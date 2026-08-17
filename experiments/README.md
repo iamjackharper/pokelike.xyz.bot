@@ -134,6 +134,13 @@ learns Q values of 6.3 / 6.2 / 6.3, three slots it has no way to tell apart. The
 limit is the representation, not the algorithm, which is what `sarsa_lambda/`
 exists to test.
 
+SARSA(λ) with linear features tested it and the answer was yes. On 25 held-out
+seeds, paired against random on the same seeds: **15 wins, 10 draws, no losses**,
++0.88 badges per run, t = 4.18. On the 50 official benchmark seeds it leads the
+leaderboard with 1.3 badges and 59.3 mean score, against random's 0.68 and −3.5.
+Same environment, same reward, same protocol Dyna-Q lost under. See
+[`sarsa_lambda/README.md`](sarsa_lambda/README.md).
+
 - **Dyna-Q+** (Sutton & Barto 8.3) — adds an exploration bonus for state-action
   pairs not tried in a while. Cheap to add on top of what is here.
 - **Prioritised sweeping** (8.4) — spend the planning budget where the value is

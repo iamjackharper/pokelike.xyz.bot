@@ -67,6 +67,45 @@ features plus a linear model is what that budget buys.
 If the features turn out to carry the day, that is the evidence that would
 justify learning a representation instead of writing one.
 
+## What happened
+
+300 episodes, reward `progress`, 98 minutes, 5988 updates. Then greedy on seeds
+40000-40024, which training never touched, against random on those same seeds:
+
+```
+            badges~  badges+   steps~  faints~   score~
+sarsa          1.52        5     21.9      3.0     67.6
+random         0.64        2     17.6      4.0      3.2
+
+paired: sarsa wins 15, draws 10, loses 0 out of 25
+mean difference: +0.88 badges per run       t = 4.18
+```
+
+Not one loss in 25, and the draws are nearly all 0-0 on seeds where both runs
+die early. Same environment, same reward, same held-out protocol on which
+tabular Dyna-Q went **backwards** (−3.8 against random's 7.0). The change was
+the representation, and that was the hypothesis.
+
+The learning curve says the same thing about sample cost:
+
+```
+ep   0-24   0.75 badges     <- indistinguishable from random
+ep  25-49   1.04
+ep  50-74   1.42            <- most of it, in fifty episodes
+ep 275-299  1.31
+```
+
+It arrives in about 50 episodes, roughly 1000 transitions, and then flattens.
+Dyna-Q had 400 episodes and never left the floor.
+
+**Read the plateau as a limit of the features, not of the method.** The weights
+say where it comes from: the largest are `team_size`, `bias`, `map_index`,
+`badges`, all of which are state-only. They shift every action in a state by the
+same amount and therefore cancel in the argmax — they fit the level of the
+return, not the choice. The features that actually decide anything are further
+down: `node:trainer*small_team`, `mon_new_type`, `mon_best_stats`. That is the
+next thing worth working on, and it is not a hyperparameter.
+
 ## Running it
 
 ```bash

@@ -42,8 +42,8 @@ REPO = Path(__file__).resolve().parents[3]
 # Point 3 is what lets anyone re-run a leaderboard result straight from a fresh
 # clone, without training anything first.
 TABLE_CANDIDATES = (
-    REPO / "training" / "dyna_q" / "models" / "dyna_q_v1.json",
-    REPO / "training" / "dyna_q" / "models" / "q_table.json",
+    REPO / "experiments" / "dyna_q" / "models" / "dyna_q_v1.json",
+    REPO / "experiments" / "dyna_q" / "models" / "q_table.json",
 )
 SUBMITTED = REPO / "leaderboard" / "entries"
 
@@ -57,9 +57,17 @@ def find_table() -> Path | None:
     local = next((p for p in TABLE_CANDIDATES if p.is_file()), None)
     if local:
         return local
-    # Fall back to the newest set of weights archived in the leaderboard.
-    archived = sorted(SUBMITTED.glob("*/artifacts/weights.json"))
-    return archived[-1] if archived else None
+    # Fall back to the newest set of weights archived in the leaderboard. Every
+    # trained bot archives its weights under that same name, so check the file
+    # is actually a Q-table before handing it over: loading someone else's
+    # would fail later and further away, with a worse error.
+    for path in reversed(sorted(SUBMITTED.glob("*/artifacts/weights.json"))):
+        try:
+            if json.loads(path.read_text(encoding="utf-8")).get("Q"):
+                return path
+        except (json.JSONDecodeError, OSError):
+            continue
+    return None
 
 HP_THRESHOLDS = ((0.25, 0), (0.5, 1), (0.8, 2))
 

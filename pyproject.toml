@@ -24,4 +24,4 @@ pokelike = ["core/*.js"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
-markers = ["slow: richiede il browser e la copia offline del gioco"]
+markers = ["slow: needs the browser and the offline copy of the game"]

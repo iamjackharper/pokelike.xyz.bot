@@ -40,6 +40,26 @@ def test_registered_bots_can_be_built():
     assert isinstance(create("random", seed=1), Bot)
 
 
+def test_the_sarsa_bot_freezes_exactly_the_features_it_was_trained_on():
+    """The copy in `bot/sarsa.py` must stay identical to `experiments/`.
+
+    Weights are a plain list of numbers: index 43 only means `mon_new_type`
+    because `feature_names()` says so. Insert one feature on the training side
+    and every index after it silently points somewhere else, so the same file
+    of weights becomes a different policy — including policies already on the
+    leaderboard. Divergence must be caught here, not by wondering months later
+    why an archived entry no longer reproduces its own score.
+
+    If this fails, the fix is to bump `FEATURES_VERSION` and retrain, never to
+    quietly paste the new names across.
+    """
+    from experiments.sarsa_lambda.features import feature_names as trained_on
+
+    from pokelike.bot.sarsa import feature_names as frozen
+
+    assert frozen() == trained_on()
+
+
 def test_unknown_bot_gives_a_useful_error():
     with pytest.raises(KeyError) as e:
         create("nonexistent")

@@ -10,12 +10,20 @@ costs about a second, and every test would otherwise pay it again.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / "site"
+
+# `experiments/` is training code, not part of the shipped package, so it is not
+# installed. Tests still need to import it: the one that matters checks that the
+# feature set frozen inside a bot has not drifted from the one it was trained
+# with, which can only be done by holding the two side by side.
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 # Ports well away from the defaults, so a test run never collides with a game
 # the developer is playing in another terminal.
