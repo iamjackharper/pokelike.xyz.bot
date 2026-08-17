@@ -153,6 +153,7 @@ CARTELLE_SLUG = (
     "img/sprites/items/",
     "img/sprites/trainers/",
     "img/sprites/badges/",
+    "img/sprites/g1/", "img/sprites/g2/", "img/sprites/g3/", "img/sprites/g4/",
 )
 RE_SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 

@@ -199,7 +199,7 @@ def cmd_bot(args) -> int:
 
 
 def cmd_stats(args) -> int:
-    print(formatta_riepilogo(riepilogo()))
+    print(formatta_riepilogo(riepilogo(), dettagli=args.dettagli))
     if args.ultime:
         print()
         for r in ultime(args.ultime, bot=args.bot):
@@ -268,6 +268,8 @@ def main(argv: list[str] | None = None) -> int:
     s.set_defaults(func=cmd_api)
 
     s = sub.add_parser("stats", help="riepilogo delle partite registrate")
+    s.add_argument("-d", "--dettagli", action="store_true",
+                   help="spiega cosa significa ogni colonna")
     s.add_argument("--ultime", type=int, default=0, help="mostra anche le ultime N partite")
     s.add_argument("--bot", default=None, help="filtra le ultime per bot")
     s.set_defaults(func=cmd_stats)

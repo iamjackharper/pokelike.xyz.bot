@@ -109,15 +109,20 @@ def riepilogo(percorso: Path | None = None) -> list[dict[str, Any]]:
         conn.row_factory = sqlite3.Row
         righe = conn.execute(
             "SELECT bot,"
-            "       COUNT(*)              AS partite,"
-            "       SUM(vinta)            AS vittorie,"
-            "       ROUND(AVG(punti), 1)  AS punti_medi,"
-            "       MAX(punti)            AS punti_max,"
-            "       MIN(punti)            AS punti_min,"
-            "       ROUND(AVG(passi), 1)  AS passi_medi,"
-            "       MAX(medaglie)         AS medaglie_max,"
-            "       ROUND(AVG(ko), 1)     AS ko_medi,"
-            "       ROUND(AVG(svenuti),1) AS svenuti_medi"
+            "       COUNT(*)                 AS run,"
+            "       SUM(vinta)               AS albo,"
+            "       ROUND(AVG(medaglie), 2)  AS medaglie_medie,"
+            "       MAX(medaglie)            AS medaglie_max,"
+            "       ROUND(AVG(mappe), 2)     AS mappe_medie,"
+            "       MAX(mappe)               AS mappe_max,"
+            "       ROUND(AVG(punti), 1)     AS punti_medi,"
+            "       MIN(punti)               AS punti_min,"
+            "       MAX(punti)               AS punti_max,"
+            "       ROUND(AVG(catture), 1)   AS catture_medie,"
+            "       ROUND(AVG(ko), 1)        AS ko_medi,"
+            "       ROUND(AVG(svenuti), 1)   AS esausti_medi,"
+            "       ROUND(AVG(livello_max),1) AS livello_medio,"
+            "       ROUND(AVG(passi), 1)     AS decisioni_medie"
             " FROM partite GROUP BY bot ORDER BY punti_medi DESC"
         ).fetchall()
         return [dict(r) for r in righe]
@@ -139,22 +144,70 @@ def ultime(n: int = 10, bot: str | None = None, percorso: Path | None = None) ->
         return [dict(r) for r in righe]
 
 
-def formatta_riepilogo(righe: list[dict[str, Any]]) -> str:
+# (chiave nel dizionario, intestazione, larghezza)
+COLONNE = [
+    ("bot", "bot", 11),
+    ("run", "run", 5),
+    ("albo", "albo", 6),
+    ("medaglie_medie", "badge~", 8),
+    ("medaglie_max", "badge+", 7),
+    ("mappe_medie", "mappe~", 8),
+    ("mappe_max", "mappe+", 7),
+    ("punti_medi", "score~", 8),
+    ("punti_min", "score-", 7),
+    ("punti_max", "score+", 7),
+    ("catture_medie", "catt~", 7),
+    ("ko_medi", "KO~", 6),
+    ("esausti_medi", "esaust~", 8),
+    ("livello_medio", "Lv max~", 8),
+    ("decisioni_medie", "scelte~", 8),
+]
+
+SPIEGAZIONE = """
+COSA SIGNIFICA OGNI COLONNA
+  ~ = media sulle partite     + = massimo raggiunto
+
+  bot        quale bot ha giocato
+  run        quante partite ha giocato (una run = dallo starter al game over)
+  albo       run COMPLETATE, cioè arrivate alla schermata di vittoria battendo
+             tutta la Lega. NON sono le medaglie: con 0 qui e 3 badge vuol dire
+             che è arrivato a tre palestre e poi è morto
+  badge~ +   medaglie di palestra prese (Gym Badges). Ce ne sono 8 per regione
+  mappe~ +   mappe completate: ogni mappa è una tabella di nodi con un boss in
+             fondo, completarla vale +50 punti
+  score~     punteggio medio, con la formula del gioco:
+                 +500  se completi la partita
+                 +  5  per ogni nemico messo KO
+                 -  10 per ogni Pokémon esausto
+                 + 50  per ogni mappa completata
+                 + 20  per ogni leggendario e per ogni shiny in squadra
+             NON include il bonus tempo, che vale ~1000 e coprirebbe tutto
+  score- +   il peggiore e il migliore, per vedere quanto è costante
+  catt~      Pokémon catturati (la squadra arriva a 6)
+  KO~        Pokémon avversari sconfitti
+  esaust~    Pokémon TUOI andati KO. Costano -10 l'uno: è la voce che affonda
+             i punteggi
+  Lv max~    livello del Pokémon più alto raggiunto in squadra
+  scelte~    quante decisioni ha preso il bot prima di finire. Le battaglie si
+             giocano da sole, quindi è il numero di bivi affrontati
+"""
+
+
+def formatta_riepilogo(righe: list[dict[str, Any]], dettagli: bool = False) -> str:
     if not righe:
         return "nessuna partita registrata"
-    testa = (
-        f"{'bot':<12}{'partite':>8}{'vinte':>7}{'punti medi':>12}"
-        f"{'min':>7}{'max':>7}{'passi':>8}{'KO':>7}{'svenuti':>9}"
+
+    testa = f"{COLONNE[0][1]:<{COLONNE[0][2]}}" + "".join(
+        f"{nome:>{largh}}" for _, nome, largh in COLONNE[1:]
     )
     out = [testa, "-" * len(testa)]
     for r in righe:
-        out.append(
-            f"{r['bot']:<12}{r['partite']:>8}{r['vittorie'] or 0:>7}"
-            f"{r['punti_medi'] if r['punti_medi'] is not None else '-':>12}"
-            f"{r['punti_min'] if r['punti_min'] is not None else '-':>7}"
-            f"{r['punti_max'] if r['punti_max'] is not None else '-':>7}"
-            f"{r['passi_medi'] if r['passi_medi'] is not None else '-':>8}"
-            f"{r['ko_medi'] if r['ko_medi'] is not None else '-':>7}"
-            f"{r['svenuti_medi'] if r['svenuti_medi'] is not None else '-':>9}"
-        )
+        cella = [f"{str(r.get('bot', '')):<{COLONNE[0][2]}}"]
+        for chiave, _, largh in COLONNE[1:]:
+            v = r.get(chiave)
+            cella.append(f"{'-' if v is None else v:>{largh}}")
+        out.append("".join(cella))
+
+    if dettagli:
+        out.append(SPIEGAZIONE)
     return "\n".join(out)

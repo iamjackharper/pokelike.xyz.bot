@@ -272,6 +272,7 @@ interrogabile con SQL normale. `--no-stats` la salta.
 
 ```bash
 uv run pokelike stats                # riepilogo per bot
+uv run pokelike stats -d             # + spiegazione di ogni colonna
 uv run pokelike stats --ultime 10    # + le ultime partite
 ```
 
@@ -282,6 +283,31 @@ casuale            6      0        -6.7    -35     25    15.5    6.7      4.0
 ```
 
 ---
+
+## Se manca un pezzo del gioco
+
+La copia locale può avere dei buchi: alcuni indirizzi il gioco se li costruisce
+al momento (`"img/sprites/items/" + nome + ".png"`) e non si trovano leggendo il
+codice. Per controllare:
+
+```bash
+uv run pokelike mirror --fasi verifica
+```
+
+Gioca a rete chiusa, elenca i file mancanti, li scarica e ricontrolla. Non
+indovina: l'elenco glielo dà il gioco stesso mentre gioca.
+
+**Cosa succede se manca qualcosa:** niente, a livello di gioco. Le immagini sono
+solo decorazione. Il server locale risponde 404, se lo segna, e il gioco mette
+un'emoji al posto dello sprite. **La partita, le regole e il punteggio non
+cambiano di una virgola** — verificato cancellando uno sprite in uso e
+rigiocando la stessa partita: stessi passi, stesso finale, stesso punteggio.
+
+E i bot non se ne accorgono nemmeno: leggono lo stato del gioco, non i pixel.
+Uno sprite mancante si vede solo con `--vedi` o `--foto`.
+
+L'unica cosa che conta davvero è il file di gioco (`js/bundle.*.js`): se manca
+quello il gioco non parte proprio, e te ne accorgi subito.
 
 ## Riproducibilità
 
@@ -297,7 +323,8 @@ bot sulle stesse partite invece che sulla fortuna.
 | `bot` | fa giocare un bot (`--bot`, `--partite`, `--seed`) |
 | `api` | server HTTP JSON |
 | `stats` | riepilogo delle partite |
-| `mirror` | rifà la copia offline (dopo un aggiornamento del gioco) |
+| `mirror --fasi verifica` | controlla che alla copia locale non manchi niente |
+| `mirror` | rifà la copia offline da zero (dopo un aggiornamento del gioco) |
 
 ---
 
