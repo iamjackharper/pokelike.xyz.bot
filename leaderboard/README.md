@@ -82,7 +82,7 @@ with the url and its sha256 instead.
 
 **A submission must be self-contained.** For a trained policy that means the
 state encoding lives inside the bot file, frozen next to the weights, rather than
-imported from `training/`. Otherwise improving the training code would silently
+imported from `experiments/`. Otherwise improving the training code would silently
 change what every past submission means.
 [`bot/dyna_q.py`](../src/pokelike/bot/dyna_q.py) does exactly this and is meant
 to be read as the worked example.

@@ -253,7 +253,7 @@ back to a safe choice and the fallback is counted. **A run never dies because of
 the model.**
 
 **`dyna_q`** ([bot/dyna_q.py](src/pokelike/bot/dyna_q.py)) plays a policy trained
-by [training/dyna_q](training/dyna_q/). It doubles as the worked example of what
+by [experiments/dyna_q](experiments/dyna_q/). It doubles as the worked example of what
 a leaderboard submission looks like, which is why it carries its own copy of the
 state encoding instead of importing the training code.
 
@@ -345,22 +345,29 @@ submitted bot.
 If the git side is a hassle, open an issue and paste your result file into it
 instead.
 
-## Reinforcement Learning
+## Making a bot play better
 
-There is a [training/](training/) folder with the RL work, kept outside the
-package: the package is the environment, that folder is the research on top of
-it. It currently holds tabular Dyna-Q (Sutton & Barto, section 8.2), with the
-state encoding, the reward and the environment adapter shared in
-`training/common/` so any algorithm added later learns on the same terms.
+[experiments/](experiments/) holds the attempts, kept outside the package: the
+package is the environment, that folder is the research on top of it. Not all of
+it is training — teaching a policy with RL and finding a better prompt for an LLM
+are both ways of improving a player.
 
 ```bash
-uv run python -m training.dyna_q.train --episodes 200
-uv run python -m training.dyna_q.evaluate --episodes 30
+uv run python -m experiments.dyna_q.train --episodes 200 --reward progress
+uv run python -m experiments.llm.compare --strategies survivor,explorer --seeds 5
 ```
 
-See [training/README.md](training/README.md) for how the game is framed as an
-MDP and what makes it awkward (slow steps, sparse rewards, a state-dependent
-action set).
+`experiments/common/` is shared by everything: the state encoding, the
+environment adapter, and five selectable reward functions. That last one matters
+more than it sounds, because **the engine's score is a Battle Tower formula**:
+`mapsCleared` only increments on the endless path and `winBonus` needs the whole
+League, so in Story mode what is left is `5·KO − 10·faints` with badges absent
+entirely. That is why a run with three badges can score −5, why the leaderboard
+ranks by badges, and why the reward you train on is worth choosing deliberately.
+
+See [experiments/README.md](experiments/README.md) for the game framed as an MDP
+and what makes it awkward (slow steps, sparse rewards, a state-dependent action
+set).
 
 ## Reproducibility
 

@@ -1,6 +1,6 @@
 """Training loop for Dyna-Q.
 
-    uv run python -m training.dyna_q.train --episodes 200
+    uv run python -m experiments.dyna_q.train --episodes 200
 
 Each episode is one run of the game, from the starter to game over. The loop is
 the algorithm box of Sutton & Barto section 8.2, with the planning phase run
@@ -19,7 +19,7 @@ import json
 import time
 from pathlib import Path
 
-from training.common.environment import TrainingEnv
+from experiments.common.environment import TrainingEnv
 
 from .agent import DynaQ
 
@@ -122,7 +122,7 @@ def main() -> int:
                    help="initial Q value; > 0 encourages early exploration")
     p.add_argument("--port", type=int, default=8600)
     p.add_argument("--reward", default="progress",
-                   help="which reward function (see training/common/rewards.py)")
+                   help="which reward function (see experiments/common/rewards.py)")
     p.add_argument("--out", default="q_table.json")
     p.add_argument("--log-every", type=int, default=10)
     a = p.parse_args()

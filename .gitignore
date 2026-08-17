@@ -9,5 +9,5 @@ stats/
 
 .env
 
-training/*/models/
-training/*/runs/
+experiments/*/models/
+experiments/*/runs/

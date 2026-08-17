@@ -5,11 +5,11 @@
 
 This file is the EXAMPLE OF WHAT A SUBMISSION LOOKS LIKE, and it is deliberately
 self-contained: the state and action encoding is copied in here rather than
-imported from `training/`.
+imported from `experiments/`.
 
 That is not duplication by accident. A policy is only meaningful under the exact
 encoding it was trained with. If this file imported the training code, improving
-`training/common/features.py` would silently change what every previously
+`experiments/common/features.py` would silently change what every previously
 submitted policy means, and old leaderboard entries would quietly become wrong.
 Freezing the encoding next to the weights is what keeps a submission valid
 forever.
@@ -128,7 +128,7 @@ class DynaQBot(Bot):
             raise FileNotFoundError(
                 "no trained table found. Looked in:\n  "
                 + "\n  ".join(str(p) for p in TABLE_CANDIDATES)
-                + "\n\ntrain one:  uv run python -m training.dyna_q.train --episodes 200"
+                + "\n\ntrain one:  uv run python -m experiments.dyna_q.train --episodes 200"
                 + "\nor point at one:  POKELIKE_DYNAQ_TABLE=/path/to/table.json"
             )
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -187,7 +187,7 @@ class DynaQBot(Bot):
                     "hyperparameters": table.get("hyperparameters"),
                     "updates": table.get("updates"),
                     "states": len(self.Q),
-                    "trainer": "training/dyna_q/train.py",
+                    "trainer": "experiments/dyna_q/train.py",
                 },
             ),
         ]

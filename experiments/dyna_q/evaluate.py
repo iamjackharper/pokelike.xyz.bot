@@ -1,6 +1,6 @@
 """Does the trained agent actually beat random?
 
-    uv run python -m training.dyna_q.evaluate --episodes 30
+    uv run python -m experiments.dyna_q.evaluate --episodes 30
 
 Both policies are run on THE SAME SEEDS, which matters more than it sounds: runs
 vary enormously by luck, and comparing two policies on different seeds mostly
@@ -18,7 +18,7 @@ import random
 import statistics
 from pathlib import Path
 
-from training.common.environment import TrainingEnv
+from experiments.common.environment import TrainingEnv
 
 from .agent import DynaQ
 

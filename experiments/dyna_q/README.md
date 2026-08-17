@@ -60,10 +60,10 @@ plateaus — either stochastic Dyna-Q with outcome counts, or **Dyna-Q+**
 
 ```bash
 # train (about 15 minutes for 50 episodes)
-uv run python -m training.dyna_q.train --episodes 50
+uv run python -m experiments.dyna_q.train --episodes 50
 
 # does it beat random? same seeds for both, held out from training
-uv run python -m training.dyna_q.evaluate --episodes 30 --seed0 5000
+uv run python -m experiments.dyna_q.evaluate --episodes 30 --seed0 5000
 ```
 
 | flag | meaning | default |

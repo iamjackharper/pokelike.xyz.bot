@@ -1,6 +1,6 @@
 """Which prompt actually plays better?
 
-    uv run python -m training.llm.compare --seeds 5 --strategies survivor,explorer
+    uv run python -m experiments.llm.compare --seeds 5 --strategies survivor,explorer
 
 Prompt engineering invites confident storytelling, so this measures instead.
 Every strategy plays THE SAME SEEDS, and the comparison is paired: the question
@@ -10,7 +10,7 @@ better than explorer".
 The metric is badges, because that is the game's own progression counter in Story
 mode. The engine's score formula was written for the Battle Tower and two of its
 terms never fire here, so ranking prompts by it would reward fighting rather than
-getting further. See training/common/rewards.py.
+getting further. See experiments/common/rewards.py.
 
 A warning about what this can and cannot tell you: the model is stochastic and a
 run is high variance, so a handful of seeds will not separate two decent prompts.

@@ -1,28 +1,39 @@
-# training
+# experiments
 
-Reinforcement Learning on pokelike. This folder sits outside the `pokelike`
-package on purpose: the package is the environment (mirroring, browser, game
-logic), this is the research on top of it.
+Attempts at making a bot play well. Not all of them are training: teaching a
+policy with Reinforcement Learning and finding a better prompt for an LLM are
+both ways of improving a player, and neither is more legitimate than the other.
+
+This folder sits outside the `pokelike` package on purpose. The package is the
+environment (mirroring, browser, game rules); this is the research on top of it.
 
 ```
-training/
-├── common/              shared by every algorithm
-│   ├── features.py        state -> key, action -> key, reward
+experiments/
+├── common/              shared by every experiment
+│   ├── features.py        state -> key, action -> key
+│   ├── rewards.py         five reward functions, selectable by name
 │   └── environment.py     TrainingEnv: reset/step with hashable keys
-└── dyna_q/              one folder per algorithm
-    ├── agent.py           the algorithm
-    ├── train.py           training script
-    ├── evaluate.py        trained vs random, on the same seeds
-    ├── models/            saved tables (gitignored)
-    └── runs/              training histories (gitignored)
+├── dyna_q/              tabular RL (Sutton & Barto 8.2)
+│   ├── agent.py           the algorithm
+│   ├── train.py           training script
+│   ├── evaluate.py        trained vs random, on the same seeds
+│   ├── models/            saved tables (gitignored)
+│   └── runs/              histories (gitignored)
+└── llm/                 prompt engineering, measured
+    └── compare.py         strategies played head to head on identical seeds
 ```
 
 Run everything from the repo root, as modules:
 
 ```bash
-uv run python -m training.dyna_q.train --episodes 200
-uv run python -m training.dyna_q.evaluate --episodes 30
+uv run python -m experiments.dyna_q.train --episodes 200 --reward progress
+uv run python -m experiments.dyna_q.evaluate --episodes 30
+uv run python -m experiments.llm.compare --strategies survivor,explorer --seeds 5
 ```
+
+Whatever the experiment, the yardstick is the same: **badges**, measured by the
+standard benchmark. The training reward is the signal you learn from; badges and
+the game's score are the independent measurement of whether it worked.
 
 ## The problem, stated as an MDP
 
@@ -42,7 +53,7 @@ choice of reward matters more than the choice of algorithm and that claim is
 worth testing rather than asserting.
 
 ```bash
-uv run python -m training.dyna_q.train --reward progress --episodes 200
+uv run python -m experiments.dyna_q.train --reward progress --episodes 200
 ```
 
 | reward | signal | density |
@@ -96,12 +107,16 @@ than advancing.
 The baseline to beat is the random bot: 0.68 badges on average over the 50
 benchmark seeds, dead in 17 moves.
 
-## Adding another algorithm
+## Adding another experiment
 
-Copy the shape of `dyna_q/`: a folder with `agent.py`, `train.py`,
-`evaluate.py`, `models/`, `runs/`. Reuse `common/` so every algorithm learns on
-the same encoding and the same reward, otherwise the comparison between them
-means nothing.
+Copy the shape of `dyna_q/` for an algorithm: a folder with `agent.py`,
+`train.py`, `evaluate.py`, `models/`, `runs/`. Reuse `common/` so everything
+learns on the same encoding and the same rewards, otherwise comparing them means
+nothing.
+
+For anything that is not training — a new prompt family, a hand-written
+heuristic, a search — copy the shape of `llm/` instead: a script that runs the
+variants head to head on identical seeds and reports the paired difference.
 
 Reasonable next steps, in rough order of effort:
 

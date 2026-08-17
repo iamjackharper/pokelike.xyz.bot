@@ -25,7 +25,7 @@ uv run pokelike stats -d         # summary, with the columns explained
 uv run pytest                    # full suite, ~3 minutes
 uv run pytest -m "not slow"      # fast tests only, no browser
 
-uv run python -m training.dyna_q.train --episodes 90   # train an RL policy
+uv run python -m experiments.dyna_q.train --episodes 90   # train an RL policy
 uv run pokelike bench --bot random --runs 10           # the standard benchmark
 ```
 
@@ -51,9 +51,10 @@ src/pokelike/
 ├── bench.py             the standard 50-seed benchmark
 ├── cli/main.py          terminal interface
 └── api/server.py        HTTP interface
-training/                RL research, outside the package on purpose
-├── common/                encoding, reward, env adapter, shared by all algos
-└── dyna_q/                agent, train, evaluate, models/, runs/
+experiments/             attempts at a better bot, outside the package
+├── common/                encoding, rewards, env adapter, shared by all of them
+├── dyna_q/                tabular RL: agent, train, evaluate, models/, runs/
+└── llm/                   prompt strategies compared on identical seeds
 leaderboard/             submissions, their weights, and how to submit
 tests/                   golden fingerprints + unit tests
 tools/deobfuscate.py     makes the bundle readable (needs node)
@@ -121,7 +122,7 @@ All of these were hit for real. Worth rereading before changing anything:
   path; and `winBonus` needs the whole League beaten. What is left is
   `5·KO − 10·faints`, and badges do not appear at all — which is how a run with
   three badges scores −5. Rank Story runs by **badges**, and see
-  `training/common/rewards.py` before designing any objective on top of it.
+  `experiments/common/rewards.py` before designing any objective on top of it.
 
 ## Scoring
 
@@ -175,7 +176,7 @@ The LLM bot is far slower (one or more HTTP calls per decision) and burns roughl
 are not obvious and matter:
 
 - **A submission must be self-contained.** A trained policy freezes its state
-  encoding inside the bot file rather than importing `training/common/features.py`,
+  encoding inside the bot file rather than importing `experiments/common/features.py`,
   so improving the training code cannot silently change what past submissions
   mean. `bot/dyna_q.py` is the worked example.
 - **The benchmark records the game bundle's sha256.** Scores from before and
