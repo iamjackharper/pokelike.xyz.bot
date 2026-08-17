@@ -125,3 +125,31 @@ def score_view(s: dict[str, Any] | None) -> str:
         f"  highest level       {st.get('highestLevel', 0):>6}",
     ]
     return "\n".join(rows)
+
+
+def trace_view(trace: list[dict[str, Any]], with_team: bool = False) -> str:
+    """The detailed log of a run: one block per decision.
+
+    Everything here is recorded by the shared run loop, so it reads the same
+    whatever was playing. The `why` line is the only bot-specific part, and it is
+    empty for bots that have nothing to say — which is honest, not a gap.
+    """
+    if not trace:
+        return "  (no decisions recorded)"
+    out = []
+    for t in trace:
+        head = (f"  {t['step']:>3} | {t['screen']:<18} "
+                f"map {t.get('map', '-')}  badges {t.get('badges', '-')}")
+        out.append(head)
+        if with_team and t.get("team"):
+            out.append(f"      | team: {', '.join(t['team'])}")
+        marked = [
+            f"[{i}]{'*' if i == t['chosen'] else ' '}{o}"
+            for i, o in enumerate(t["options"])
+        ]
+        out.append(f"      | {'  '.join(marked)}")
+        out.append(f"      | -> {t['chosen_label']}")
+        if t.get("why"):
+            out.append(f"      |    {t['why'][:110]}")
+        out.append("")
+    return "\n".join(out)

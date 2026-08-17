@@ -92,7 +92,21 @@ At the prompt: a **number** to act, `l` for the symbol legend, `s` for the score
 
 ```bash
 uv run pokelike bot --runs 5             # the random bot
+uv run pokelike bot --runs 1 -d          # + log every decision it made
 uv run pokelike stats                    # how it went
+```
+
+`-d` prints one block per decision, recorded by the shared run loop so it reads
+the same whatever is playing: the screen, every option, which one was taken.
+`-dd` adds the team. The last line is the only bot-specific part — an LLM's
+stated reason, Dyna-Q's learned values — and it is simply absent for a bot with
+nothing to say:
+
+```
+    2 | map-screen         map 0  badges 0
+      | [0] catch  [1]*battle
+      | -> battle
+      |    Q: catch=5.8, battle=7.3
 ```
 
 The LLM bot needs your own credentials for any OpenAI-compatible endpoint

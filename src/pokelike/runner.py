@@ -16,6 +16,22 @@ from typing import Any
 from .core.game import Game
 
 
+def short_label(a: dict[str, Any]) -> str:
+    """A compact name for an action, for logs and traces.
+
+    Labels that carry row context read like "EQUIP — Ponyta Lv8 — empty — EQUIP".
+    The informative half is the context, not the button word, so keep both: five
+    identical "EQUIP" entries in a log tell you nothing about what was chosen.
+    """
+    if a.get("kind") == "node":
+        return a["node"]
+    label = (a.get("label") or "").strip()
+    if "—" in label:
+        parts = [p.strip() for p in label.split("—")]
+        return f"{parts[0]}:{parts[1]}"[:38]
+    return label[:34] or f"slot{a.get('idx', 0)}"
+
+
 def play_run(
     game: Game,
     bot: Any,
@@ -35,11 +51,32 @@ def play_run(
     """
     obs = game.reset(seed=seed)
     bot.on_start(seed)
+    trace: list[dict[str, Any]] = []
 
     while not obs.get("done") and obs.get("actions") and game.steps < max_steps:
         if on_step:
             on_step(obs, game.steps)
-        obs = game.step(bot.choose(obs))
+
+        options = list(obs["actions"])
+        chosen = bot.choose(obs)
+
+        # Recorded for every bot alike, in the shared loop rather than in each
+        # bot, so the log means the same thing whatever is playing.
+        run = obs.get("run") or {}
+        team = obs.get("team") or []
+        trace.append({
+            "step": game.steps,
+            "screen": obs.get("screen"),
+            "map": run.get("map"),
+            "badges": run.get("badges"),
+            "team": [f"{p['name']} L{p['level']} {p['hp']}/{p['max_hp']}" for p in team],
+            "options": [short_label(a) for a in options],
+            "chosen": chosen,
+            "chosen_label": short_label(options[chosen]) if 0 <= chosen < len(options) else "?",
+            "why": (bot.explain() or "").strip(),
+        })
+
+        obs = game.step(chosen)
 
     score = game.score() or {}
     bot.on_end(obs, score)
@@ -59,4 +96,5 @@ def play_run(
         "team": alive.get("team") or [],
         "final_state": obs,
         "score_detail": score,
+        "trace": trace,
     }

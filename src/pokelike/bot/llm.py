@@ -210,6 +210,7 @@ class LLMBot(Bot):
         self.tokens_used = 0
         self.fallbacks = 0
         self.journal: list[str] = []
+        self._last_why = ""
 
     # ------------------------------------------------------------------ hooks
 
@@ -218,6 +219,7 @@ class LLMBot(Bot):
         self.calls = 0
         self.tokens_used = 0
         self.fallbacks = 0
+        self._last_why = ""
 
     def notes(self) -> dict[str, Any]:
         """Ends up in the `extra` column of the run registry."""
@@ -268,22 +270,28 @@ class LLMBot(Bot):
 
     # --------------------------------------------------------------- decision
 
+    def explain(self) -> str:
+        return self._last_why
+
     def choose(self, state: dict[str, Any]) -> int:
         n = len(state["actions"])
         try:
             index, why = self._agentic_round(state)
         except Exception as e:  # noqa: BLE001 — no error may stop the run
             self.fallbacks += 1
+            self._last_why = f"(fell back: {type(e).__name__})"
             if self.verbose:
                 print(f"   [llm] fallback: {type(e).__name__}: {e}")
             return self._fallback(state)
 
         if not isinstance(index, int) or not 0 <= index < n:
             self.fallbacks += 1
+            self._last_why = f"(fell back: model returned index {index})"
             if self.verbose:
                 print(f"   [llm] invalid index ({index}), falling back")
             return self._fallback(state)
 
+        self._last_why = why
         self.journal.append(f"step {state.get('steps')}: [{index}] {why[:90]}")
         self.journal = self.journal[-self.memory:]
         if self.verbose:

@@ -48,6 +48,19 @@ class Bot(ABC):
     def on_end(self, state: dict[str, Any], score: dict[str, Any] | None) -> None:
         """Called once the run is over, with the final state and the score."""
 
+    def explain(self) -> str:
+        """One line on why the last `choose` went the way it did.
+
+        Optional, and only used by the detailed log. The shared run loop already
+        records what every bot has in common — the screen, the options, which one
+        was taken — so this is for the part only the bot knows: an LLM's stated
+        reason, a table's learned values, a heuristic's rule.
+
+        Returning "" means "nothing to add", which is honest for a bot that picks
+        at random.
+        """
+        return ""
+
     def artifacts(self) -> list:
         """What to archive alongside a leaderboard result.
 

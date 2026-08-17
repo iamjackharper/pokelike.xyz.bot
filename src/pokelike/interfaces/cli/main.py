@@ -233,6 +233,11 @@ def cmd_bot(args) -> int:
 
             r = play_run(game, bot, seed, max_steps=args.max_steps, on_step=each_step)
 
+            if args.detailed:
+                print()
+                print(f"--- run {i + 1}, seed {seed} ---")
+                print(render.trace_view(r["trace"], with_team=args.detailed > 1))
+
             if not args.no_stats:
                 record(bot=args.bot, seed=seed, state=r["final_state"],
                        score=r["score_detail"], steps=r["steps"], alive=game.last_alive,
@@ -388,6 +393,8 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--shots", metavar="FOLDER", help="save an image at every step")
     s.add_argument("--pause", type=int, default=800, help="ms between moves with --watch")
     s.add_argument("--no-stats", action="store_true", help="do not record the runs")
+    s.add_argument("-d", "--detailed", action="count", default=0,
+                   help="log every decision; repeat (-dd) to include the team")
     s.set_defaults(func=cmd_bot)
 
     s = sub.add_parser("api", help="start the HTTP API")

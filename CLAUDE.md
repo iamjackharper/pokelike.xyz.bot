@@ -23,6 +23,7 @@ uv run pokelike play --seed 42   # interactive run
 uv run pokelike bot --runs 5     # the random bot
 uv run pokelike stats -d         # summary, with the columns explained
 uv run pokelike schema           # what a bot receives (regenerates docs/STATE.md with --markdown)
+uv run pokelike bot -d --runs 1  # log every decision, for any bot
 uv run pytest                    # full suite, ~3 minutes
 uv run pytest -m "not slow"      # fast tests only, no browser
 
@@ -67,6 +68,10 @@ tools/deobfuscate.py     makes the bundle readable (needs node)
 
 `interfaces/` and `bot/` contain no game logic: they all go through `Game`'s four
 methods. If you feel like putting a game rule in the CLI, it belongs in `core`.
+
+Decision logging lives in `runner.play_run` for the same reason: recorded once,
+in the shared loop, so a log means the same thing whatever is playing. Bots add
+at most one line through the optional `explain()` hook.
 
 `bot/` is deliberately not under `interfaces/`. The interfaces are entry points —
 something outside drives the game through them. A bot is an extension point: you

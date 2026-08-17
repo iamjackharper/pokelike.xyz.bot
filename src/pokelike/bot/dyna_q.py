@@ -167,6 +167,7 @@ class DynaQBot(Bot):
         self.table_path = path
         self.unseen = 0      # how often we fell back, worth knowing
         self.decisions = 0
+        self._last_why = ""
 
     def on_start(self, seed: int) -> None:
         self.rng = random.Random(seed)
@@ -213,6 +214,9 @@ class DynaQBot(Bot):
             ),
         ]
 
+    def explain(self) -> str:
+        return self._last_why
+
     def choose(self, state: dict[str, Any]) -> int:
         self.decisions += 1
         actions = state["actions"]
@@ -224,10 +228,15 @@ class DynaQBot(Bot):
             # what any tabular policy has to do outside its table, and counting
             # how often it happens tells you whether training covered enough.
             self.unseen += 1
+            self._last_why = "state never seen in training, fell back to the safe rule"
             return self._fallback(state)
 
         scored = [(values.get(action_key(a), 0.0), i) for i, a in enumerate(actions)]
         best = max(v for v, _ in scored)
+        self._last_why = "Q: " + ", ".join(
+            f"{action_key(a).split(':')[-1]}={values.get(action_key(a), 0.0):.1f}"
+            for a in actions
+        )
         return self.rng.choice([i for v, i in scored if v == best])
 
     @staticmethod
