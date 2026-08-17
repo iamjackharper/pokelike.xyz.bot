@@ -1,0 +1,148 @@
+"""State and action encoding, plus the reward.
+
+This is where most of the work in tabular RL actually lives. In a grid world the
+state IS an integer, so you index a dense table with it. Here the raw
+observation is a dict holding a team, a bag and a graph, and there are
+astronomically many of them: a table over raw states would never see the same
+state twice and would learn nothing.
+
+So we compress. Three decisions matter more than the algorithm sitting on top.
+
+
+THE STATE KEY
+-------------
+Only features that plausibly change what the best move is. Every extra feature
+multiplies the state space, and a state visited twice in a thousand runs teaches
+you nothing. This is function approximation by hand, the crudest kind: state
+aggregation (Sutton & Barto, section 9.3).
+
+
+THE ACTION KEY
+--------------
+Actions are NOT stable by position. Index 2 means "battle" on one turn and
+"catch" on the next, so learning Q(s, 2) would be learning noise. We key actions
+by what they *are*, and Q(s, "node:catch") then accumulates across every turn
+where catching was an option.
+
+This is also why the table is a dict and not a torch tensor. In your grid world
+the action set was fixed (up/down/left/right) and states were 0..N-1, so a dense
+`Q[num_states, num_actions]` was exactly right. Here both dimensions are sparse
+and string-keyed, and most (state, action) pairs never occur, so a dict is the
+same idea with the zeros left out.
+
+
+THE REWARD
+----------
+We use the game's own scoring weights, applied per step instead of once at the
+end. Optimising the same numbers the scoreboard uses avoids the classic trap of
+training a bot that is great at a proxy nobody cares about.
+"""
+
+from __future__ import annotations
+
+from typing import Any
+
+# How full the worst-off team member is, in four buckets. Finer buckets split
+# experience across cells that behave identically.
+HP_THRESHOLDS = ((0.25, 0), (0.5, 1), (0.8, 2))
+
+
+def hp_bucket(team: list[dict]) -> int:
+    """0 = someone is nearly dead, 3 = everyone healthy."""
+    if not team:
+        return 0
+    alive = [p["hp"] / p["max_hp"] for p in team if p["max_hp"]]
+    if not alive:
+        return 0
+    worst = min(alive)
+    for threshold, bucket in HP_THRESHOLDS:
+        if worst < threshold:
+            return bucket
+    return 3
+
+
+def depth_bucket(state: dict[str, Any]) -> int:
+    """How far down the current map we are, in three bands.
+
+    The boss sits at the bottom, so depth changes what a good move looks like:
+    catching is worth more early, healing is worth more just before the boss.
+    """
+    m = state.get("map")
+    if not m or not m.get("current"):
+        return 0
+    layers = [n["layer"] for n in m["nodes"]]
+    current = next((n["layer"] for n in m["nodes"] if n["id"] == m["current"]), 0)
+    deepest = max(layers) if layers else 1
+    frac = current / deepest if deepest else 0.0
+    return 0 if frac < 0.34 else (1 if frac < 0.67 else 2)
+
+
+def action_key(a: dict[str, Any]) -> str:
+    """What an action *is*, in a form that is stable across turns.
+
+    Map moves are keyed by node type. Everything else (catch offers, item
+    offers, equip modals) is keyed by screen plus slot, because there the
+    options are homogeneous — three Pokemon to catch, three items to take — and
+    what distinguishes them is which slot you take.
+    """
+    if a.get("kind") == "node":
+        return f"node:{a['node']}"
+    label = (a.get("label") or "").strip().lower()
+    # A few buttons mean the same thing wherever they show up.
+    for word, key in (("skip", "skip"), ("cancel", "cancel"),
+                      ("keep in bag", "bag"), ("equip", "equip")):
+        if word in label:
+            return f"btn:{key}"
+    return f"{a.get('layer', 'x')}:slot{a.get('idx', 0)}"
+
+
+def state_key(state: dict[str, Any]) -> tuple:
+    """The compressed state. Keep it small: every field multiplies the table.
+
+    The set of available actions is part of the key on purpose. Without it the
+    same cell would mix turns offering completely different options, and the
+    learned values would average over situations that are not comparable.
+    """
+    run = state.get("run") or {}
+    team = state.get("team") or []
+    offered = tuple(sorted({action_key(a) for a in state.get("actions") or []}))
+    return (
+        state.get("screen"),
+        min(len(team), 6),
+        hp_bucket(team),
+        min(run.get("map") or 0, 8),
+        depth_bucket(state),
+        min(run.get("badges") or 0, 8),
+        offered,
+    )
+
+
+# --------------------------------------------------------------------- reward
+
+# The game's own scoring weights. See the score formula in the README:
+#   +500 completed, +5 per KO, -10 per faint, +50 per map, +20 per shiny/legendary
+# We drop the time bonus, which is pinned by the frozen clock and carries no
+# information, and the shiny/legendary terms, which are read off the final team
+# rather than counted per step.
+WEIGHTS = {
+    "enemiesKO": 5,
+    "faintsSuffered": -10,
+    "mapsCleared": 50,
+}
+WIN_BONUS = 500
+
+
+def step_reward(before: dict[str, Any] | None, after: dict[str, Any] | None,
+                done: bool = False, won: bool = False) -> float:
+    """Reward for one transition, from the deltas of the engine's own counters.
+
+    Those counters live in `state["stats"]` and the game updates them after each
+    battle, so this is the real thing and not a hand-made approximation.
+    """
+    r = 0.0
+    if before and after:
+        for field, weight in WEIGHTS.items():
+            r += weight * ((after.get(field) or 0) - (before.get(field) or 0))
+    if done and won:
+        r += WIN_BONUS
+    return r

@@ -313,6 +313,23 @@ only shows up with `--watch` or `--shots`.
 The only file that truly matters is the game bundle (`js/bundle.*.js`): without
 it the game does not start, and you find out immediately.
 
+## Reinforcement Learning
+
+There is a [training/](training/) folder with the RL work, kept outside the
+package: the package is the environment, that folder is the research on top of
+it. It currently holds tabular Dyna-Q (Sutton & Barto, section 8.2), with the
+state encoding, the reward and the environment adapter shared in
+`training/common/` so any algorithm added later learns on the same terms.
+
+```bash
+uv run python -m training.dyna_q.train --episodes 200
+uv run python -m training.dyna_q.evaluate --episodes 30
+```
+
+See [training/README.md](training/README.md) for how the game is framed as an
+MDP and what makes it awkward (slow steps, sparse rewards, a state-dependent
+action set).
+
 ## Reproducibility
 
 Same seed + same actions = exactly the same run. That is what lets you compare
