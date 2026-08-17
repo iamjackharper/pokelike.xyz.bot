@@ -14,6 +14,7 @@ from pathlib import Path
 from ..assets.mirror import PHASES, build
 from ..bench import CATEGORIES, STANDARD_SEEDS, format_result, run_benchmark
 from ..leaderboard import build_index, format_table, write_entry
+from ..runner import play_run
 from ..assets.server import AssetServer
 from ..core import render
 from ..core.game import Game, IllegalAction
@@ -169,33 +170,29 @@ def cmd_bot(args) -> int:
     try:
         for i in range(args.runs):
             seed = args.seed + i
-            obs = game.reset(seed=seed)
-            bot.on_start(seed)
-            while not obs.get("done") and obs.get("actions") and game.steps < args.max_steps:
+
+            def each_step(obs, steps, _i=i):
                 if args.shots:
                     game.screenshot(
-                        Path(args.shots) / f"{i:02d}-{game.steps:03d}-{obs['screen']}.png"
+                        Path(args.shots) / f"{_i:02d}-{steps:03d}-{obs['screen']}.png"
                     )
-                obs = game.step(bot.choose(obs))
-                if args.watch:
+                if args.watch and steps:
                     game.session.page.wait_for_timeout(args.pause)
-            s = game.score() or {}
-            bot.on_end(obs, s)
+
+            r = play_run(game, bot, seed, max_steps=args.max_steps, on_step=each_step)
+
             if not args.no_stats:
-                record(bot=args.bot, seed=seed, state=obs, score=s, steps=game.steps,
-                       alive=game.last_alive,
+                record(bot=args.bot, seed=seed, state=r["final_state"],
+                       score=r["score_detail"], steps=r["steps"], alive=game.last_alive,
                        extra=bot.notes() if hasattr(bot, "notes") else None)
-            b = s.get("breakdown") or {}
-            badges = ((game.last_alive or {}).get("run") or {}).get("badges", 0)
-            # We print `points_no_time` because it is the only comparable one:
-            # the time bonus is worth ~1000 on a scale where everything else is
-            # in the tens, so `points` makes a disastrous run look fine.
+            # We print `score` (points without the time bonus) because it is the
+            # only comparable one: the time bonus is worth ~1000 on a scale where
+            # everything else is in the tens.
             print(
                 f"run {i + 1}/{args.runs}  seed {seed}  "
-                f"steps {game.steps:>3}  end {obs.get('screen'):<16} "
-                f"badges {badges}  score {s.get('points_no_time')}  "
-                f"(KO {b.get('enemiesKO', 0)}, faints {b.get('faints', 0)}, "
-                f"maps {b.get('mapsCleared', 0)})"
+                f"steps {r['steps']:>3}  end {r['ending']:<16} "
+                f"badges {r['badges']}  score {r['score']}  "
+                f"(KO {r['kos']}, faints {r['faints']}, maps {r['maps']})"
             )
         return 0
     finally:
@@ -251,6 +248,29 @@ def cmd_leaderboard(args) -> int:
     index = build_index(LEADERBOARD)
     print(format_table(index))
     print(f"\n  {len(index['entries'])} entries in {LEADERBOARD}/entries/")
+    return 0
+
+
+def cmd_schema(args) -> int:
+    """Prints what a bot receives, captured from a live run."""
+    from ..schema import as_markdown, capture, describe
+
+    server, game = _server_and_game(args)
+    try:
+        obs = capture(game)
+    finally:
+        game.close()
+        server.stop()
+
+    if args.json:
+        print(json.dumps(obs, indent=1))
+    elif args.markdown:
+        out = Path(__file__).resolve().parents[3] / "docs" / "STATE.md"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(as_markdown(obs), encoding="utf-8")
+        print(f"written to {out}")
+    else:
+        print(describe(obs))
     return 0
 
 
@@ -336,6 +356,11 @@ def main(argv: list[str] | None = None) -> int:
 
     s = sub.add_parser("leaderboard", help="rebuild and print the leaderboard table")
     s.set_defaults(func=cmd_leaderboard)
+
+    s = sub.add_parser("schema", help="what a bot receives: state, actions, node kinds")
+    s.add_argument("--json", action="store_true", help="print a real observation instead")
+    s.add_argument("--markdown", action="store_true", help="regenerate docs/STATE.md")
+    s.set_defaults(func=cmd_schema)
 
     s = sub.add_parser("stats", help="summary of the recorded runs")
     s.add_argument("-d", "--explain", action="store_true",

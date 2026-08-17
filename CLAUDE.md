@@ -22,6 +22,7 @@ uv run pokelike setup            # browser + offline copy (once)
 uv run pokelike play --seed 42   # interactive run
 uv run pokelike bot --runs 5     # the random bot
 uv run pokelike stats -d         # summary, with the columns explained
+uv run pokelike schema           # what a bot receives (regenerates docs/STATE.md with --markdown)
 uv run pytest                    # full suite, ~3 minutes
 uv run pytest -m "not slow"      # fast tests only, no browser
 

@@ -102,7 +102,8 @@ uv run pokelike setup
 ```
 
 **3. Write your bot** in `src/pokelike/bot/`, register it in `AVAILABLE`, and run
-the benchmark:
+the benchmark. If you are not sure what your bot gets to look at, run
+`uv run pokelike schema` or read [docs/STATE.md](../docs/STATE.md).
 
 ```bash
 uv run pokelike bench --bot yourbot \

@@ -197,6 +197,10 @@ calls, which is why this is a process that has to keep running.
 
 A bot is one thing only: given the state, it says **which action to take**.
 
+**What you get to look at:** [docs/STATE.md](docs/STATE.md), or run
+`uv run pokelike schema`. It is generated from a live observation, so it cannot
+describe a game that no longer exists.
+
 ```python
 # src/pokelike/bot/mine.py
 from .base import Bot

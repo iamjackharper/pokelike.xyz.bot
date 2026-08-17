@@ -26,6 +26,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from .runner import play_run
+
 # The official seed list. Fifty runs is enough to see past the luck without
 # taking all afternoon, and it is held well away from the seeds used elsewhere
 # in the project so nobody trains on the benchmark by accident.
@@ -86,24 +88,11 @@ def run_benchmark(
 
     bar = tqdm(seeds, desc=f"bench {bot_name}", unit="run", leave=True)
     for seed in bar:
-        obs = game.reset(seed=seed)
-        bot.on_start(seed)
-        while not obs.get("done") and obs.get("actions") and game.steps < max_steps:
-            obs = game.step(bot.choose(obs))
-        s = game.score() or {}
-        bot.on_end(obs, s)
-
-        b = s.get("breakdown") or {}
-        row = {
-            "seed": seed,
-            "steps": game.steps,
-            "score": s.get("points_no_time"),
-            "badges": ((game.last_alive or {}).get("run") or {}).get("badges", 0),
-            "maps": b.get("mapsCleared", 0),
-            "kos": b.get("enemiesKO", 0),
-            "faints": b.get("faints", 0),
-            "ending": obs.get("screen"),
-        }
+        full = play_run(game, bot, seed, max_steps=max_steps)
+        # The heavy fields (final state, full team) are for callers who want
+        # them; a result file keeps one compact row per run.
+        row = {k: full[k] for k in
+               ("seed", "steps", "score", "badges", "maps", "kos", "faints", "ending")}
         runs.append(row)
         done = [r["score"] for r in runs if r["score"] is not None]
         bar.set_postfix(score=row["score"],
