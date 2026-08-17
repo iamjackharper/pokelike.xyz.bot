@@ -42,7 +42,7 @@ def _train_cmd(v, episodes: int, reward: str, port: int, seed0: int) -> list[str
     cmd = [
         sys.executable, "-m", "experiments.sarsa_lambda.train",
         "--episodes", str(episodes), "--reward", reward, "--seed0", str(seed0),
-        "--port", str(port), "--out", f"ablation_{v.name}.json", "--quiet",
+        "--port", str(port), "--out", f"ablation_{v.name}.json",
     ]
     if v.groups is not None:
         cmd += ["--groups", ",".join(v.groups)]

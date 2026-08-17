@@ -128,3 +128,44 @@ while clearing a map is a long chain of decisions ending in a single payout that
 That is the thing to attack next, and it points at the algorithm rather than the
 hyperparameters: sparse delayed reward is what n-step methods (Chapter 7) and
 prioritised sweeping (8.4) are for.
+
+## Then it was given more, and it got worse
+
+That last paragraph turned out to be wrong, and the record is left standing
+rather than edited into something that looks smarter.
+
+Version 2 of the encoding fixed the fragmentation described above (563 states
+holding 686 pairs became 397 holding 940) and it trained for 400 episodes with
+50 planning steps, 465k updates. Evaluated greedily on 20 held-out seeds against
+random on the same seeds:
+
+```
+               mean score   wins
+dyna-q v2            -3.8    6/20   (2 draws, 12 losses)
+random                7.0
+```
+
+It **lost**. More episodes, a better-conditioned table, and it went backwards.
+
+The detailed log had already said why, before either evaluation:
+
+```
+    1 | starter-screen
+      | [0] Bulbasaur Lv5  [1] Charmander Lv5  [2] Squirtle Lv5
+      |    Q: slot0=6.3, slot1=6.2, slot2=6.3
+```
+
+Three values within a rounding error, because the encoding shows the agent three
+indistinguishable slots where a player sees a Grass starter, a Fire one and a
+Water one with different stats. **No number of episodes fixes that: the
+information never reaches the table.**
+
+So the diagnosis in the previous section — attack the algorithm — was the wrong
+call. The limit was the representation. [`sarsa_lambda/`](../sarsa_lambda/) is
+that hypothesis tested: same reward, same environment, same held-out protocol,
+81 linear features instead of a table. It won 15 of 25 with no losses, and now
+leads the leaderboard.
+
+The tabular version is kept because a Q-table is the clearest thing to read when
+you want to know what an agent believes, and because a negative result you can
+reproduce is worth more than one you quietly delete.

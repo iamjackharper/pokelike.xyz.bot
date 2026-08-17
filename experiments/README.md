@@ -41,7 +41,17 @@ Run everything from the repo root, as modules:
 uv run python -m experiments.dyna_q.train --episodes 200 --reward progress
 uv run python -m experiments.dyna_q.evaluate --episodes 30
 uv run python -m experiments.llm.compare --strategies survivor,explorer --seeds 5
+
+uv run python -m experiments.sarsa_lambda.train --episodes 300
+uv run python -m experiments.sarsa_lambda.evaluate --episodes 25 --seed0 40000
+uv run python -m experiments.sarsa_lambda.ablation --list           # the questions
+uv run python -m experiments.sarsa_lambda.ablation --workers 4      # answer them at once
 ```
+
+The last one is the only command here that is not one run: it trains several
+feature sets **at the same time**, one process and one browser each. A single run
+is about 100 minutes, which is the price at which you test two ideas and then
+start blaming the step size instead.
 
 Whatever the experiment, the yardstick is the same: **badges**, measured by the
 standard benchmark. The training reward is the signal you learn from; badges and
@@ -49,16 +59,38 @@ the game's score are the independent measurement of whether it worked.
 
 ## The problem, stated as an MDP
 
+An **MDP**, a Markov Decision Process, is the standard way of stating a problem
+so that Reinforcement Learning can be applied to it: a set of states, the actions
+available in each, and a reward. Writing the game down in those terms is exactly
+what `env/` contains.
+
 **State.** The full observation is a dict with a team, a bag and a map graph.
 Far too large for a table, so `env/encoding.py` compresses it to a tuple:
-screen, team size, worst HP bucket, map index, depth on the map, badges, and the
-set of actions on offer. That last field matters more than it looks — without it
-one table cell would mix turns offering completely different options.
+screen, team size, worst HP bucket, map index, depth on the map, badges.
+
+Version 1 also keyed on the set of actions on offer, on the theory that one cell
+should not mix turns offering different options. The numbers said the theory was
+wrong: 90 episodes gave 563 states holding 686 state-action pairs, about 1.2
+actions per state, so the agent almost never got to compare two moves in the same
+situation — the one thing a Q-table is for. **Version 2 dropped it**, which
+collapsed those to 244 states and let `Q(s, "node:catch")` accumulate across every
+map turn that offered a catch.
 
 **Actions.** Between 2 and 7 per turn, and they change every turn. Crucially
-they are *not* stable by position: index 2 is a battle now and a catch next
-turn. So actions are keyed by what they are (`node:catch`, `btn:skip`), which is
-what makes `Q(s, a)` accumulate meaningfully.
+they are *not* stable by position: index 2 is a battle now and a catch next turn.
+
+The tabular agent handles that by keying actions on what they are (`node:catch`,
+`btn:skip`), which is what makes `Q(s, a)` accumulate meaningfully — and is also
+one of its ceilings, since all five EQUIP buttons collapse into one `btn:equip`
+and it cannot choose *who* to equip. `sarsa_lambda/` takes the other road: it
+drives by index and describes each action with its own feature vector, so five
+buttons are five vectors.
+
+There is one more action that is not in that list at all. **Team order**: slot 0
+leads the next battle, so the order is a decision, but reordering does not consume
+the turn. It reaches a bot through `Bot.rearrange()` rather than through
+`state["actions"]`, because a full team would otherwise add fifteen swap pairs
+beside the real moves at every map node.
 
 **Reward.** Selectable, from a registry in `env/rewards.py`, because here the
 choice of reward matters more than the choice of algorithm and that claim is

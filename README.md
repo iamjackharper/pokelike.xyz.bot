@@ -331,6 +331,25 @@ by [experiments/dyna_q](experiments/dyna_q/). It doubles as the worked example o
 a leaderboard submission looks like, which is why it carries its own copy of the
 state encoding instead of importing the training code.
 
+It also **lost**, and that is left standing on the leaderboard rather than
+quietly retried: −3.8 mean score against random's 7.0 on held-out seeds, winning
+6 of 20. Its own decision log said why before the evaluation did — on the starter
+screen it learned Q values of 6.3 / 6.2 / 6.3, three slots its encoding cannot
+tell apart.
+
+**`sarsa`** ([bot/sarsa.py](src/pokelike/bot/sarsa.py)) is the answer to that, and
+currently leads the leaderboard: 1.3 badges and 59.3 mean score over the 50
+standard seeds, against random's 0.68 and −3.5. Same algorithm family, same
+budget; what changed is that 81 hand-built linear features let it see what is on
+the card. Trained by
+[experiments/sarsa_lambda](experiments/sarsa_lambda/) — Sutton & Barto chapter 10
+for the update, 12.7 for the traces:
+
+    q̂(s, a, w) = wᵀ x(s, a)
+
+Because the model is linear you can read the policy instead of only running it:
+training prints the weights it leaned on hardest, by name.
+
 ---
 
 ## The score

@@ -87,6 +87,14 @@ change what every past submission means.
 [`bot/dyna_q.py`](../src/pokelike/bot/dyna_q.py) does exactly this and is meant
 to be read as the worked example.
 
+There is a mechanical reason on top of the principle: an entry archives **one
+file**, the one holding the bot's class, and hashes it for the entry id. Split a
+bot across two modules and the archive keeps an unrunnable half while the hash
+stops identifying what actually ran. [`bot/sarsa.py`](../src/pokelike/bot/sarsa.py)
+is the larger example — it carries all 81 of its feature definitions inline for
+exactly that reason, and a test pins that frozen copy to the training code so the
+two cannot drift apart unnoticed.
+
 ## How to submit
 
 **1. Fork.** Press *Fork* at the top right of the GitHub page. You now have your

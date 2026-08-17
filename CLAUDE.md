@@ -27,8 +27,12 @@ uv run pokelike bot -d --runs 1  # log every decision, for any bot
 uv run pytest                    # full suite, ~3 minutes
 uv run pytest -m "not slow"      # fast tests only, no browser
 
-uv run python -m experiments.dyna_q.train --episodes 90   # train an RL policy
-uv run pokelike bench --bot random --runs 10           # the standard benchmark
+uv run pokelike bench --bot random --runs 10   # the standard benchmark, 50 seeds
+
+uv run python -m experiments.sarsa_lambda.train --episodes 300      # train a policy
+uv run python -m experiments.sarsa_lambda.evaluate --seed0 40000    # vs random, paired
+uv run python -m experiments.sarsa_lambda.ablation --workers 4      # feature variants,
+uv run python -m experiments.sarsa_lambda.ablation --list           # trained in parallel
 ```
 
 ## Architecture
@@ -45,7 +49,8 @@ src/pokelike/
 │   ├── base.py            abstract Bot: only choose() is required
 │   ├── random_bot.py      the baseline
 │   ├── llm.py             self-contained: prompts + tools + HTTP
-│   └── dyna_q.py          a trained policy; the worked example of a submission
+│   ├── dyna_q.py          a trained policy; the worked example of a submission
+│   └── sarsa.py           linear SARSA(λ); currently top of the leaderboard
 ├── assets/
 │   ├── mirror.py          builds site/ in five phases
 │   └── server.py          serves site/ from disk
