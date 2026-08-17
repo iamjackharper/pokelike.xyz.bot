@@ -5,7 +5,7 @@
 Same algorithm, same hyperparameters, same training seeds, same evaluation
 seeds. The only thing that varies is the reward function. If reward design
 matters more than algorithm choice — which is the usual claim, and the reason
-`mdp/rewards.py` is a registry rather than one function — it should show up here
+`env/rewards.py` is a registry rather than one function — it should show up here
 as three visibly different players.
 
 The hypotheses, written down before running so they can be wrong:
@@ -31,7 +31,7 @@ import statistics
 import time
 from pathlib import Path
 
-from experiments.mdp import TrainingEnv
+from experiments.env import TrainingEnv
 
 from .agent import DynaQ
 

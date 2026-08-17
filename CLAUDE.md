@@ -58,7 +58,7 @@ src/pokelike/
     ├── cli/main.py        a human, in a terminal
     └── api/server.py      a program, over HTTP
 experiments/             attempts at a better bot, outside the package
-├── mdp/                   the game as an MDP: encoding, rewards, env adapter
+├── env/                   the game as an RL problem: environment, rewards, encoding
 ├── dyna_q/                tabular RL on that MDP: agent, train, evaluate
 └── llm/                   prompt strategies compared on identical seeds
 leaderboard/             submissions, their weights, and how to submit
@@ -175,7 +175,7 @@ All of these were hit for real. Worth rereading before changing anything:
   path; and `winBonus` needs the whole League beaten. What is left is
   `5·KO − 10·faints`, and badges do not appear at all — which is how a run with
   three badges scores −5. Rank Story runs by **badges**, and see
-  `experiments/mdp/rewards.py` before designing any objective on top of it.
+  `experiments/env/rewards.py` before designing any objective on top of it.
 
 ## Scoring
 
@@ -229,7 +229,7 @@ The LLM bot is far slower (one or more HTTP calls per decision) and burns roughl
 are not obvious and matter:
 
 - **A submission must be self-contained.** A trained policy freezes its state
-  encoding inside the bot file rather than importing `experiments/mdp/encoding.py`,
+  encoding inside the bot file rather than importing `experiments/env/encoding.py`,
   so improving the training code cannot silently change what past submissions
   mean. `bot/dyna_q.py` is the worked example.
 - **The benchmark records the game bundle's sha256.** Scores from before and

@@ -180,7 +180,7 @@ def describe(obs: dict[str, Any]) -> str:
     add("")
     add("  Also absent on purpose: any reward. Reward is a training signal, and it")
     add("  belongs to whatever is learning, not to the state. See")
-    add("  experiments/mdp/rewards.py.")
+    add("  experiments/env/rewards.py.")
     return "\n".join(out)
 
 

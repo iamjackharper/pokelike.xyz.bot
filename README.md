@@ -431,7 +431,7 @@ uv run python -m experiments.dyna_q.train --episodes 200 --reward progress
 uv run python -m experiments.llm.compare --strategies survivor,explorer --seeds 5
 ```
 
-`experiments/mdp/` states the game as an MDP: the encoding, the environment
+`experiments/env/` states the game as an MDP: the encoding, the environment
 adapter, and five selectable reward functions. That last one matters
 more than it sounds, because **the engine's score is a Battle Tower formula**:
 `mapsCleared` only increments on the endless path and `winBonus` needs the whole

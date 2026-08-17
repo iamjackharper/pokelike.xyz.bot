@@ -13,7 +13,7 @@ WHY THE FEATURE CODE IS COPIED IN HERE
 Same reason as `dyna_q.py`, and it matters more here. A weight vector means
 nothing without the exact function that produced the vectors it multiplies:
 `w[43]` is a number, and only `feature_names()` says it is `mon_new_type`. If
-this file imported `experiments/sarsa_lambda/features.py`, then inserting one
+this file imported `experiments/sarsa_lambda/features/`, then inserting one
 feature there would shift every index and silently reinterpret every policy ever
 submitted, including ones already on the leaderboard.
 
@@ -52,7 +52,7 @@ REPO = Path(__file__).resolve().parents[3]
 # Point 3 is what lets anyone reproduce a leaderboard result from a fresh clone,
 # without training anything first.
 WEIGHT_CANDIDATES = (
-    REPO / "experiments" / "sarsa_lambda" / "models" / "sarsa_v1.json",
+    REPO / "experiments" / "sarsa_lambda" / "output" / "models" / "sarsa_v1.json",
 )
 SUBMITTED = REPO / "leaderboard" / "entries"
 

@@ -39,7 +39,7 @@ So the problem was never the algorithm. It was that the agent could not see.
 
 **It can see.** Features carry what is on screen — a candidate's types, whether
 they are new to the team, its bulk against the other two on offer, where a map
-node leads. `features.py` parses the Pokemon card text the tabular agent threw
+node leads. `features/groups.py` parses the Pokemon card text the tabular agent threw
 away.
 
 **It generalises.** Weights are shared, so "catch something that adds a type I
@@ -106,6 +106,50 @@ return, not the choice. The features that actually decide anything are further
 down: `node:trainer*small_team`, `mon_new_type`, `mon_best_stats`. That is the
 next thing worth working on, and it is not a hyperparameter.
 
+## Layout
+
+```
+sarsa_lambda/
+├── agent.py          the algorithm: q̂ = wᵀx, traces, the update
+├── train.py          the three things you run
+├── evaluate.py
+├── ablation.py
+├── features/         THE REPRESENTATION — the part worth arguing about
+│   ├── groups.py       the 81 features, in named groups
+│   └── variants.py     which groups a run carries, and what it is asking
+└── output/           weights, histories, ablation results (gitignored)
+```
+
+`features/` is its own package because of what Dyna-Q taught: the update rule was
+never the problem, the vector was. Keeping it separate makes it possible to
+switch a group off and leave everything else meaning the same thing.
+
+## Which features actually decide anything
+
+```bash
+uv run python -m experiments.sarsa_lambda.ablation --list          # the questions
+uv run python -m experiments.sarsa_lambda.ablation --episodes 300 --workers 4
+```
+
+Every variant is a question with an answer you can be wrong about, written down
+in `features/variants.py` **before** the run, so the result cannot be
+reinterpreted afterwards into whatever happened.
+
+One training run is about 100 minutes. At that price you test two ideas and
+stop, which is how a plateau gets blamed on the step size. So variants train at
+the same time, one process and one browser each.
+
+The parallelism is deliberately **between** runs and never inside one. SARSA is
+on-policy with eligibility traces: splitting episode collection across several
+environments would draw updates from a behaviour distribution the traces do not
+describe, which is a different algorithm wearing the same name. Whole
+independent runs sidestep that, and comparing variants is exactly the case where
+that is all you need.
+
+A variant that drops features and does **not** get worse is the interesting
+result, not a disappointing one: it means those features were never doing the
+work their weights suggested.
+
 ## Running it
 
 ```bash
@@ -119,7 +163,7 @@ uv run python -m experiments.sarsa_lambda.evaluate --episodes 25 --seed0 40000
 | `--gamma` | discount | 0.98 |
 | `--lam` | trace decay λ | 0.9 |
 | `--epsilon` | initial exploration, annealed to 0.02 | 0.3 |
-| `--reward` | which reward (see `mdp/rewards.py`) | progress |
+| `--reward` | which reward (see `env/rewards.py`) | progress |
 
 ## You can read what it learned
 

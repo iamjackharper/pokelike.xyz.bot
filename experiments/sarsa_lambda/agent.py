@@ -56,7 +56,7 @@ import random
 from pathlib import Path
 from typing import Any
 
-from .features import N_FEATURES, feature_names, features
+from .features import ALL_GROUPS, FeatureSet
 
 ENCODING_VERSION = 1
 
@@ -71,7 +71,11 @@ class SarsaLambda:
         epsilon_min: float = 0.02,
         epsilon_decay: float = 0.99,
         seed: int = 0,
+        featureset: FeatureSet | None = None,
     ) -> None:
+        # Which vector this agent speaks. Defaults to the full set, so nothing
+        # that existed before this parameter changes behaviour.
+        self.fs = featureset or FeatureSet()
         self.alpha = alpha
         self.gamma = gamma
         self.lam = lam
@@ -80,8 +84,8 @@ class SarsaLambda:
         self.epsilon_decay = epsilon_decay
         self.rng = random.Random(seed)
 
-        self.w = [0.0] * N_FEATURES
-        self.z = [0.0] * N_FEATURES
+        self.w = [0.0] * self.fs.n
+        self.z = [0.0] * self.fs.n
         self.updates = 0
 
     # ------------------------------------------------------------------ value
@@ -90,7 +94,7 @@ class SarsaLambda:
         return sum(self.w[i] * v for i, v in x.items())
 
     def all_features(self, state: dict[str, Any]) -> list[dict[int, float]]:
-        return [features(state, a) for a in state["actions"]]
+        return [self.fs.of(state, a) for a in state["actions"]]
 
     # ----------------------------------------------------------------- policy
 
@@ -105,7 +109,7 @@ class SarsaLambda:
     # --------------------------------------------------------------- learning
 
     def start_episode(self) -> None:
-        self.z = [0.0] * N_FEATURES
+        self.z = [0.0] * self.fs.n
 
     def update(
         self,
@@ -118,7 +122,7 @@ class SarsaLambda:
 
         # z <- γλz + x(S,A), accumulating traces.
         decay = self.gamma * self.lam
-        for i in range(N_FEATURES):
+        for i in range(self.fs.n):
             self.z[i] *= decay
         for i, v in x.items():
             self.z[i] += v
@@ -129,7 +133,7 @@ class SarsaLambda:
         # Normalising by the number of active features keeps the effective step
         # size stable as features are added or removed.
         step = self.alpha / max(1, len(x))
-        for i in range(N_FEATURES):
+        for i in range(self.fs.n):
             if self.z[i]:
                 self.w[i] += step * delta * self.z[i]
         self.updates += 1
@@ -144,6 +148,10 @@ class SarsaLambda:
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(json.dumps({
             "encoding_version": ENCODING_VERSION,
+            # The groups travel WITH the weights. Weights are stored by name, so
+            # loading them into a different set would zero-fill what is missing
+            # and hand back a policy nobody ever trained.
+            "feature_groups": self.fs.groups,
             "algorithm": "semi-gradient SARSA(lambda), linear (S&B ch. 10 and 12.7)",
             "hyperparameters": {
                 "alpha": self.alpha, "gamma": self.gamma, "lambda": self.lam,
@@ -151,7 +159,7 @@ class SarsaLambda:
             },
             "updates": self.updates,
             # Named so the learned policy can be read rather than only run.
-            "weights": dict(zip(feature_names(), [round(v, 4) for v in self.w])),
+            "weights": dict(zip(self.fs.names, [round(v, 4) for v in self.w])),
         }, indent=1), encoding="utf-8")
         return p
 
@@ -164,19 +172,27 @@ class SarsaLambda:
                 f"this code is v{ENCODING_VERSION}: the vector no longer means the "
                 f"same thing, so retrain."
             )
+        kwargs.setdefault("featureset", FeatureSet(data.get("feature_groups")))
         agent = cls(**kwargs)
-        names = feature_names()
         stored = data["weights"]
-        agent.w = [float(stored.get(n, 0.0)) for n in names]
+        missing = [n for n in agent.fs.names if n not in stored]
+        if missing:
+            raise ValueError(
+                f"the saved weights are missing {len(missing)} of this feature set's "
+                f"names (first: {missing[:3]}). Zero-filling them would invent a "
+                f"policy that was never trained, so this refuses instead."
+            )
+        agent.w = [float(stored[n]) for n in agent.fs.names]
         agent.updates = data.get("updates", 0)
         return agent
 
     # ------------------------------------------------------------------ stats
 
     def summary(self) -> dict[str, Any]:
-        live = [(n, v) for n, v in zip(feature_names(), self.w) if abs(v) > 1e-6]
+        live = [(n, v) for n, v in zip(self.fs.names, self.w) if abs(v) > 1e-6]
         return {
-            "features": N_FEATURES,
+            "features": self.fs.n,
+            "groups": "+".join(self.fs.groups),
             "nonzero_weights": len(live),
             "updates": self.updates,
             "epsilon": round(self.epsilon, 4),
@@ -187,6 +203,6 @@ class SarsaLambda:
 
         The point of a linear model: you can read what it learned.
         """
-        pairs = [(name, w) for name, w in zip(feature_names(), self.w)]
+        pairs = [(name, w) for name, w in zip(self.fs.names, self.w)]
         pairs.sort(key=lambda p: -abs(p[1]))
         return [(n_, round(w, 3)) for n_, w in pairs[:n]]

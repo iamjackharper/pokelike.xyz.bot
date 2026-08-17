@@ -60,7 +60,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-from ..mdp.encoding import ENCODING_VERSION  # single source of truth
+from ..env.encoding import ENCODING_VERSION  # single source of truth
 
 
 class DynaQ:

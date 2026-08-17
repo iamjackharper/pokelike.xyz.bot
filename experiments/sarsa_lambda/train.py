@@ -17,17 +17,18 @@ import statistics
 import time
 from pathlib import Path
 
-from experiments.mdp.rewards import get as get_reward
+from experiments.env.rewards import get as get_reward
 from pokelike.assets import AssetServer
 from pokelike.core.game import Game
 
 from .agent import SarsaLambda
-from .features import features
+from .features import FeatureSet
 
 ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).parent
-MODELS = HERE / "models"
-RUNS = HERE / "runs"
+OUT = HERE / "output"
+MODELS = OUT / "models"
+RUNS = OUT / "runs"
 
 
 def train(
@@ -41,11 +42,15 @@ def train(
     max_steps: int = 300,
     port: int = 8710,
     out: str = "sarsa.json",
+    groups: list[str] | None = None,
+    quiet: bool = False,
 ) -> dict:
     from tqdm import tqdm
 
     reward_fn = get_reward(reward)
-    agent = SarsaLambda(alpha=alpha, gamma=gamma, lam=lam, epsilon=epsilon, seed=seed0)
+    fs = FeatureSet(groups)
+    agent = SarsaLambda(alpha=alpha, gamma=gamma, lam=lam, epsilon=epsilon, seed=seed0,
+                        featureset=fs)
     history: list[dict] = []
     started = time.monotonic()
 
@@ -54,14 +59,15 @@ def train(
     game = Game(url=server.url)
     game.open()
     try:
-        bar = tqdm(range(episodes), desc="sarsa(λ)", unit="ep")
+        bar = tqdm(range(episodes), desc=(out.replace(".json", "") or "sarsa(λ)"),
+                   unit="ep", disable=quiet)
         for ep in bar:
             seed = seed0 + ep
             obs = game.reset(seed=seed)
             agent.start_episode()
 
             action = agent.choose(obs)
-            x = features(obs, obs["actions"][action])
+            x = fs.of(obs, obs["actions"][action])
             total = 0.0
 
             while True:
@@ -80,7 +86,7 @@ def train(
                     break
 
                 action = agent.choose(obs)
-                x_next = features(obs, obs["actions"][action])
+                x_next = fs.of(obs, obs["actions"][action])
                 agent.update(x, r, x_next)
                 x = x_next
 
@@ -133,9 +139,14 @@ def main() -> int:
     p.add_argument("--epsilon", type=float, default=0.3)
     p.add_argument("--port", type=int, default=8710)
     p.add_argument("--out", default="sarsa.json")
+    p.add_argument("--groups", default=None,
+                   help="feature groups to keep, comma separated (default: all). "
+                        "See features.GROUPS — this is what an ablation varies.")
+    p.add_argument("--quiet", action="store_true", help="no progress bar (parallel runs)")
     a = p.parse_args()
     train(episodes=a.episodes, seed0=a.seed0, reward=a.reward, alpha=a.alpha,
-          gamma=a.gamma, lam=a.lam, epsilon=a.epsilon, port=a.port, out=a.out)
+          gamma=a.gamma, lam=a.lam, epsilon=a.epsilon, port=a.port, out=a.out,
+          groups=a.groups.split(",") if a.groups else None, quiet=a.quiet)
     return 0
 
 

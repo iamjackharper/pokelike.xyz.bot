@@ -9,7 +9,7 @@ environment (mirroring, browser, game rules); this is the research on top of it.
 
 ```
 experiments/
-├── mdp/                 the game stated as an MDP — what RL needs
+├── env/                 the game turned into an RL problem
 │   ├── encoding.py        observation -> state key, action -> stable key
 │   ├── rewards.py         five reward functions, selectable by name
 │   └── environment.py     TrainingEnv: reset/step in those terms
@@ -21,13 +21,17 @@ experiments/
 │   ├── models/            saved tables (gitignored)
 │   └── runs/              histories (gitignored)
 ├── sarsa_lambda/        linear function approximation (S&B 10 and 12.7)
-│   ├── features.py        x(s,a): what the tabular encoding threw away
-│   ├── agent.py train.py evaluate.py
+│   ├── agent.py           q̂ = wᵀx, eligibility traces, the update
+│   ├── train.py evaluate.py ablation.py
+│   ├── features/          x(s,a): what the tabular encoding threw away
+│   │   ├── groups.py        the 81 features, in named groups
+│   │   └── variants.py      which groups a run carries, and what it asks
+│   └── output/            weights, histories, results (gitignored)
 └── llm/                 prompt engineering, measured
     └── compare.py         strategies played head to head on identical seeds
 ```
 
-`mdp/` used to be called `common/`, which was a lie: the LLM experiment reads the
+`env/` was `common/` and then `mdp/`. `common/` was a lie: the LLM experiment reads the
 raw observation and imports none of it. What lives there is the Reinforcement
 Learning formulation of the game, and nothing else needs it.
 
@@ -46,7 +50,7 @@ the game's score are the independent measurement of whether it worked.
 ## The problem, stated as an MDP
 
 **State.** The full observation is a dict with a team, a bag and a map graph.
-Far too large for a table, so `mdp/encoding.py` compresses it to a tuple:
+Far too large for a table, so `env/encoding.py` compresses it to a tuple:
 screen, team size, worst HP bucket, map index, depth on the map, badges, and the
 set of actions on offer. That last field matters more than it looks — without it
 one table cell would mix turns offering completely different options.
@@ -56,7 +60,7 @@ they are *not* stable by position: index 2 is a battle now and a catch next
 turn. So actions are keyed by what they are (`node:catch`, `btn:skip`), which is
 what makes `Q(s, a)` accumulate meaningfully.
 
-**Reward.** Selectable, from a registry in `mdp/rewards.py`, because here the
+**Reward.** Selectable, from a registry in `env/rewards.py`, because here the
 choice of reward matters more than the choice of algorithm and that claim is
 worth testing rather than asserting.
 
@@ -118,7 +122,7 @@ benchmark seeds, dead in 17 moves.
 ## Adding another experiment
 
 Copy the shape of `dyna_q/` for an algorithm: a folder with `agent.py`,
-`train.py`, `evaluate.py`, `models/`, `runs/`. Reuse `mdp/` so everything learns on the same
+`train.py`, `evaluate.py`, `models/`, `runs/`. Reuse `env/` so everything learns on the same
 encoding and the same rewards, otherwise comparing them means nothing.
 
 For anything that is not training — a new prompt family, a hand-written
@@ -149,8 +153,8 @@ Same environment, same reward, same protocol Dyna-Q lost under. See
 - **n-step SARSA** (Chapter 7) — better suited to delayed rewards than one-step
   backups.
 - **Linear function approximation** (Chapter 9) — the honest fix for the state
-  space, instead of hand-tuning the buckets in `mdp/encoding.py`.
+  space, instead of hand-tuning the buckets in `env/encoding.py`.
 
-If you change `mdp/encoding.py`, bump `ENCODING_VERSION` there. Saved tables
+If you change `env/encoding.py`, bump `ENCODING_VERSION` there. Saved tables
 are keyed by encoded states, so an old table under a new encoding is not just
 stale, it is meaningless — and loading it silently would be worse than an error.

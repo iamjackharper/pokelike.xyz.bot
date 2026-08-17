@@ -137,7 +137,7 @@ WHAT IS NOT IN HERE
 
   Also absent on purpose: any reward. Reward is a training signal, and it
   belongs to whatever is learning, not to the state. See
-  experiments/mdp/rewards.py.
+  experiments/env/rewards.py.
 ```
 
 ## A real observation

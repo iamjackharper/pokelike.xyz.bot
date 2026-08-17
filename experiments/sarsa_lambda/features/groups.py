@@ -100,40 +100,77 @@ def _leads_to(state: dict[str, Any], node_id: str) -> list[str]:
     return [by_id[t]["kind"] for f, t in m.get("edges", []) if f == node_id and t in by_id]
 
 
-# The names are the vector's index order. Keeping them explicit means a trained
-# weight vector can be read and argued with, which is most of the point of a
-# linear model.
-def feature_names() -> list[str]:
-    names = [
-        "bias", "team_size", "min_hp", "mean_hp", "map_index", "depth",
-        "badges", "any_fainted", "n_actions",
-    ]
-    names += [f"node:{k}" for k in NODE_KINDS]
-    names += [f"node:{k}*deep" for k in NODE_KINDS]
-    names += [f"node:{k}*hurt" for k in NODE_KINDS]
-    names += [f"node:{k}*small_team" for k in NODE_KINDS]
-    names += ["leads_to_heal", "leads_to_catch", "leads_to_boss", "leads_dead_end"]
-    names += [f"screen:{s}" for s in SCREENS]
-    names += [
-        "mon_new_type", "mon_level_rel", "mon_power", "mon_bulk", "mon_atk",
-        "mon_shiny", "mon_best_stats",
-        "equip_on_strongest", "equip_on_weakest", "swap_out_weakest",
-        "is_skip", "is_cancel", "is_bag",
-    ]
-    return names
+# The vector, split into named groups so a variant can switch one off and the
+# rest keep their meaning. GROUP ORDER IS THE INDEX ORDER and must not be
+# reshuffled: a weight vector is a plain list, and `w[43]` means `mon_new_type`
+# only because this list says so.
+#
+# The groups exist because of what the first trained policy turned out to look
+# like. Its heaviest weights were all in `context` — features that depend on the
+# state but not on the action, so they shift every option by the same amount and
+# CANCEL in the argmax. They fit the level of the return, not the choice. That is
+# a hypothesis you can only test by taking them away, which is what this is for.
+GROUPS: dict[str, list[str]] = {
+    # State only. Cannot discriminate between actions, by construction.
+    "context": ["bias", "team_size", "min_hp", "mean_hp", "map_index", "depth",
+                "badges", "any_fainted", "n_actions"],
+    # Which kind of node this move leads to.
+    "node": [f"node:{k}" for k in NODE_KINDS],
+    # The same, crossed with the situation: 36 features earning their keep or not.
+    "node_deep": [f"node:{k}*deep" for k in NODE_KINDS],
+    "node_hurt": [f"node:{k}*hurt" for k in NODE_KINDS],
+    "node_team": [f"node:{k}*small_team" for k in NODE_KINDS],
+    # One step of lookahead past the node.
+    "lookahead": ["leads_to_heal", "leads_to_catch", "leads_to_boss", "leads_dead_end"],
+    # Which screen the choice is on. State only as well.
+    "screen": [f"screen:{s}" for s in SCREENS],
+    # What is actually on the card: the part the tabular agent could not see.
+    "mon": ["mon_new_type", "mon_level_rel", "mon_power", "mon_bulk", "mon_atk",
+            "mon_shiny", "mon_best_stats"],
+    # Which team member a slot-shaped screen is pointing at.
+    "slot": ["equip_on_strongest", "equip_on_weakest", "swap_out_weakest"],
+    "button": ["is_skip", "is_cancel", "is_bag"],
+}
+
+ALL_GROUPS = list(GROUPS)
+
+
+def feature_names(groups: list[str] | None = None) -> list[str]:
+    """The vector's index order, named.
+
+    Explicit names are most of the point of a linear model: a trained weight
+    vector can be read and argued with. With no argument this is the full set,
+    which must stay byte-identical to what shipped — `bot/sarsa.py` freezes a
+    copy of it, and a test holds the two side by side.
+    """
+    for g in (groups or []):
+        if g not in GROUPS:
+            raise KeyError(f"unknown feature group '{g}' — have: {', '.join(ALL_GROUPS)}")
+    chosen = ALL_GROUPS if groups is None else [g for g in ALL_GROUPS if g in groups]
+    return [n for g in chosen for n in GROUPS[g]]
 
 
 N_FEATURES = len(feature_names())
 
 
-def features(state: dict[str, Any], action: dict[str, Any]) -> dict[int, float]:
-    """Sparse x(s, a): index -> value. Only non-zero entries."""
-    names = _NAME_INDEX
+def features(state: dict[str, Any], action: dict[str, Any],
+             index: dict[str, int] | None = None) -> dict[int, float]:
+    """Sparse x(s, a): index -> value. Only non-zero entries.
+
+    `index` is a name -> position map, so a variant with some groups switched off
+    computes the same quantities and simply drops the ones it does not carry.
+    The alternative — a separate function per variant — is how two feature sets
+    silently stop meaning the same thing.
+    """
+    names = _NAME_INDEX if index is None else index
     x: dict[int, float] = {}
 
     def put(name: str, value: float = 1.0) -> None:
-        if value:
-            x[names[name]] = value
+        # A name the variant left out is skipped, not an error: that is what
+        # switching a group off means.
+        i = names.get(name)
+        if value and i is not None:
+            x[i] = value
 
     run = state.get("run") or {}
     team = state.get("team") or []
@@ -213,3 +250,26 @@ def features(state: dict[str, Any], action: dict[str, Any]) -> dict[int, float]:
 
 
 _NAME_INDEX = {n: i for i, n in enumerate(feature_names())}
+
+
+class FeatureSet:
+    """One variant of the vector: which groups are in, and their index order.
+
+    Carrying the group list around with the weights is what keeps an ablation
+    honest. Weights are saved by NAME, so loading them into a different set would
+    otherwise zero-fill the missing ones and quietly produce a policy nobody
+    trained.
+    """
+
+    def __init__(self, groups: list[str] | None = None) -> None:
+        self.groups = list(ALL_GROUPS if groups is None else
+                           [g for g in ALL_GROUPS if g in groups])
+        self.names = feature_names(self.groups)
+        self.index = {n: i for i, n in enumerate(self.names)}
+        self.n = len(self.names)
+
+    def of(self, state: dict[str, Any], action: dict[str, Any]) -> dict[int, float]:
+        return features(state, action, self.index)
+
+    def __repr__(self) -> str:
+        return f"FeatureSet({self.n} features, groups={'+'.join(self.groups)})"

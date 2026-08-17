@@ -11,3 +11,4 @@ stats/
 
 experiments/*/models/
 experiments/*/runs/
+experiments/*/output/

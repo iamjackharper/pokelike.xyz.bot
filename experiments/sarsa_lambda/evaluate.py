@@ -29,8 +29,9 @@ from .agent import SarsaLambda
 
 ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).parent
-MODELS = HERE / "models"
-RUNS = HERE / "runs"
+OUT = HERE / "output"
+MODELS = OUT / "models"
+RUNS = OUT / "runs"
 
 
 def _outcome(game: Game, obs: dict, seed: int) -> dict:
