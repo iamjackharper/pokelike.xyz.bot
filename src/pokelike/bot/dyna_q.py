@@ -5,7 +5,7 @@
 
 This file is the EXAMPLE OF WHAT A SUBMISSION LOOKS LIKE, and it is deliberately
 self-contained: the state and action encoding is copied in here rather than
-imported from `experiments/`.
+imported from `experiments/mdp/`.
 
 That is not duplication by accident. A policy is only meaningful under the exact
 encoding it was trained with. If this file imported the training code, improving

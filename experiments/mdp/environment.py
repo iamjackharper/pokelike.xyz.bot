@@ -22,7 +22,7 @@ from typing import Any
 from pokelike.assets import AssetServer
 from pokelike.core.game import Game
 
-from .features import action_key, state_key
+from .encoding import action_key, state_key
 from .rewards import get as get_reward
 
 SITE = Path(__file__).resolve().parents[2] / "site"

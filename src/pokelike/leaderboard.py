@@ -227,7 +227,7 @@ def build_index(root: Path) -> dict[str, Any]:
     # counter in Story mode; the engine's score formula was written for the
     # Battle Tower and two of its terms (mapsCleared, winBonus) never fire here,
     # so it rewards fighting rather than getting further. See
-    # experiments/common/rewards.py for the full story.
+    # experiments/mdp/rewards.py for the full story.
     rows.sort(key=lambda r: (
         r["badges_mean"] is None, -(r["badges_mean"] or 0), -(r["score_mean"] or 0)
     ))

@@ -87,7 +87,7 @@ the bug is in the encoding or the reward, not in the hyperparameters.
 to 50 is nearly free in wall clock. Diminishing returns come from the model
 being wrong (see departure 2), not from cost.
 
-**The encoding matters more than the hyperparameters.** `common/features.py`
+**The encoding matters more than the hyperparameters.** `mdp/encoding.py`
 decides what the agent can even distinguish. If two situations that need
 different moves collapse into the same key, no amount of `alpha` will save it.
 

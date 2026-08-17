@@ -18,7 +18,7 @@ import random
 import statistics
 from pathlib import Path
 
-from experiments.common.environment import TrainingEnv
+from experiments.mdp.environment import TrainingEnv
 
 from .agent import DynaQ
 
