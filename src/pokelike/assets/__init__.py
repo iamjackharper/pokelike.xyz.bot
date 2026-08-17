@@ -1,5 +1,5 @@
-"""Copia locale del gioco e server statico che la espone."""
+"""The local copy of the game and the static server that exposes it."""
 
-from .server import ServerAsset
+from .server import AssetServer
 
-__all__ = ["ServerAsset"]
+__all__ = ["AssetServer"]

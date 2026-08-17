@@ -1,13 +1,14 @@
-"""Avvio e controllo del browser headless che fa da runtime al gioco.
+"""Starting and driving the headless browser that runs the game.
 
-Il gioco è JavaScript e ha bisogno di un ambiente browser (`document`,
-`localStorage`, canvas SVG). Headless significa che quell'ambiente esiste per
-intero ma non viene disegnato: nessuna finestra, nessun pixel. Non stiamo
-"guardando lo schermo", stiamo parlando con gli oggetti in memoria.
+The game is JavaScript and needs a browser environment (`document`,
+`localStorage`, SVG). Headless means that environment exists in full but is
+never painted: no window, no pixels. We are not looking at a screen, we are
+talking to objects in memory.
 """
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -15,13 +16,12 @@ from playwright.sync_api import Browser, Page, sync_playwright
 
 BRIDGE = Path(__file__).with_name("bridge.js")
 
-# Lo script che gira PRIMA del bundle. Fissa le due sorgenti di casualità del
-# gioco e azzera le attese delle animazioni.
+# Script that runs BEFORE the game bundle. It pins the game's two sources of
+# randomness and collapses animation delays.
 #
-# Il seed di partita è `Date.now() ^ (Math.random() * 2**32)` e tutto quello che
-# la partita genera (mappa, incontri, offerte di oggetti) discende dal PRNG del
-# motore inizializzato con quel valore. Per rendere una partita riproducibile
-# vanno quindi fissati entrambi.
+# The run seed is `Date.now() ^ (Math.random() * 2**32)` and everything a run
+# generates (map layout, encounters, item offers) flows from the engine's PRNG
+# seeded with it. Making a run reproducible therefore means pinning both.
 INIT_SCRIPT = """
 (() => {
   const cfg = %s;
@@ -30,71 +30,69 @@ INIT_SCRIPT = """
     s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0;
     return s / 4294967296;
   };
-  let orologio = 1700000000000;
-  Date.now = () => (orologio += 16);
+  let clock = 1700000000000;
+  Date.now = () => (clock += 16);
   const st = window.setTimeout.bind(window);
-  window.setTimeout = (fn, d, ...a) => st(fn, Math.min(Number(d) || 0, cfg.attesa_max), ...a);
+  window.setTimeout = (fn, d, ...a) => st(fn, Math.min(Number(d) || 0, cfg.max_delay), ...a);
   window.requestAnimationFrame = (fn) => st(() => fn(performance.now()), 0);
   try { localStorage.clear(); } catch (e) {}
 })();
 """
 
-# Schermate che rappresentano una scelta reale del giocatore.
-SCHERMATE_DECISIONE = [
+# Screens that represent a real choice by the player.
+DECISION_SCREENS = [
     "map-screen", "catch-screen", "item-screen", "passive-screen", "swap-screen",
     "starter-screen", "trainer-screen", "stat-buff-screen", "trade-screen", "shiny-screen",
 ]
-SCHERMATE_FINALI = ["gameover-screen", "win-screen"]
-# Modali che sono scelte di gioco. Quelli informativi (impostazioni, Pokédex,
-# note di rilascio) sono esclusi apposta: l'agente non deve poterli aprire.
-MODALI_GIOCO = [
+TERMINAL_SCREENS = ["gameover-screen", "win-screen"]
+# Modals that are genuine in-run choices. Purely informational ones (settings,
+# Pokedex, patch notes) are excluded on purpose: a bot must never open them.
+GAME_MODALS = [
     "item-equip-modal", "usable-item-modal", "item-discard-modal",
     "submap-pick-modal", "vitamin-apply-modal", "legend-voucher-modal", "shop-modal",
 ]
 
-# Tutto ciò che uscirebbe da casa. Oltre a pubblicità e analytics ci sono due
-# dipendenze del gioco stesso: pokeapi.co (usata dal Pokédex, che l'agente non
-# apre mai) e raw.githubusercontent (ripiego per gli sprite mancanti, gestito dal
-# gioco con un'emoji). Bloccarle è ciò che rende l'ambiente davvero offline.
-BLOCCO_ESTERNO = (
+BLOCKED_HOSTS = (
     "fuseplatform", "googletagmanager", "googlesyndication", "doubleclick",
     "amazon-adsystem", "fonts.googleapis", "fonts.gstatic", "google-analytics",
+    # Two of the game's own dependencies: pokeapi.co (used by the Pokedex, which
+    # a bot never opens) and raw.githubusercontent (fallback for missing sprites,
+    # which the game handles with an emoji). Blocking them is what makes the
+    # environment genuinely offline.
     "raw.githubusercontent", "pokeapi.co",
 )
 
 
 @dataclass
-class Sessione:
-    """Un browser vivo con una pagina di gioco caricata."""
+class Session:
+    """A live browser with a game page loaded."""
 
     url: str
-    visibile: bool = False
-    attesa_max: int = 1
+    watch: bool = False
+    max_delay: int = 1
     _pw: object | None = field(default=None, repr=False)
     browser: Browser | None = field(default=None, repr=False)
     page: Page | None = field(default=None, repr=False)
-    richieste_esterne: list[str] = field(default_factory=list, repr=False)
-    errori_pagina: list[str] = field(default_factory=list, repr=False)
+    external_requests: list[str] = field(default_factory=list, repr=False)
+    page_errors: list[str] = field(default_factory=list, repr=False)
 
-    def avvia(self) -> None:
+    def start(self) -> None:
         self._pw = sync_playwright().start()
         self.browser = self._pw.chromium.launch(
-            headless=not self.visibile, args=["--no-sandbox"]
+            headless=not self.watch, args=["--no-sandbox"]
         )
 
-    def carica(self, seed: int) -> Page:
-        """Apre una pagina nuova con il seed fissato. Un contesto per partita."""
+    def load(self, seed: int) -> Page:
+        """Opens a fresh page with the seed pinned. One context per run."""
         if self.browser is None:
-            raise RuntimeError("sessione non avviata: chiama avvia()")
+            raise RuntimeError("session not started: call start()")
         ctx = self.browser.new_context(viewport={"width": 1280, "height": 900})
         page = ctx.new_page()
-        page.on("pageerror", lambda e: self.errori_pagina.append(str(e)[:200]))
-        page.route("**/*", self._filtra)
-
-        import json
+        page.on("pageerror", lambda e: self.page_errors.append(str(e)[:200]))
+        page.route("**/*", self._filter)
 
         page.add_init_script(
-            INIT_SCRIPT % json.dumps({"seed": seed, "attesa_max": self.attesa_max})
+            INIT_SCRIPT % json.dumps({"seed": seed, "max_delay": self.max_delay})
         )
         page.goto(self.url, wait_until="domcontentloaded")
         page.wait_for_timeout(1500)
@@ -102,9 +100,9 @@ class Sessione:
         page.evaluate(
             "cfg => { window.__PK_CFG = cfg; }",
             {
-                "decisionali": SCHERMATE_DECISIONE,
-                "terminali": SCHERMATE_FINALI,
-                "modali": MODALI_GIOCO,
+                "decision": DECISION_SCREENS,
+                "terminal": TERMINAL_SCREENS,
+                "modals": GAME_MODALS,
             },
         )
         page.evaluate(BRIDGE.read_text(encoding="utf-8"))
@@ -114,20 +112,20 @@ class Sessione:
         self.page = page
         return page
 
-    def _filtra(self, route) -> None:
-        """Blocca pubblicità e analytics, e annota ogni richiesta uscita di casa.
+    def _filter(self, route) -> None:
+        """Blocks ads and analytics, and records anything that left the machine.
 
-        `richieste_esterne` è ciò che il mirror usa per sapere cosa gli manca.
+        `external_requests` is how the mirror learns what it is still missing.
         """
         url = route.request.url
-        if any(b in url for b in BLOCCO_ESTERNO):
+        if any(b in url for b in BLOCKED_HOSTS):
             route.abort()
             return
         if not url.startswith(("http://127.0.0.1", "http://localhost")):
-            self.richieste_esterne.append(url)
+            self.external_requests.append(url)
         route.continue_()
 
-    def chiudi(self) -> None:
+    def close(self) -> None:
         if self.browser is not None:
             self.browser.close()
             self.browser = None

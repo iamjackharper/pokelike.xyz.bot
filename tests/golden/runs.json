@@ -1,11 +1,11 @@
 {
- "1-fissa": {
+ "1-fixed": {
   "seed": 1,
-  "politica": "fissa",
-  "passi": 20,
-  "schermata_finale": "gameover-screen",
-  "punti": -65,
-  "dettaglio": {
+  "policy": "fixed",
+  "steps": 20,
+  "final_screen": "gameover-screen",
+  "points": -65,
+  "breakdown": {
    "winBonus": 0,
    "enemiesKO": 9,
    "faints": 11,
@@ -14,45 +14,45 @@
    "shinies": 0,
    "timeBonus": 999
   },
-  "squadra": [
+  "team": [
    {
-    "nome": "Bulbasaur",
-    "livello": 11,
+    "name": "Bulbasaur",
+    "level": 11,
     "hp": 0,
-    "hp_max": 30
+    "max_hp": 30
    },
    {
-    "nome": "Venonat",
-    "livello": 10,
+    "name": "Venonat",
+    "level": 10,
     "hp": 0,
-    "hp_max": 32
+    "max_hp": 32
    },
    {
-    "nome": "Geodude",
-    "livello": 10,
+    "name": "Geodude",
+    "level": 10,
     "hp": 0,
-    "hp_max": 28
+    "max_hp": 28
    },
    {
-    "nome": "Zubat",
-    "livello": 10,
+    "name": "Zubat",
+    "level": 10,
     "hp": 0,
-    "hp_max": 28
+    "max_hp": 28
    },
    {
-    "nome": "Bellsprout",
-    "livello": 10,
+    "name": "Bellsprout",
+    "level": 10,
     "hp": 0,
-    "hp_max": 30
+    "max_hp": 30
    },
    {
-    "nome": "Tangela",
-    "livello": 10,
+    "name": "Tangela",
+    "level": 10,
     "hp": 27,
-    "hp_max": 33
+    "max_hp": 33
    }
   ],
-  "traccia": [
+  "trace": [
    "trainer-screen|2|el0:BOY",
    "starter-screen|3|el0:Bulbasaur Lv. 5 GRASS POISON SP.A 11 SPE",
    "map-screen|2|n1_0:catch",
@@ -75,13 +75,13 @@
    "map-screen|2|n5_0:battle"
   ]
  },
- "2-fissa": {
+ "2-fixed": {
   "seed": 2,
-  "politica": "fissa",
-  "passi": 35,
-  "schermata_finale": "gameover-screen",
-  "punti": 5,
-  "dettaglio": {
+  "policy": "fixed",
+  "steps": 35,
+  "final_screen": "gameover-screen",
+  "points": 5,
+  "breakdown": {
    "winBonus": 0,
    "enemiesKO": 25,
    "faints": 12,
@@ -90,45 +90,45 @@
    "shinies": 0,
    "timeBonus": 999
   },
-  "squadra": [
+  "team": [
    {
-    "nome": "Porygon",
-    "livello": 26,
+    "name": "Porygon",
+    "level": 26,
     "hp": 0,
-    "hp_max": 69
+    "max_hp": 69
    },
    {
-    "nome": "Venonat",
-    "livello": 29,
+    "name": "Venonat",
+    "level": 29,
     "hp": 0,
-    "hp_max": 73
+    "max_hp": 73
    },
    {
-    "nome": "Cubone",
-    "livello": 24,
+    "name": "Cubone",
+    "level": 24,
     "hp": 0,
-    "hp_max": 58
+    "max_hp": 58
    },
    {
-    "nome": "Porygon",
-    "livello": 22,
+    "name": "Porygon",
+    "level": 22,
     "hp": 0,
-    "hp_max": 60
+    "max_hp": 60
    },
    {
-    "nome": "Haunter",
-    "livello": 23,
+    "name": "Haunter",
+    "level": 23,
     "hp": 0,
-    "hp_max": 53
+    "max_hp": 53
    },
    {
-    "nome": "Ivysaur",
-    "livello": 27,
+    "name": "Ivysaur",
+    "level": 27,
     "hp": 47,
-    "hp_max": 69
+    "max_hp": 69
    }
   ],
-  "traccia": [
+  "trace": [
    "trainer-screen|2|el0:BOY",
    "starter-screen|3|el0:Bulbasaur Lv. 5 GRASS POISON SP.A 11 SPE",
    "map-screen|2|n1_0:catch",
@@ -166,13 +166,13 @@
    "map-screen|2|n5_0:trainer"
   ]
  },
- "3-ciclica": {
+ "3-cycling": {
   "seed": 3,
-  "politica": "ciclica",
-  "passi": 14,
-  "schermata_finale": "gameover-screen",
-  "punti": -20,
-  "dettaglio": {
+  "policy": "cycling",
+  "steps": 14,
+  "final_screen": "gameover-screen",
+  "points": -20,
+  "breakdown": {
    "winBonus": 0,
    "enemiesKO": 2,
    "faints": 3,
@@ -181,27 +181,27 @@
    "shinies": 0,
    "timeBonus": 1000
   },
-  "squadra": [
+  "team": [
    {
-    "nome": "Charmander",
-    "livello": 7,
+    "name": "Charmander",
+    "level": 7,
     "hp": 11,
-    "hp_max": 22
+    "max_hp": 22
    },
    {
-    "nome": "Drowzee",
-    "livello": 6,
+    "name": "Drowzee",
+    "level": 6,
     "hp": 23,
-    "hp_max": 23
+    "max_hp": 23
    },
    {
-    "nome": "Pidgey",
-    "livello": 4,
+    "name": "Pidgey",
+    "level": 4,
     "hp": 17,
-    "hp_max": 17
+    "max_hp": 17
    }
   ],
-  "traccia": [
+  "trace": [
    "trainer-screen|2|el0:BOY",
    "starter-screen|3|el1:Charmander Lv. 5 FIRE SP.A 11 SPE 11 HP ",
    "map-screen|2|n1_0:catch",
@@ -218,13 +218,13 @@
    "item-equip-modal|4|el1:→ ZEN HEADBUTT"
   ]
  },
- "7-ciclica": {
+ "7-cycling": {
   "seed": 7,
-  "politica": "ciclica",
-  "passi": 10,
-  "schermata_finale": "gameover-screen",
-  "punti": -10,
-  "dettaglio": {
+  "policy": "cycling",
+  "steps": 10,
+  "final_screen": "gameover-screen",
+  "points": -10,
+  "breakdown": {
    "winBonus": 0,
    "enemiesKO": 2,
    "faints": 2,
@@ -233,21 +233,21 @@
    "shinies": 0,
    "timeBonus": 1000
   },
-  "squadra": [
+  "team": [
    {
-    "nome": "Charmander",
-    "livello": 6,
+    "name": "Charmander",
+    "level": 6,
     "hp": 0,
-    "hp_max": 20
+    "max_hp": 20
    },
    {
-    "nome": "Drowzee",
-    "livello": 6,
+    "name": "Drowzee",
+    "level": 6,
     "hp": 20,
-    "hp_max": 23
+    "max_hp": 23
    }
   ],
-  "traccia": [
+  "trace": [
    "trainer-screen|2|el0:BOY",
    "starter-screen|3|el1:Charmander Lv. 5 FIRE SP.A 11 SPE 11 HP ",
    "map-screen|2|n1_0:catch",

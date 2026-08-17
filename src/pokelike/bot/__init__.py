@@ -1,19 +1,19 @@
-"""I bot: chi decide le mosse.
+"""The bots: whoever decides the moves.
 
-Per aggiungerne uno: crea un file qui dentro con una classe che eredita da `Bot`,
-poi registrala in `DISPONIBILI` per poterla usare da riga di comando con
-`pokelike bot --bot <nome>`.
+To add one: create a file here with a class inheriting from `Bot`, then register
+it in `AVAILABLE` so it can be used from the command line with
+`pokelike bot --bot <name>`.
 
-    # src/pokelike/bot/mio.py
+    # src/pokelike/bot/mine.py
     from .base import Bot
 
-    class MioBot(Bot):
-        nome = "mio"
-        def scegli(self, stato):
+    class MyBot(Bot):
+        name = "mine"
+        def choose(self, state):
             return 0
 
-    # qui sotto, in DISPONIBILI:
-    "mio": ("mio", "MioBot"),
+    # then, in AVAILABLE below:
+    "mine": ("mine", "MyBot"),
 """
 
 from __future__ import annotations
@@ -21,24 +21,24 @@ from __future__ import annotations
 from importlib import import_module
 
 from .base import Bot
-from .casuale import BotCasuale
+from .random_bot import RandomBot
 
-# nome da riga di comando -> (modulo dentro questo pacchetto, classe)
-# Il modulo si importa solo quando serve: così un bot con dipendenze pesanti
-# (un LLM, torch) non rallenta chi usa solo quello casuale.
-DISPONIBILI: dict[str, tuple[str, str]] = {
-    "casuale": ("casuale", "BotCasuale"),
-    "llm": ("llm", "BotLLM"),
+# command-line name -> (module inside this package, class)
+# The module is imported only when needed, so a bot with heavy dependencies
+# (an LLM client, torch) does not slow down anyone using the simple ones.
+AVAILABLE: dict[str, tuple[str, str]] = {
+    "random": ("random_bot", "RandomBot"),
+    "llm": ("llm", "LLMBot"),
 }
 
 
-def crea(nome: str, seed: int = 0) -> Bot:
-    """Costruisce un bot dal nome registrato in `DISPONIBILI`."""
-    if nome not in DISPONIBILI:
-        disponibili = ", ".join(sorted(DISPONIBILI))
-        raise KeyError(f"bot '{nome}' sconosciuto — disponibili: {disponibili}")
-    modulo, classe = DISPONIBILI[nome]
-    return getattr(import_module(f".{modulo}", __package__), classe)(seed=seed)
+def create(name: str, seed: int = 0) -> Bot:
+    """Builds a bot from a name registered in `AVAILABLE`."""
+    if name not in AVAILABLE:
+        available = ", ".join(sorted(AVAILABLE))
+        raise KeyError(f"unknown bot '{name}' — available: {available}")
+    module, cls = AVAILABLE[name]
+    return getattr(import_module(f".{module}", __package__), cls)(seed=seed)
 
 
-__all__ = ["Bot", "BotCasuale", "DISPONIBILI", "crea"]
+__all__ = ["Bot", "RandomBot", "AVAILABLE", "create"]

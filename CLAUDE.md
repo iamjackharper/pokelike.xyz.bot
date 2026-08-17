@@ -1,141 +1,160 @@
 # CLAUDE.md — pokelike.xyz.bot
 
-Note per agenti che lavorano su questa repo. Il README è per chi la usa; questo è
-per chi ci mette le mani.
+Notes for agents working on this repo.
 
-## Cos'è
+**Read [README.md](README.md) as well.** It explains what the project does, how
+it is installed and how it is used — everything you need to guide a user. This
+file only adds what someone *changing* the code needs: internals, pitfalls, and
+the reasoning behind decisions that look odd.
 
-Un ambiente per far giocare bot a [pokelike.xyz](https://pokelike.xyz/), un
-roguelike Pokémon che gira interamente nel browser. Il gioco non ha un backend:
-tutta la logica sta in un bundle JavaScript offuscato. Noi lo eseguiamo in un
-Chromium headless e parliamo con le sue funzioni globali.
+## What this is
 
-Il codice, i commenti e i nomi delle variabili sono **in italiano**. Mantieni
-quella lingua quando aggiungi roba.
+An environment for letting bots play [pokelike.xyz](https://pokelike.xyz/), a
+Pokémon roguelike that runs entirely in the browser. The game has no backend: all
+its logic is in one obfuscated JavaScript bundle. We run it in headless Chromium
+and talk to its global functions.
 
-## Comandi
+## Commands
 
 ```bash
-uv sync                         # ambiente
-uv run pokelike setup           # browser + copia offline (una volta sola)
-uv run pokelike gioca --seed 42 # partita interattiva
-uv run pokelike bot --partite 5 # bot casuale
-uv run pokelike stats           # riepilogo
+uv sync                          # environment
+uv run pokelike setup            # browser + offline copy (once)
+uv run pokelike play --seed 42   # interactive run
+uv run pokelike bot --runs 5     # the random bot
+uv run pokelike stats -d         # summary, with the columns explained
+uv run pytest                    # full suite, ~3 minutes
+uv run pytest -m "not slow"      # fast tests only, no browser
 ```
 
-Non c'è una suite di test. Il collaudo di fatto è `pokelike bot --partite 3`: se
-tre partite finiscono senza eccezioni e con punteggi sensati, la catena regge.
-
-## Architettura
+## Architecture
 
 ```
-site/                    il gioco scaricato (gitignored, ~130 MB)
+site/                    the downloaded game (gitignored, ~130 MB)
 src/pokelike/
-├── core/                LOGICA COMUNE — l'unica che sa giocare
-│   ├── bridge.js          iniettato nella pagina: osserva ed esegue
-│   ├── browser.py         Playwright headless, seed fissato, animazioni azzerate
-│   ├── game.py            classe Partita: nuova/stato/esegui/punteggio
-│   └── render.py          mappa ASCII, squadra, azioni
-├── bot/                 CHI DECIDE LE MOSSE
-│   ├── base.py            classe Bot astratta: solo scegli() è obbligatorio
-│   ├── casuale.py         linea di base
-│   └── llm.py             autosufficiente: prompt + strumenti + HTTP
+├── core/                SHARED LOGIC — the only part that knows how to play
+│   ├── bridge.js          injected into the page: observes and acts
+│   ├── browser.py         Playwright headless, pinned seed, flattened animations
+│   ├── game.py            class Game: reset/state/step/score
+│   └── render.py          ASCII map, team, actions
+├── bot/                 WHOEVER DECIDES THE MOVES
+│   ├── base.py            abstract Bot: only choose() is required
+│   ├── random_bot.py      the baseline
+│   └── llm.py             self-contained: prompts + tools + HTTP
 ├── assets/
-│   ├── mirror.py          costruisce site/ in quattro fasi
-│   └── server.py          serve site/ dal disco
-├── statistiche/registro.py  SQLite in stats/partite.db
-├── cli/main.py          interfaccia terminale
-└── api/server.py        interfaccia HTTP
-tools/deobfuscate.py     rende leggibile il bundle (richiede node)
+│   ├── mirror.py          builds site/ in five phases
+│   └── server.py          serves site/ from disk
+├── stats/registry.py    SQLite in stats/runs.db
+├── cli/main.py          terminal interface
+└── api/server.py        HTTP interface
+tests/                   golden fingerprints + unit tests
+tools/deobfuscate.py     makes the bundle readable (needs node)
 ```
 
-`cli`, `api` e `bot` non contengono logica di gioco: passano tutti per i quattro
-metodi di `Partita`. Se ti viene voglia di mettere una regola di gioco in `cli`,
-va in `core`.
+`cli`, `api` and `bot` contain no game logic: they all go through `Game`'s four
+methods. If you feel like putting a game rule in `cli`, it belongs in `core`.
 
-## Come si parla col gioco
+## Talking to the game
 
-Il motore espone tutto come globali della pagina. Le più utili:
+The engine exposes everything as page globals. The useful ones:
 
-| globale | uso |
+| global | use |
 |---|---|
-| `state` | stato completo: squadra, zaino, mappa (DAG), medaglie, `runSeed` |
-| `getAccessibleNodes(state.map)` | mosse legali sulla mappa |
-| `onNodeClick(nodo)` | esegue una mossa |
-| `runBattle(...)` | simulatore di battaglia puro, senza DOM |
-| `getBestMove`, `calcDamage` | l'AI e la formula del danno del gioco |
-| `finalizeRunScore`, `foldBattleIntoRunStats`, `newRunStats` | punteggio |
-| `seedRng`, `getRngSeed` | PRNG interno |
+| `state` | full state: team, bag, map (a DAG), badges, `runSeed` |
+| `getAccessibleNodes(state.map)` | legal map moves |
+| `onNodeClick(node)` | take a move |
+| `runBattle(...)` | pure battle simulator, no DOM |
+| `getBestMove`, `calcDamage` | the game's own AI and damage formula |
+| `finalizeRunScore`, `foldBattleIntoRunStats`, `newRunStats` | scoring |
+| `seedRng`, `getRngSeed` | internal PRNG |
 
-Non si guardano pixel. Gli screenshot esistono (`Partita.foto`) ma sono solo per
-gli umani.
+No pixels are looked at. Screenshots exist (`Game.screenshot`) but are for humans
+only.
 
-Le azioni sono di due tipi: le mosse sulla mappa passano da `onNodeClick(nodo)`
-(chiamata diretta), le altre scelte attivano un elemento del DOM perché il gioco
-ci lega sopra il gestore.
+Actions come in two kinds: map moves go through `onNodeClick(node)` (a direct
+call), other choices activate a DOM element because that is where the game binds
+its handler.
 
-Per esplorare il bundle: `python3 tools/deobfuscate.py site/js/bundle.*.js`.
-Ricava da solo i nomi interni dell'offuscatore, che cambiano a ogni rilascio.
+To explore the bundle: `python3 tools/deobfuscate.py site/js/bundle.*.js`. It
+works out the obfuscator's internal names by itself, since they change with every
+release.
 
-## Trappole vere
+## Real pitfalls
 
-Tutte incontrate sul campo. Rileggerle prima di mettere mano:
+All of these were hit for real. Worth rereading before changing anything:
 
-- **Il sito non risponde 404 ai file mancanti**: rimanda `index.html` con stato
-  200. Senza controllare i byte iniziali il mirror si riempie di HTML travestito
-  da `.png` (successe: 6612 file). Vedi `FIRME` in `assets/mirror.py`.
-- **Poca concorrenza in download.** Con 24 richieste in volo il sito blocca tutto
-  in silenzio, peggio che essere lenti. Il mirror sta a 6 e ripara i mancanti in
-  sequenza, dall'elenco esatto che produce la verifica giocando.
-- **A game over il motore azzera `state`**: squadra vuota, medaglie assenti. Per
-  il riepilogo di fine partita serve `Partita.ultimo_vivo`, l'ultima istantanea
-  con la partita viva.
-- **Mai dichiarare una variabile locale con lo stesso nome di un globale che vuoi
-  sostituire** in `bridge.js`: la oscuri e riscrivi la copia sbagliata. Sintomo:
-  `Assignment to constant variable` che non c'entra niente con `const`.
-- **`maxTeamSize` è un massimo storico, non un limite.** Il limite vero è 6.
-- **Gli oggetti non usabili aprono un modale di equipaggiamento** che non è un
-  `.screen`. Chi guarda solo i `.screen` resta bloccato lì per sempre.
-- **La mappa è SVG**: i nodi non hanno `.click()`.
-- **Il nome del bundle contiene l'hash del contenuto** e cambia a ogni rilascio
-  del gioco. Se qualcosa si rompe di colpo, prima cosa: `pokelike mirror`.
+- **The site does not answer 404 for missing files**: it returns `index.html` with
+  status 200. Without checking magic bytes the mirror fills with HTML dressed as
+  `.png` (it happened: 6612 junk files). See `SIGNATURES` in `assets/mirror.py`.
+- **Keep download concurrency low.** With 24 requests in flight the site cuts us
+  off and *everything* fails silently, which is worse than being slow. The mirror
+  runs at 6 and repairs missing files sequentially, from the exact list the
+  verification produces by playing.
+- **At game over the engine wipes `state`**: empty team, no badges. The
+  end-of-run summary needs `Game.last_alive`, the last snapshot taken while the
+  run was alive.
+- **Never declare a local with the same name as a global you mean to replace** in
+  `bridge.js`: you shadow it and rewrite the wrong copy. Symptom:
+  `Assignment to constant variable` that has nothing to do with `const`.
+- **Two Playwright sync instances cannot live in the same thread.** One `Game` per
+  thread, full stop — this is why the API tests reuse the session-wide fixture.
+- **The sync API is bound to its creating thread**, so `api/server.py` is
+  single-threaded by necessity: `serve_forever()` must run on the thread that owns
+  the game, or you get `greenlet.error: Cannot switch to a different thread`.
+- **`maxTeamSize` is a high-water mark, not a limit.** The real limit is 6.
+- **Non-usable items open an equip modal** which is not a `.screen`. Anything that
+  only watches `.screen` elements gets stuck there forever.
+- **The map is SVG**: nodes have no `.click()`.
+- **The bundle filename carries a content hash** and changes with every game
+  release. If something breaks all at once, first thing: `pokelike mirror`.
 
-## Punteggio
+## Scoring
 
-Il gioco sa già calcolarlo (`finalizeRunScore`) e sa già contare
-(`foldBattleIntoRunStats`), ma collega le due cose **solo in modalità Challenge**:
-il punto di chiamata è `state.challengeId && state.runStats && fold(...)`.
+The engine already knows how to compute it (`finalizeRunScore`) and how to count
+(`foldBattleIntoRunStats`), but it only wires the two together in Challenge mode:
+the call site reads `state.challengeId && state.runStats && fold(...)`.
 
-Forzare `challengeId` sarebbe la scorciatoia ovvia ed è **sbagliata**: quel campo
-cambia le regole, fra l'altro alza i livelli della Superquattro
-(`challengeId ? Math.max(0, 10 + challengeEliteLevelMod) : 0`). Quindi
-`bridge.js` avvolge `runBattle` e passa il risultato alla funzione di conteggio
-del gioco: regole intatte, contatori nativi.
+Forcing `challengeId` is the obvious shortcut and it is **wrong**: that flag
+changes the rules, among other things raising the Elite Four's levels
+(`challengeId ? Math.max(0, 10 + challengeEliteLevelMod) : 0`). So `bridge.js`
+wraps `runBattle` and hands the result to the game's own counting function:
+rules untouched, native counters.
 
-Confronta sempre con `punti_senza_tempo`. Il bonus tempo dipende da `Date.now()`,
-che congeliamo per il determinismo, quindi resta fisso vicino a 1000 e coprirebbe
-tutto il resto.
+Always compare with `points_no_time`. The time bonus depends on `Date.now()`,
+which we freeze for determinism, so it sits pinned near 1000 and would drown out
+everything else.
 
-## Riproducibilità
+## Reproducibility
 
-Il seed di partita è `Date.now() ^ (Math.random() * 2**32)` e tutto discende dal
-PRNG del motore inizializzato con quello. `browser.py` fissa **entrambi** in uno
-script che gira prima del bundle, e cappa i `setTimeout` a 1 ms per azzerare le
-animazioni. Stesso seed + stesse azioni = stessa partita, punteggio incluso.
+The run seed is `Date.now() ^ (Math.random() * 2**32)` and everything flows from
+the engine's PRNG seeded with it. `browser.py` pins **both** in a script that runs
+before the bundle, and caps `setTimeout` at 1 ms to flatten animations. Same seed
++ same actions = same run, score included.
 
-Un contesto browser nuovo per ogni partita: riusando la stessa pagina si
-impilerebbe un altro init script, e un altro reseed, a ogni reset.
+A fresh browser context per run: reusing the page would stack another init script,
+and another reseed, on every reset.
 
-## Prestazioni
+## Tests
 
-~1,5 decisioni al secondo, ~14 s per partita con policy veloce. Le partite sono
-indipendenti: per andare più forte si lanciano più processi, non più thread.
+The regression net lives in `tests/golden/runs.json`: recorded runs, replayed and
+compared. The fingerprint holds **only engine data** — screen ids, node types,
+Pokémon names, scores — never text we write ourselves. That is what let the whole
+codebase be translated from Italian to English with proof that behaviour did not
+move.
 
-Il bot LLM è molto più lento (una o più chiamate HTTP per decisione) e consuma
-~30k token a partita.
+Regenerate it with `uv run python tests/record_golden.py` **only** when the game
+itself has changed upstream and you have checked the new behaviour by hand.
+Regenerating it to make a red test go green defeats the point.
 
-## Segreti
+## Performance
 
-Le credenziali dell'LLM si leggono **solo** da `FW_ENDPOINT`, `FW_TOKEN`,
-`MODEL_ID`. Non scriverle nel codice, nei commenti, nel README o nel registro
-partite. `stats/` è gitignored.
+~1.5 decisions per second, ~14 s per run with a fast policy. Runs are independent:
+to go faster, launch more processes, not more threads.
+
+The LLM bot is far slower (one or more HTTP calls per decision) and burns roughly
+30k tokens per run.
+
+## Secrets
+
+LLM credentials are read **only** from `FW_ENDPOINT`, `FW_TOKEN`, `MODEL_ID`.
+Never write them into code, comments, the README or the run registry. `stats/` is
+gitignored.

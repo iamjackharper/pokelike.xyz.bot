@@ -1,5 +1,5 @@
-"""Logica comune: browser, partita, rendering testuale."""
+"""Shared logic: browser, game, text rendering."""
 
-from .game import ErroreAzione, Partita
+from .game import Game, IllegalAction
 
-__all__ = ["Partita", "ErroreAzione"]
+__all__ = ["Game", "IllegalAction"]

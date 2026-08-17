@@ -1,26 +1,26 @@
-"""Interfaccia comune a tutti i bot.
+"""The interface every bot implements.
 
-Un bot è una cosa sola: qualcosa che, dato lo stato, dice **quale azione fare**.
-Tutto il resto (avviare il browser, applicare la mossa, calcolare il punteggio)
-non lo riguarda.
+A bot is one thing only: something that, given the state, says **which action to
+take**. Everything else — starting the browser, applying the move, computing the
+score — is none of its business.
 
-    class MioBot(Bot):
-        def scegli(self, stato):
-            return 0          # indice dentro stato["azioni"]
+    class MyBot(Bot):
+        def choose(self, state):
+            return 0          # index into state["actions"]
 
-L'indice è la posizione dentro `stato["azioni"]`, la stessa lista numerata che
-vedi giocando da CLI. Restituire un indice fuori range fa fallire la mossa, quindi
-un bot deve sempre stare dentro `len(stato["azioni"])`.
+The index is the position in `state["actions"]`, the same numbered list you see
+when playing from the CLI. Returning an index out of range makes the move fail,
+so a bot must always stay within `len(state["actions"])`.
 
-I due agganci `inizio` e `fine` servono ai bot che hanno bisogno di memoria fra
-un turno e l'altro:
+The two hooks `on_start` and `on_end` are for bots that need memory across
+turns:
 
-- un **LLM** azzera la conversazione in `inizio` e la chiude in `fine`;
-- un algoritmo **RL** accumula la traiettoria e in `fine` riceve il punteggio
-  finale, che è il segnale di ricompensa;
-- un bot a **mosse prefissate** rimette a zero il contatore in `inizio`.
+- an **LLM** resets its conversation in `on_start` and closes it in `on_end`;
+- an **RL** algorithm accumulates the trajectory and receives the final score in
+  `on_end`, which is its reward signal;
+- a **scripted** bot resets its move counter in `on_start`.
 
-Chi non ne ha bisogno li ignora: hanno già un'implementazione vuota.
+Bots that need neither can ignore them: both already have empty bodies.
 """
 
 from __future__ import annotations
@@ -30,20 +30,20 @@ from typing import Any
 
 
 class Bot(ABC):
-    """Base di ogni bot. L'unico metodo obbligatorio è `scegli`."""
+    """Base for every bot. `choose` is the only required method."""
 
-    nome = "bot"
+    name = "bot"
 
     @abstractmethod
-    def scegli(self, stato: dict[str, Any]) -> int:
-        """Indice dell'azione scelta dentro `stato["azioni"]`.
+    def choose(self, state: dict[str, Any]) -> int:
+        """Index of the chosen action within `state["actions"]`.
 
-        `stato` è il dizionario completo: `squadra`, `zaino`, `mappa`, `run`,
-        `azioni`, `passi`, `schermata`. Vedi `core/render.py` per come si legge.
+        `state` is the full dict: `team`, `bag`, `map`, `run`, `actions`,
+        `steps`, `screen`. See `core/render.py` for how to read it.
         """
 
-    def inizio(self, seed: int) -> None:
-        """Chiamato prima del primo turno di ogni partita."""
+    def on_start(self, seed: int) -> None:
+        """Called before the first turn of each run."""
 
-    def fine(self, stato: dict[str, Any], punteggio: dict[str, Any] | None) -> None:
-        """Chiamato a partita conclusa, con lo stato finale e il punteggio."""
+    def on_end(self, state: dict[str, Any], score: dict[str, Any] | None) -> None:
+        """Called once the run is over, with the final state and the score."""

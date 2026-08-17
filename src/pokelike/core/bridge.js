@@ -1,18 +1,19 @@
-// Ponte fra il motore del gioco e Python.
+// Bridge between the game engine and Python.
 //
-// Viene iniettato nella pagina DOPO che il bundle e' partito. Espone quattro
-// funzioni su window, che sono tutta la superficie che Python usa:
+// Injected into the page AFTER the game bundle has booted. It exposes a handful
+// of functions on `window`, and that is the entire surface Python uses:
 //
-//   __pk_layer()    quale schermata/modale e' attiva adesso
-//   __pk_choices()  le azioni legali, come lista ordinata e stabile
-//   __pk_apply(c)   esegue una di quelle azioni
-//   __pk_obs()      lo stato completo, come JSON puro
+//   __pk_layer()    which screen or modal is active right now
+//   __pk_choices()  the legal actions, as a stable ordered list
+//   __pk_apply(c)   perform one of them
+//   __pk_obs()      the full state, as plain JSON
 //
-// Nota importante: qui non si guardano pixel. `state` e' un oggetto JavaScript
-// in memoria e i bottoni sono oggetti del DOM, che esistono anche senza finestra.
+// Worth stressing: no pixels are involved. `state` is a JavaScript object in
+// memory and the buttons are DOM objects, both of which exist perfectly well
+// without a window ever being drawn.
 (() => {
-  // I nomi del motore sono globali dichiarati con `let`/`function`: stanno nello
-  // scope globale dello script, non su window, quindi vanno letti con eval.
+  // The engine's names are globals declared with `let`/`function`: they live in
+  // the script's global scope, not on `window`, so they need eval to read.
   const g = (n) => { try { return eval(n); } catch (e) { return undefined; } };
 
   const CFG = window.__PK_CFG;
@@ -25,8 +26,8 @@
     return r.width > 0 && r.height > 0;
   };
 
-  // Contenitore delle scelte per ogni schermata; se manca si usa la schermata stessa.
-  const CONTENITORI = {
+  // Where each screen keeps its choices; falls back to the screen itself.
+  const CONTAINERS = {
     'starter-screen': '#starter-choices',
     'trainer-screen': '#trainer-choices',
     'catch-screen': '#catch-choices',
@@ -35,72 +36,72 @@
     'swap-screen': '#swap-choices',
   };
 
-  const RUMORE = /run-menu|btn-shop|pokechain|settings|typechart|pokedex|achievements|credits|patch/i;
+  const NOISE = /run-menu|btn-shop|pokechain|settings|typechart|pokedex|achievements|credits|patch/i;
 
   window.__pk_layer = () => {
-    for (const id of CFG.modali) {
-      if (shown(document.getElementById(id))) return { tipo: 'modale', id };
+    for (const id of CFG.modals) {
+      if (shown(document.getElementById(id))) return { kind: 'modal', id };
     }
     const s = [...document.querySelectorAll('.screen')]
       .find((e) => getComputedStyle(e).display !== 'none');
-    return { tipo: 'schermata', id: s ? s.id : '(nessuna)' };
+    return { kind: 'screen', id: s ? s.id : '(none)' };
   };
 
-  // Unica fonte di verita' per le azioni: __pk_apply indicizza esattamente
-  // questa lista, cosi' una scelta non puo' mai riferirsi a un altro bottone.
-  const elementiScelta = () => {
+  // Single source of truth for the action list: __pk_apply indexes into exactly
+  // this array, so a choice can never end up pointing at a different button.
+  const choiceElements = () => {
     const L = window.__pk_layer();
-    if (L.tipo === 'schermata' && L.id === 'map-screen') return { L, nodi: true };
-    const sel = L.tipo === 'modale' ? '#' + L.id : (CONTENITORI[L.id] || '#' + L.id);
+    if (L.kind === 'screen' && L.id === 'map-screen') return { L, nodes: true };
+    const sel = L.kind === 'modal' ? '#' + L.id : (CONTAINERS[L.id] || '#' + L.id);
     const root = document.querySelector(sel) || document.getElementById(L.id);
     if (!root) return { L, els: [] };
     const els = [...root.querySelectorAll(
       '.poke-card, .choice-card, .trainer-card, .item-card, .equip-pokemon-row button, button'
-    )].filter((e) => shown(e) && !e.disabled && !RUMORE.test(e.id + ' ' + e.className));
+    )].filter((e) => shown(e) && !e.disabled && !NOISE.test(e.id + ' ' + e.className));
     return { L, els };
   };
 
   window.__pk_choices = () => {
-    const { L, nodi, els } = elementiScelta();
-    if (nodi) {
+    const { L, nodes, els } = choiceElements();
+    if (nodes) {
       const st = g('state');
       if (!st || !st.map) return [];
       return Object.values(st.map.nodes)
         .filter((n) => n.accessible && !n.visited)
         .sort((a, b) => (a.layer - b.layer) || (a.col - b.col))
-        .map((n) => ({ tipo: 'nodo', id: n.id, nodo: n.type, livello: n.layer, colonna: n.col }));
+        .map((n) => ({ kind: 'node', id: n.id, node: n.type, layer: n.layer, col: n.col }));
     }
     return (els || []).map((e, i) => ({
-      tipo: 'elemento', idx: i, layer: L.id, id: e.id || null,
-      etichetta: (e.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 120),
+      kind: 'element', idx: i, layer: L.id, id: e.id || null,
+      label: (e.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 120),
     }));
   };
 
   window.__pk_apply = (c) => {
-    if (c.tipo === 'nodo') {
+    if (c.kind === 'node') {
       const st = g('state');
       const n = st && st.map && st.map.nodes[c.id];
       if (!n || !n.accessible || n.visited) return false;
-      g('onNodeClick')(n); // asincrona: Python aspetta che le cose si assestino
+      g('onNodeClick')(n); // async by design; Python polls until things settle
       return true;
     }
-    const { els } = elementiScelta();
+    const { els } = choiceElements();
     const el = els && els[c.idx];
     if (!el) return false;
     el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
     return true;
   };
 
-  window.__pk_stato_punto = () => {
+  window.__pk_point = () => {
     const L = window.__pk_layer();
-    if (L.tipo === 'schermata' && CFG.terminali.includes(L.id)) return 'finale';
-    if (L.tipo === 'modale') return 'decisione';
-    return CFG.decisionali.includes(L.id) ? 'decisione' : 'transitorio';
+    if (L.kind === 'screen' && CFG.terminal.includes(L.id)) return 'terminal';
+    if (L.kind === 'modal') return 'decision';
+    return CFG.decision.includes(L.id) ? 'decision' : 'transient';
   };
 
-  // Avanza da solo tutto cio' che non e' una decisione: riproduzione delle
-  // battaglie, banner di livello, bottoni "Continua".
-  window.__pk_avanza = () => {
+  // Advances anything that is not a decision by itself: battle playback,
+  // level-up banners, "Continue" buttons.
+  window.__pk_advance = () => {
     for (const id of ['btn-continue-battle', 'btn-auto-battle']) {
       const b = document.getElementById(id);
       if (b && getComputedStyle(b).display !== 'none' && !b.disabled) { b.click(); return id; }
@@ -109,127 +110,124 @@
     const root = document.getElementById(L.id);
     if (!root) return null;
     const btns = [...root.querySelectorAll('button')]
-      .filter((b) => shown(b) && !b.disabled && !RUMORE.test(b.id + ' ' + b.className));
-    if (btns.length === 1) { btns[0].click(); return btns[0].id || 'unico'; }
+      .filter((b) => shown(b) && !b.disabled && !NOISE.test(b.id + ' ' + b.className));
+    if (btns.length === 1) { btns[0].click(); return btns[0].id || 'single'; }
     return null;
   };
 
   window.__pk_obs = () => {
     const st = g('state');
     const L = window.__pk_layer();
-    const o = { layer: L.tipo, schermata: L.id };
+    const o = { layer: L.kind, screen: L.id };
     if (st) {
       o.run = {
-        seed_run: st.runSeed, mappa: st.currentMap, medaglie: st.badges,
-        squadra_max: st.maxTeamSize, nuzlocke: !!st.nuzlockeMode,
-        qualcuno_svenuto: !!st.anyFainted, finita: !!st._finished,
-        item_raccolti: st.itemsThisRun || 0, elite: st.eliteIndex,
+        run_seed: st.runSeed, map: st.currentMap, badges: st.badges,
+        max_team_size: st.maxTeamSize, nuzlocke: !!st.nuzlockeMode,
+        anyone_fainted: !!st.anyFainted, finished: !!st._finished,
+        items_this_run: st.itemsThisRun || 0, elite: st.eliteIndex,
       };
-      o.squadra = (st.team || []).map((p) => ({
-        uid: p._uid, specie_id: p.speciesId, nome: p.name, livello: p.level,
-        hp: p.currentHp, hp_max: p.maxHp, tipi: p.types, stats_base: p.baseStats,
-        tier_mosse: p.moveTier, oggetto: p.heldItem ? p.heldItem.name : null,
-        megastone: p.megaStone ? p.megaStone.name : null, shiny: !!p.isShiny,
+      o.team = (st.team || []).map((p) => ({
+        uid: p._uid, species_id: p.speciesId, name: p.name, level: p.level,
+        hp: p.currentHp, max_hp: p.maxHp, types: p.types, base_stats: p.baseStats,
+        move_tier: p.moveTier, item: p.heldItem ? p.heldItem.name : null,
+        mega_stone: p.megaStone ? p.megaStone.name : null, shiny: !!p.isShiny,
       }));
-      o.zaino = (st.items || []).map((i) => i && (i.name || i.id));
+      o.bag = (st.items || []).map((i) => i && (i.name || i.id));
       if (st.map) {
-        o.mappa = {
-          nodi: Object.values(st.map.nodes).map((n) => ({
-            id: n.id, tipo: n.type, livello: n.layer, colonna: n.col,
-            accessibile: !!n.accessible, visitato: !!n.visited, rivelato: !!n.revealed,
+        o.map = {
+          nodes: Object.values(st.map.nodes).map((n) => ({
+            id: n.id, kind: n.type, layer: n.layer, col: n.col,
+            accessible: !!n.accessible, visited: !!n.visited, revealed: !!n.revealed,
           })),
-          archi: st.map.edges.map((e) => [e.from, e.to]),
-          attuale: st.currentNode ? st.currentNode.id : null,
+          edges: st.map.edges.map((e) => [e.from, e.to]),
+          current: st.currentNode ? st.currentNode.id : null,
         };
       }
-      // Statistiche accumulate dal nostro aggancio a runBattle (vedi __pk_stats).
-      if (window.__pk_stats) o.statistiche = { ...window.__pk_stats };
+      // Counters accumulated by our runBattle hook (see __pk_attach_score).
+      if (window.__pk_stats) o.stats = { ...window.__pk_stats };
     }
-    o.azioni = window.__pk_choices();
+    o.actions = window.__pk_choices();
     return o;
   };
 
   // ---------------------------------------------------------------------
-  // Punteggio.
+  // Scoring.
   //
-  // Il gioco sa gia' calcolarlo (finalizeRunScore) e sa gia' contare le
-  // statistiche (foldBattleIntoRunStats), ma le collega solo in modalita'
-  // Challenge: il call site e' `state.challengeId && state.runStats && fold(...)`.
-  // In Story i contatori resterebbero a zero.
+  // The engine already knows how to count (foldBattleIntoRunStats) and how to
+  // apply the formula (finalizeRunScore), but it only wires the two together in
+  // Challenge mode: the call site reads
+  //     state.challengeId && state.runStats && fold(...)
+  // so in Story mode the counters would stay at zero forever.
   //
-  // Invece di forzare challengeId — che cambierebbe le regole di gioco —
-  // avvolgiamo runBattle: chiamiamo l'originale e poi passiamo il risultato
-  // alla funzione di conteggio del gioco. Le regole restano intatte e i
-  // contatori sono quelli nativi.
+  // Setting challengeId would be the obvious shortcut and it is WRONG: that flag
+  // changes the rules, among other things raising the Elite Four's levels
+  //     state.challengeId ? Math.max(0, 10 + challengeEliteLevelMod) : 0
+  // so the run would no longer be a normal one. Wrapping runBattle leaves the
+  // game untouched and still gives us the engine's own counters.
   // ---------------------------------------------------------------------
-  window.__pk_aggancia_punteggio = () => {
-    // ATTENZIONE: niente variabili locali con lo stesso nome dei globali che
-    // vogliamo sostituire, altrimenti le oscuriamo e riscriviamo la copia
-    // sbagliata.
+  window.__pk_attach_score = () => {
+    // CAREFUL: no local variable may share a name with a global we intend to
+    // replace, or we shadow it and rewrite the wrong copy.
     const foldOrig = g('foldBattleIntoRunStats');
-    const nuoveOrig = g('newRunStats');
-    const battagliaOrig = g('runBattle');
-    if (typeof battagliaOrig !== 'function' || typeof foldOrig !== 'function'
-        || typeof nuoveOrig !== 'function') {
-      return { ok: false, motivo: 'funzioni di punteggio non trovate' };
+    const newStatsOrig = g('newRunStats');
+    const battleOrig = g('runBattle');
+    if (typeof battleOrig !== 'function' || typeof foldOrig !== 'function'
+        || typeof newStatsOrig !== 'function') {
+      return { ok: false, reason: 'scoring functions not found' };
     }
-    if (window.__pk_agganciato) return { ok: true, gia: true };
+    if (window.__pk_attached) return { ok: true, already: true };
 
-    // Perche' non usiamo invece il gate nativo (`state.challengeId`): impostarlo
-    // CAMBIA LE REGOLE. Fra le altre cose alza i livelli della Superquattro
-    //     state.challengeId ? Math.max(0, 10 + challengeEliteLevelMod) : 0
-    // quindi la partita non sarebbe piu' quella normale. Avvolgere runBattle
-    // lascia il gioco identico e ci da' comunque i contatori nativi.
-    //
-    // runBattle e' una `function` dichiarata al livello globale: sta su window
-    // ed e' scrivibile.
+    // Whatever goes wrong here must NOT stop the run: the score is a bonus,
+    // the game comes first.
     try {
       const st = g('state');
-      if (st && !st.runStats) st.runStats = nuoveOrig();
+      if (st && !st.runStats) st.runStats = newStatsOrig();
 
+      // runBattle is a top-level function declaration, so it lives on window
+      // and is writable.
       window.runBattle = function (...args) {
-        const r = battagliaOrig.apply(this, args);
+        const r = battleOrig.apply(this, args);
         try {
           const s = g('state');
           if (s) {
-            if (!s.runStats) s.runStats = nuoveOrig();
-            // Stessa firma del punto di chiamata originale del gioco:
-            //   fold(detailedLog, <primo argomento di runBattle>, playerWon, pTeam)
+            if (!s.runStats) s.runStats = newStatsOrig();
+            // Same argument order as the engine's own call site:
+            //   fold(detailedLog, <runBattle's first argument>, playerWon, pTeam)
             foldOrig(r.detailedLog, args[0], r.playerWon, r.pTeam);
             window.__pk_stats = JSON.parse(JSON.stringify(s.runStats));
           }
         } catch (e) {
-          window.__pk_errore_punteggio = String(e);
+          window.__pk_score_error = String(e);
         }
         return r;
       };
-      window.__pk_agganciato = true;
-      return { ok: true, modo: 'runBattle-avvolta' };
+      window.__pk_attached = true;
+      return { ok: true, mode: 'runBattle-wrapped' };
     } catch (e) {
-      return { ok: false, motivo: String(e) };
+      return { ok: false, reason: String(e) };
     }
   };
 
-  // Applica la formula ufficiale del gioco all'ultimo snapshot di statistiche.
+  // Applies the game's official formula to the latest stats snapshot.
   //
-  // Nota sul bonus tempo: la formula lo calcola come 1000 - 100 per ogni minuto
-  // di gioco reale, ma noi congeliamo Date.now() per rendere le partite
-  // riproducibili. Il risultato e' che il bonus resta inchiodato vicino a 1000 e
-  // non porta informazione. Restituiamo quindi anche `punti_senza_tempo`, che e'
-  // il numero da usare per confrontare fra loro giocatori o strategie.
-  window.__pk_punteggio = (completata) => {
+  // A note on the time bonus: the formula computes it as 1000 minus 100 per
+  // minute of real play, but we freeze Date.now() to make runs reproducible. The
+  // upshot is that the bonus sits pinned near 1000 and carries no information.
+  // So we also return `points_no_time`, which is the number to use when
+  // comparing players or strategies.
+  window.__pk_score = (completed) => {
     const fin = g('finalizeRunScore');
     const st = g('state');
     const stats = (st && st.runStats) || window.__pk_stats;
     if (!stats || typeof fin !== 'function') return null;
-    const copia = JSON.parse(JSON.stringify(stats));
-    const punti = fin(copia, { cleared: !!completata });
-    const d = copia.scoreBreakdown || {};
+    const copy = JSON.parse(JSON.stringify(stats));
+    const points = fin(copy, { cleared: !!completed });
+    const b = copy.scoreBreakdown || {};
     return {
-      punti,
-      punti_senza_tempo: punti - (d.timeBonus || 0),
-      dettaglio: d,
-      statistiche: copia,
+      points,
+      points_no_time: points - (b.timeBonus || 0),
+      breakdown: b,
+      stats: copy,
     };
   };
 })();

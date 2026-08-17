@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pokelike.xyz.bot"
 version = "0.1.0"
-description = "Fai giocare dei bot a pokelike.xyz, headless, da CLI o API HTTP"
+description = "Let bots play pokelike.xyz, headless, from a CLI or an HTTP API"
 requires-python = ">=3.10"
 dependencies = ["playwright>=1.55"]
 

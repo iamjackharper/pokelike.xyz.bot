@@ -1,340 +1,355 @@
 # pokelike.xyz.bot
 
-Gioca a [pokelike.xyz](https://pokelike.xyz/) — un roguelike Pokémon — da riga di
-comando, da Python o via API HTTP. Senza finestre, senza internet, e con un
-punteggio per confrontare i giocatori.
+Play [pokelike.xyz](https://pokelike.xyz/) — a Pokémon roguelike — from the
+command line, from Python, or over an HTTP API. No windows, no internet, and a
+score to compare players with.
 
-Nato per far giocare dei bot: ce ne sono due (uno casuale e uno guidato da un
-LLM) e l'interfaccia per scriverne altri è di un metodo solo.
+Built to let bots play it: two ship with it (a random one and one driven by an
+LLM) and the interface for writing your own is a single method.
 
 ---
 
-## Installazione
+## Install
 
-Serve [uv](https://docs.astral.sh/uv/) e nient'altro. Se non ce l'hai:
+You need [uv](https://docs.astral.sh/uv/) and nothing else:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-Poi:
+Then:
 
 ```bash
 git clone https://github.com/pierpierpy/pokelike.xyz.bot
 cd pokelike.xyz.bot
-uv sync            # crea l'ambiente e installa le dipendenze
+uv sync              # creates the environment and installs dependencies
 uv run pokelike setup
 ```
 
-`setup` fa due cose, una volta sola:
+`setup` does two things, once:
 
-1. scarica il browser headless (~120 MB)
-2. scarica il gioco in `site/` (~130 MB, qualche minuto)
+1. downloads the headless browser (~120 MB)
+2. downloads the game into `site/` (~130 MB, a few minutes)
 
-Da qui in poi **non serve più internet**.
+After that **you never need the internet again**.
 
-> Non hai bisogno di attivare nessun ambiente: `uv run` ci pensa da solo.
-> Se preferisci, `source .venv/bin/activate` e poi `pokelike ...` senza `uv run`.
+> No environment to activate: `uv run` handles it. If you prefer,
+> `source .venv/bin/activate` and then drop the `uv run` prefix.
 
-## Giochi tu
+## Play it yourself
 
 ```bash
-uv run pokelike gioca --seed 42
+uv run pokelike play --seed 42
 ```
 
-Ti compare la situazione e rispondi con un numero:
+You get the situation and answer with a number:
 
 ```
 ========================================================================
-passo 2   schermata: map-screen   mappa 0   medaglie 0
+step 2   screen: map-screen   map 0   badges 0
 ========================================================================
 
-SQUADRA
+TEAM
   0. Bulbasaur    Lv 5  ##########  19/19   Grass/Poison *
 
-MAPPA   [qui]  <mossa legale>  x'=fatto
-  liv  0 | [@]
-  liv  1 | <o> <x>
-  liv  2 |  T   x   T
-  liv  3 |  o   o   i   o
-  liv  8 |  B
+MAP   [here]  <legal move>  x'=done
+  layer  0 | [@]
+  layer  1 | <o> <x>
+  layer  2 |  T   x   T
+  layer  3 |  o   o   i   o
+  layer  8 |  B
 
-AZIONI
-  [0] vai al nodo n1_0   (catch)
-  [1] vai al nodo n1_1   (battle)
+ACTIONS
+  [0] go to node n1_0   (catch)
+  [1] go to node n1_1   (battle)
 
 > 1
 ```
 
-La mappa si legge così: si scende dall'alto verso il basso, `[qui]` è dove sei,
-`<così>` sono le mosse legali, `x'` è già fatto. In fondo c'è il boss.
-**Scegliendo un nodo, gli altri dello stesso livello si chiudono per sempre.**
+Reading the map: it runs top to bottom, `[here]` is where you are, `<like this>`
+are the legal moves, `x'` is already done, the boss sits at the bottom.
+**Picking one node closes the others on that layer forever.**
 
-Al prompt: un **numero** per agire, `l` legenda dei simboli, `s` punteggio,
-`j` stato grezzo in JSON, `n` nuova partita, `q` esci.
+At the prompt: a **number** to act, `l` for the symbol legend, `s` for the score,
+`j` for the raw JSON state, `n` for a new run, `q` to quit.
 
-## Fai giocare un bot
-
-```bash
-uv run pokelike bot --partite 5              # bot casuale
-uv run pokelike stats                        # com'è andata
-```
-
-Per il bot LLM servono le tue credenziali di un endpoint compatibile OpenAI
-(qualunque: OpenAI, vLLM, Ollama, un endpoint aziendale):
+## Let a bot play
 
 ```bash
-export FW_ENDPOINT="https://il-tuo-endpoint"     # senza /v1 finale
-export FW_TOKEN="la-tua-chiave"
-export MODEL_ID="il-nome-del-modello"
-
-uv run pokelike bot --bot llm --partite 3
-POKELIKE_VERBOSO=1 uv run pokelike bot --bot llm --partite 1   # con le motivazioni
+uv run pokelike bot --runs 5             # the random bot
+uv run pokelike stats                    # how it went
 ```
 
-Le chiavi si leggono **solo** dall'ambiente: non finiscono mai nel codice né nel
-registro delle partite.
-
-## Vedere cosa succede
+The LLM bot needs your own credentials for any OpenAI-compatible endpoint
+(OpenAI, vLLM, Ollama, a company endpoint — whatever you have):
 
 ```bash
-uv run pokelike gioca --seed 42                    # solo testo (il più veloce)
-uv run pokelike gioca --seed 42 --foto /tmp/foto   # + un PNG a ogni schermata
-uv run pokelike gioca --seed 42 --vedi             # + finestra vera del gioco
+export FW_ENDPOINT="https://your-endpoint"    # no trailing /v1
+export FW_TOKEN="your-key"
+export MODEL_ID="your-model-name"
+
+uv run pokelike bot --bot llm --runs 3
+POKELIKE_VERBOSE=1 uv run pokelike bot --bot llm --runs 1   # with its reasoning
 ```
 
-`--vedi` funziona anche su `bot`, con `--pausa` per i millisecondi fra le mosse.
-Richiede il browser completo: `uv run playwright install chromium`.
+Credentials are read **only** from the environment: they never reach the code or
+the run registry.
+
+## Watch what happens
+
+```bash
+uv run pokelike play --seed 42                     # text only (fastest)
+uv run pokelike play --seed 42 --shots /tmp/shots  # + a PNG of every screen
+uv run pokelike play --seed 42 --watch             # + a real window of the game
+```
+
+`--watch` works on `bot` too, with `--pause` for the milliseconds between moves.
+It needs the full browser: `uv run playwright install chromium`.
 
 ---
 
-## Come funziona
+## How it works
 
-### Il gioco è tutto nel browser
+### The game lives entirely in the browser
 
-Pokelike non ha un server: tutta la logica sta in un file JavaScript che gira nel
-tuo browser. Quindi non c'è nessuna API remota da chiamare — il motore è già sul
-tuo computer, e noi parliamo direttamente con le sue funzioni.
+Pokelike has no server: all its logic sits in one JavaScript file that runs in
+your browser. So there is no remote API to call — the engine is already on your
+machine, and we talk straight to its functions.
 
-### "Headless" non vuol dire senza grafica
+### "Headless" does not mean "no graphics"
 
-Vuol dire **senza finestra**. Il browser costruisce comunque tutto in memoria:
-lo stato della partita, i bottoni, la mappa. Semplicemente non lo disegna.
+It means **no window**. The browser still builds everything in memory: the game
+state, the buttons, the map. It simply never paints them.
 
-Quindi non guardiamo pixel e non riconosciamo immagini. La mappa ASCII qui sopra
-non è letta da uno screenshot: è ridisegnata da noi a partire dai nodi e dagli
-archi che leggiamo dalla memoria del gioco.
+So we look at no pixels and recognise no images. The ASCII map above is not read
+from a screenshot: we redraw it from the nodes and edges we read out of the
+game's memory.
 
-### Le battaglie si giocano da sole
+### Battles play themselves
 
-Il gioco decide le mosse di entrambi i lati. Quello che decide il giocatore è la
-parte roguelike: dove andare sulla mappa, chi catturare, quale oggetto prendere e
-a chi darlo, chi scambiare quando la squadra è piena.
+The game picks the moves for both sides. What a player decides is the roguelike
+part: where to go on the map, who to catch, which item to take and who to give it
+to, who to swap out when the team is full.
 
-### I pezzi
+### The pieces
 
 ```
-site/                 il gioco scaricato (non versionato)
+site/                the downloaded game (not in git)
    │
    ▼
-assets/server.py      lo serve dal disco, senza toccare internet
+assets/server.py     serves it from disk, never touching the internet
    │
    ▼
-browser headless      esegue il gioco
+headless browser     runs the game
    │
-core/bridge.js        legge lo stato, esegue le scelte
+core/bridge.js       reads the state, performs the choices
    │
-core/game.py          classe Partita  ← LA LOGICA, una sola
+core/game.py         class Game  ← THE LOGIC, one copy of it
    │
-   ├─── cli/          il terminale
-   ├─── api/          HTTP JSON
-   └─── bot/          chi decide le mosse
+   ├─── cli/         the terminal
+   ├─── api/         HTTP JSON
+   └─── bot/         whoever decides the moves
 ```
 
-`Partita` ha quattro metodi, e tutto il resto passa da lì:
+`Game` has four methods, and everything else goes through them:
 
 ```python
-g.nuova(seed=42)   # comincia
-g.stato()          # squadra, mappa, azioni legali
-g.esegui(1)        # fai la mossa 1 -> nuovo stato
-g.punteggio()      # quanto vale la partita
+g.reset(seed=42)   # start
+g.state()          # team, map, legal actions
+g.step(1)          # take move 1 -> new state
+g.score()          # what the run is worth
 ```
 
-CLI, API e bot sono tre facce sopra questi quattro metodi. Nessuno dei tre
-contiene logica di gioco.
+CLI, API and bots are three faces over those four methods. None of them holds any
+game logic.
 
-### Le due interfacce
+### The two interfaces
 
 **Python**
 
 ```python
-from pokelike import Partita
-from pokelike.assets import ServerAsset
+from pokelike import Game
+from pokelike.assets import AssetServer
 
-with ServerAsset("site") as s, Partita(url=s.url) as g:
-    obs = g.nuova(seed=42)
-    while not obs["finita"]:
-        print(obs["azioni"])    # [{'tipo':'nodo','id':'n1_0','nodo':'catch'}, ...]
-        obs = g.esegui(0)
-    print(g.punteggio())
+with AssetServer("site") as s, Game(url=s.url) as g:
+    obs = g.reset(seed=42)
+    while not obs["done"]:
+        print(obs["actions"])   # [{'kind':'node','id':'n1_0','node':'catch'}, ...]
+        obs = g.step(0)
+    print(g.score())
 ```
 
-**HTTP** — `uv run pokelike api` (porta 8423). Il browser resta acceso fra una
-chiamata e l'altra, per questo è un processo che deve restare vivo.
+**HTTP** — `uv run pokelike api` (port 8423). The browser stays alive between
+calls, which is why this is a process that has to keep running.
 
-| Metodo | Rotta | Cosa fa |
+| Method | Route | What it does |
 |---|---|---|
-| `POST` | `/nuova` `{"seed":42}` | comincia una partita |
-| `GET` | `/stato` | stato completo + campo `vista` già formattato |
-| `GET` | `/azioni` | solo le azioni legali |
-| `POST` | `/azione` `{"indice":1}` | esegue → nuovo stato (409 se illegale) |
-| `GET` | `/punteggio` | punteggio con la formula del gioco |
+| `POST` | `/new` `{"seed":42}` | start a run |
+| `GET` | `/state` | full state + a ready-to-print `view` field |
+| `GET` | `/actions` | just the legal actions |
+| `POST` | `/action` `{"index":1}` | take it → new state (409 if illegal) |
+| `GET` | `/score` | score using the game's own formula |
 
 ---
 
-## Scrivere un bot
+## Writing a bot
 
-Un bot è una cosa sola: dato lo stato, dice **quale azione fare**.
+A bot is one thing only: given the state, it says **which action to take**.
 
 ```python
-# src/pokelike/bot/mio.py
+# src/pokelike/bot/mine.py
 from .base import Bot
 
-class MioBot(Bot):
-    nome = "mio"
+class MyBot(Bot):
+    name = "mine"
 
-    def scegli(self, stato):
-        # stato["azioni"] è la lista numerata che vedi giocando
-        for i, a in enumerate(stato["azioni"]):
-            if a.get("nodo") == "catch":
-                return i          # cattura appena puoi
+    def choose(self, state):
+        # state["actions"] is the numbered list you see when playing
+        for i, a in enumerate(state["actions"]):
+            if a.get("node") == "catch":
+                return i          # catch whenever you can
         return 0
 ```
 
-Registralo in `DISPONIBILI` dentro [bot/\_\_init\_\_.py](src/pokelike/bot/__init__.py):
+Register it in `AVAILABLE` inside [bot/\_\_init\_\_.py](src/pokelike/bot/__init__.py):
 
 ```python
-DISPONIBILI = {
-    "casuale": ("casuale", "BotCasuale"),
-    "llm":     ("llm", "BotLLM"),
-    "mio":     ("mio", "MioBot"),      # <-
+AVAILABLE = {
+    "random": ("random_bot", "RandomBot"),
+    "llm":    ("llm", "LLMBot"),
+    "mine":   ("mine", "MyBot"),      # <-
 }
 ```
 
-e usalo: `uv run pokelike bot --bot mio`. I moduli si importano solo quando
-servono, così un bot che tira dentro torch non rallenta gli altri.
+then use it: `uv run pokelike bot --bot mine`. Modules are imported only when
+needed, so a bot that pulls in torch does not slow down the others.
 
-Due agganci opzionali per chi ha bisogno di memoria fra i turni:
-`inizio(seed)` e `fine(stato, punteggio)`.
+Two optional hooks for bots that need memory across turns: `on_start(seed)` and
+`on_end(state, score)`.
 
-### I due bot già pronti
+### The two bots that ship with it
 
-**`casuale`** sceglie a caso fra le azioni legali. È la linea di base: muore in
-12-17 mosse, zero medaglie, zero mappe completate, punteggio intorno a zero.
-Chiunque deve batterlo.
+**`random`** picks uniformly among the legal actions. It is the baseline: dead in
+12–17 moves, no badges, no maps cleared, score around zero. Everyone has to beat
+it.
 
-**`llm`** ([bot/llm.py](src/pokelike/bot/llm.py)) sta tutto in un file: prompt,
-strumenti, loop agentico e chiamata HTTP con `urllib`. Ogni turno il modello
-riceve la situazione e le azioni numerate, può chiamare strumenti di sola lettura,
-e chiude con `gioca(indice)`:
+**`llm`** ([bot/llm.py](src/pokelike/bot/llm.py)) is self-contained: prompts,
+tools, agentic loop and the HTTP call with `urllib`. Each turn the model gets the
+situation and the numbered actions, may call read-only tools, and closes with
+`play(index)`:
 
-| strumento | cosa dà |
+| tool | what it gives |
 |---|---|
-| `dettagli_squadra` | HP, livelli, tipi, oggetti tenuti |
-| `cosa_c_e_avanti` | dove porta ogni azione al livello successivo |
-| `gioca(indice, perche)` | esegue e chiude il turno |
+| `team_details` | HP, levels, types, held items |
+| `what_lies_ahead` | where each action leads on the next layer |
+| `play(index, why)` | performs it and ends the turn |
 
-`cosa_c_e_avanti` è quello che conta: la scelta chiude per sempre gli altri nodi
-del livello, e senza guardare gli archi il modello non può saperlo.
+`what_lies_ahead` is the one that matters: the choice closes the other nodes on
+that layer forever, and without reading the edges the model cannot know that.
 
-Se il modello sbaglia indice, va in timeout o non chiama `gioca`, si ripiega su
-una scelta di riserva e il ripiego viene contato. **Una partita non muore mai per
-colpa del modello.**
+If the model returns a bad index, times out, or never calls `play`, the bot falls
+back to a safe choice and the fallback is counted. **A run never dies because of
+the model.**
 
 ---
 
-## Il punteggio
+## The score
 
-È quello del gioco, non inventato da noi:
+It is the game's own, not something we made up:
 
 ```
-500 se completata + 5·nemici_sconfitti − 10·svenimenti + 50·mappe_completate
-+ 20·leggendari + 20·shiny + bonus_tempo
+500 if completed + 5·enemies_KOd − 10·faints + 50·maps_cleared
++ 20·legendaries + 20·shinies + time_bonus
 ```
 
-Usa **`punti_senza_tempo`** per confrontare: il bonus tempo vale ~1000 su una
-scala dove il resto sta nelle decine, quindi coprirebbe tutto.
+Use **`points_no_time`** to compare: the time bonus is worth ~1000 on a scale
+where everything else is in the tens, so it would drown out the rest.
 
-## Le statistiche
+## Statistics
 
-Ogni partita di `pokelike bot` finisce in `stats/partite.db`, un SQLite
-interrogabile con SQL normale. `--no-stats` la salta.
+Every `pokelike bot` run lands in `stats/runs.db`, a SQLite file you can query
+with plain SQL. `--no-stats` skips it.
 
 ```bash
-uv run pokelike stats                # riepilogo per bot
-uv run pokelike stats -d             # + spiegazione di ogni colonna
-uv run pokelike stats --ultime 10    # + le ultime partite
+uv run pokelike stats                # summary per bot
+uv run pokelike stats -d             # + what each column means
+uv run pokelike stats --recent 10    # + the last runs
 ```
 
 ```
-bot          partite  vinte  punti medi    min    max   passi     KO  svenuti
------------------------------------------------------------------------------
-casuale            6      0        -6.7    -35     25    15.5    6.7      4.0
+bot         runs  done  badge~ badge+  maps~  maps+  score~ score- score+ catch~   KO~ faint~ Lv max~ moves~
+------------------------------------------------------------------------------------------------------------
+random         7     0    0.43      1    0.0      0    -2.1    -35     25    2.3   7.0    3.7    12.6   14.7
 ```
 
----
+`~` is the average, `+` the best. Careful with `done`: those are runs *completed*
+by beating the whole League, not badges — badges are their own column.
 
-## Se manca un pezzo del gioco
+The `extra` column is free-form JSON for a bot's own notes: the LLM one puts its
+model, call count, tokens spent and how many fallbacks it made.
 
-La copia locale può avere dei buchi: alcuni indirizzi il gioco se li costruisce
-al momento (`"img/sprites/items/" + nome + ".png"`) e non si trovano leggendo il
-codice. Per controllare:
+## If a piece of the game is missing
+
+The local copy can have holes: some addresses the game builds on the fly
+(`"img/sprites/items/" + name + ".png"`) and cannot be found by reading the code.
+To check:
 
 ```bash
-uv run pokelike mirror --fasi verifica
+uv run pokelike mirror --phase verify
 ```
 
-Gioca a rete chiusa, elenca i file mancanti, li scarica e ricontrolla. Non
-indovina: l'elenco glielo dà il gioco stesso mentre gioca.
+It plays with the network closed, lists what is missing, downloads it and checks
+again. It does not guess: the list comes from the game itself as it plays.
 
-**Cosa succede se manca qualcosa:** niente, a livello di gioco. Le immagini sono
-solo decorazione. Il server locale risponde 404, se lo segna, e il gioco mette
-un'emoji al posto dello sprite. **La partita, le regole e il punteggio non
-cambiano di una virgola** — verificato cancellando uno sprite in uso e
-rigiocando la stessa partita: stessi passi, stesso finale, stesso punteggio.
+**What happens if something is missing:** nothing, as far as the game goes.
+Images are decoration. The local server answers 404, notes it down, and the game
+shows an emoji instead of the sprite. **The run, the rules and the score do not
+change at all** — verified by deleting a sprite in use and replaying the same
+run: same steps, same ending, same score.
 
-E i bot non se ne accorgono nemmeno: leggono lo stato del gioco, non i pixel.
-Uno sprite mancante si vede solo con `--vedi` o `--foto`.
+Bots do not even notice: they read the game state, not pixels. A missing sprite
+only shows up with `--watch` or `--shots`.
 
-L'unica cosa che conta davvero è il file di gioco (`js/bundle.*.js`): se manca
-quello il gioco non parte proprio, e te ne accorgi subito.
+The only file that truly matters is the game bundle (`js/bundle.*.js`): without
+it the game does not start, and you find out immediately.
 
-## Riproducibilità
+## Reproducibility
 
-Stesso seed + stesse azioni = stessa identica partita. Serve per confrontare due
-bot sulle stesse partite invece che sulla fortuna.
+Same seed + same actions = exactly the same run. That is what lets you compare
+two bots on the same games rather than on luck.
 
-## Comandi
+## Tests
 
-| comando | cosa fa |
+```bash
+uv run pytest              # the whole suite (~3 minutes)
+uv run pytest -m "not slow"   # only the fast ones, no browser needed
+```
+
+The regression tests replay recorded runs and compare fingerprints made only of
+engine data — screens, node types, scores — so refactoring and renaming cannot
+make them pass or fail spuriously.
+
+## Commands
+
+| command | what it does |
 |---|---|
-| `setup` | browser + copia offline. Una volta sola |
-| `gioca` | partita interattiva nel terminale |
-| `bot` | fa giocare un bot (`--bot`, `--partite`, `--seed`) |
-| `api` | server HTTP JSON |
-| `stats` | riepilogo delle partite |
-| `mirror --fasi verifica` | controlla che alla copia locale non manchi niente |
-| `mirror` | rifà la copia offline da zero (dopo un aggiornamento del gioco) |
+| `setup` | browser + offline copy. Run once |
+| `play` | interactive run in the terminal |
+| `bot` | runs a bot (`--bot`, `--runs`, `--seed`) |
+| `api` | HTTP JSON server |
+| `stats` | summary of recorded runs (`-d` explains the columns) |
+| `mirror --phase verify` | check the local copy is not missing anything |
+| `mirror` | rebuild the offline copy (after a game update) |
 
 ---
 
-## Note
+## Notes
 
-Il gioco è un progetto amatoriale di altri e chiede di non essere confuso con uno
-ufficiale. Con la copia locale il traffico verso di loro è zero: si scarica una
-volta e basta.
+The game is somebody else's fan project and asks not to be mistaken for an
+official one. With the local copy, traffic to them is zero: downloaded once, then
+never again.
 
-Il nome del file di gioco contiene l'hash del contenuto, quindi **cambia a ogni
-aggiornamento**: se un giorno smette di funzionare, `uv run pokelike mirror`.
+The game's filename carries a content hash, so it **changes with every update**:
+if things break one day, run `uv run pokelike mirror`.
 
-Dettagli tecnici, trappole e come è fatto dentro: [CLAUDE.md](CLAUDE.md).
+Internals, pitfalls and how it is put together: [CLAUDE.md](CLAUDE.md).

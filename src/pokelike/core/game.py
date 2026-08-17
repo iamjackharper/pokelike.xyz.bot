@@ -1,83 +1,81 @@
-"""Logica di gioco comune. CLI e API sono due facce sottili sopra questa classe.
+"""The shared game logic. CLI, API and bots are all thin faces over this class.
 
-Il modello è quello di un ambiente a turni:
+The model is a turn-based environment:
 
-    g = Partita()
-    g.nuova(seed=42)
-    g.stato()        -> dizionario con squadra, mappa, azioni legali
-    g.esegui(1)      -> applica l'azione 1 e restituisce il nuovo stato
-    g.punteggio()    -> punteggio calcolato con la formula del gioco
+    g = Game()
+    g.reset(seed=42)
+    g.state()      -> dict with team, map and legal actions
+    g.step(1)      -> apply action 1, return the new state
+    g.score()      -> score computed with the game's own formula
 
-Fra una decisione e l'altra il motore fa un sacco di cose da solo (riproduce la
-battaglia, mostra i passaggi di livello, i banner). Non sono scelte del
-giocatore, quindi `_assesta()` le fa scorrere e restituisce il controllo solo
-quando c'è davvero più di un'opzione, o la partita è finita.
+Between one decision and the next the engine does plenty on its own (plays out
+the battle, shows level-ups, banners). Those are not player choices, so
+`_settle()` runs them through and only hands control back when there really is
+more than one option, or the run is over.
 """
 
 from __future__ import annotations
 
 import time
-from pathlib import Path
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
-from .browser import Sessione
+from .browser import Session
 
 
-class ErroreAzione(RuntimeError):
-    """Azione non valida nello stato corrente."""
+class IllegalAction(RuntimeError):
+    """The action is not valid in the current state."""
 
 
 @dataclass
-class Partita:
+class Game:
     url: str = "http://127.0.0.1:8422/"
-    visibile: bool = False
-    attesa_max: int = 1
-    punteggio_attivo: bool = True
+    watch: bool = False
+    max_delay: int = 1
+    scoring: bool = True
 
-    sessione: Sessione | None = field(default=None, repr=False)
+    session: Session | None = field(default=None, repr=False)
     seed: int | None = None
-    passi: int = 0
-    aggancio_punteggio: dict[str, Any] | None = field(default=None, repr=False)
-    ultimo_vivo: dict[str, Any] | None = field(default=None, repr=False)
-    _ultimo: dict[str, Any] | None = field(default=None, repr=False)
+    steps: int = 0
+    score_hook: dict[str, Any] | None = field(default=None, repr=False)
+    last_alive: dict[str, Any] | None = field(default=None, repr=False)
+    _last: dict[str, Any] | None = field(default=None, repr=False)
 
-    # ------------------------------------------------------------------ avvio
+    # ------------------------------------------------------------------ setup
 
-    def apri(self) -> None:
-        self.sessione = Sessione(
-            url=self.url, visibile=self.visibile, attesa_max=self.attesa_max
-        )
-        self.sessione.avvia()
+    def open(self) -> None:
+        self.session = Session(url=self.url, watch=self.watch, max_delay=self.max_delay)
+        self.session.start()
 
-    def chiudi(self) -> None:
-        if self.sessione is not None:
-            self.sessione.chiudi()
-            self.sessione = None
+    def close(self) -> None:
+        if self.session is not None:
+            self.session.close()
+            self.session = None
 
-    def __enter__(self) -> "Partita":
-        self.apri()
+    def __enter__(self) -> "Game":
+        self.open()
         return self
 
     def __exit__(self, *_exc) -> None:
-        self.chiudi()
+        self.close()
 
-    # ----------------------------------------------------------------- partita
+    # -------------------------------------------------------------------- run
 
-    def nuova(self, seed: int = 0) -> dict[str, Any]:
-        """Comincia una partita in modalità Storia, regione Kanto, regole classiche.
+    def reset(self, seed: int = 0) -> dict[str, Any]:
+        """Starts a run in Story mode, Kanto, classic rules.
 
-        La scelta dell'allenatore e dello starter NON viene fatta qui: restano
-        decisioni del giocatore e compaiono come primi due turni.
+        Picking the trainer and the starter is NOT done here: those stay player
+        decisions and show up as the first two turns.
         """
-        if self.sessione is None:
-            self.apri()
-        assert self.sessione is not None
+        if self.session is None:
+            self.open()
+        assert self.session is not None
 
         self.seed = seed
-        self.passi = 0
-        self.ultimo_vivo = None
-        page = self.sessione.carica(seed)
+        self.steps = 0
+        self.last_alive = None
+        page = self.session.load(seed)
 
         page.evaluate("() => { const b = document.getElementById('btn-history-run'); if (b) b.click(); }")
         page.wait_for_timeout(300)
@@ -87,122 +85,118 @@ class Partita:
         )
         page.wait_for_timeout(300)
 
-        if self.punteggio_attivo:
-            # Il punteggio è un extra: se l'aggancio fallisce la partita deve
-            # comunque andare avanti.
+        if self.scoring:
+            # Scoring is a bonus: if the hook fails the run must still go on.
             try:
-                self.aggancio_punteggio = page.evaluate(
-                    "() => window.__pk_aggancia_punteggio()"
-                )
+                self.score_hook = page.evaluate("() => window.__pk_attach_score()")
             except Exception as e:  # noqa: BLE001
-                self.aggancio_punteggio = {"ok": False, "motivo": str(e)[:200]}
+                self.score_hook = {"ok": False, "reason": str(e)[:200]}
 
-        return self._assesta()
+        return self._settle()
 
-    # ------------------------------------------------------------ osservazione
+    # ------------------------------------------------------------ observation
 
-    def stato(self) -> dict[str, Any]:
-        """Lo stato corrente. Sola lettura: non fa avanzare il gioco."""
-        if self.sessione is None or self.sessione.page is None:
-            raise RuntimeError("nessuna partita aperta: chiama nuova()")
-        obs = self.sessione.page.evaluate("() => window.__pk_obs()")
-        obs["passi"] = self.passi
+    def state(self) -> dict[str, Any]:
+        """The current state. Read-only: it does not advance the game."""
+        if self.session is None or self.session.page is None:
+            raise RuntimeError("no run open: call reset()")
+        obs = self.session.page.evaluate("() => window.__pk_obs()")
+        obs["steps"] = self.steps
         obs["seed"] = self.seed
-        obs["finita"] = self._e_finale()
-        self._ultimo = obs
-        # Sulla schermata di game over il motore azzera `state`: squadra vuota e
-        # medaglie assenti. Teniamo da parte l'ultima istantanea con la partita
-        # ancora viva, altrimenti il riepilogo di fine partita non ha nulla da
-        # raccontare.
-        if obs.get("squadra"):
-            self.ultimo_vivo = obs
+        obs["done"] = self._is_terminal()
+        self._last = obs
+        # On the game-over screen the engine wipes `state`: empty team, no
+        # badges. Keep the last snapshot taken while the run was alive, or the
+        # end-of-run summary would have nothing to report.
+        if obs.get("team"):
+            self.last_alive = obs
         return obs
 
-    def azioni(self) -> list[dict[str, Any]]:
-        return self.stato().get("azioni", [])
+    def actions(self) -> list[dict[str, Any]]:
+        return self.state().get("actions", [])
 
-    # ----------------------------------------------------------------- azione
+    # ----------------------------------------------------------------- action
 
-    def esegui(self, indice: int) -> dict[str, Any]:
-        """Applica l'azione `indice` fra quelle legali e restituisce il nuovo stato."""
-        assert self.sessione is not None and self.sessione.page is not None
-        azioni = (self._ultimo or self.stato()).get("azioni", [])
-        if not 0 <= indice < len(azioni):
-            raise ErroreAzione(
-                f"indice {indice} fuori range: ci sono {len(azioni)} azioni legali"
+    def step(self, index: int) -> dict[str, Any]:
+        """Applies legal action `index` and returns the new state."""
+        assert self.session is not None and self.session.page is not None
+        actions = (self._last or self.state()).get("actions", [])
+        if not 0 <= index < len(actions):
+            raise IllegalAction(
+                f"index {index} out of range: there are {len(actions)} legal actions"
             )
-        scelta = azioni[indice]
-        ok = self.sessione.page.evaluate("c => window.__pk_apply(c)", scelta)
+        choice = actions[index]
+        ok = self.session.page.evaluate("c => window.__pk_apply(c)", choice)
         if not ok:
-            raise ErroreAzione(f"il motore ha rifiutato l'azione: {scelta}")
-        self.passi += 1
-        self.sessione.page.wait_for_timeout(70)
-        return self._assesta()
+            raise IllegalAction(f"the engine refused the action: {choice}")
+        self.steps += 1
+        self.session.page.wait_for_timeout(70)
+        return self._settle()
 
-    # -------------------------------------------------------------- punteggio
+    # ------------------------------------------------------------------ score
 
-    def punteggio(self) -> dict[str, Any] | None:
-        """Punteggio secondo la formula del gioco.
+    def score(self) -> dict[str, Any] | None:
+        """Score using the game's own formula.
 
-            500 se completata + 5·KO − 10·svenimenti + 50·mappe
-            + 20·leggendari + 20·shiny + bonus tempo
+            500 if completed + 5·KOs − 10·faints + 50·maps
+            + 20·legendaries + 20·shinies + time bonus
 
-        Restituisce None se l'aggancio alle statistiche non è attivo.
+        Returns None when the stats hook is not attached.
         """
-        if self.sessione is None or self.sessione.page is None:
+        if self.session is None or self.session.page is None:
             return None
-        completata = (self._ultimo or {}).get("schermata") == "win-screen"
-        return self.sessione.page.evaluate("c => window.__pk_punteggio(c)", completata)
+        completed = (self._last or {}).get("screen") == "win-screen"
+        return self.session.page.evaluate("c => window.__pk_score(c)", completed)
 
-    # ---------------------------------------------------------------- interni
+    # --------------------------------------------------------------- internals
 
-    def foto(self, percorso: str | Path) -> Path:
-        """Salva un'immagine della schermata attuale.
+    def screenshot(self, path: str | Path) -> Path:
+        """Saves an image of the current screen.
 
-        Non è una cattura dello schermo: non c'è nessuno schermo. È il motore di
-        rendering del browser che disegna in memoria su richiesta e ci consegna
-        i byte del PNG. Funziona identico anche in headless.
+        This is not a screen capture — there is no screen. It is the browser's
+        rendering engine drawing into memory on request and handing us the PNG
+        bytes. It works exactly the same headless.
         """
-        if self.sessione is None or self.sessione.page is None:
-            raise RuntimeError("nessuna partita aperta")
-        p = Path(percorso)
+        if self.session is None or self.session.page is None:
+            raise RuntimeError("no run open")
+        p = Path(path)
         p.parent.mkdir(parents=True, exist_ok=True)
-        self.sessione.page.screenshot(path=str(p))
+        self.session.page.screenshot(path=str(p))
         return p
 
-    def _e_finale(self) -> bool:
-        assert self.sessione is not None and self.sessione.page is not None
-        return self.sessione.page.evaluate("() => window.__pk_stato_punto()") == "finale"
+    def _is_terminal(self) -> bool:
+        assert self.session is not None and self.session.page is not None
+        return self.session.page.evaluate("() => window.__pk_point()") == "terminal"
 
-    def _assesta(self, timeout_s: float = 90.0) -> dict[str, Any]:
-        """Fa scorrere tutto ciò che non è una scelta, poi restituisce lo stato."""
-        assert self.sessione is not None and self.sessione.page is not None
-        page = self.sessione.page
-        inizio = time.monotonic()
-        fermi = 0
+    def _settle(self, timeout_s: float = 90.0) -> dict[str, Any]:
+        """Runs through everything that is not a choice, then returns the state."""
+        assert self.session is not None and self.session.page is not None
+        page = self.session.page
+        started = time.monotonic()
+        stuck = 0
 
-        while time.monotonic() - inizio < timeout_s:
-            punto = page.evaluate("() => window.__pk_stato_punto()")
-            if punto == "finale":
-                return self.stato()
-            if punto == "decisione":
+        while time.monotonic() - started < timeout_s:
+            point = page.evaluate("() => window.__pk_point()")
+            if point == "terminal":
+                return self.state()
+            if point == "decision":
                 n = page.evaluate("() => window.__pk_choices().length")
                 if n > 1:
-                    return self.stato()
+                    return self.state()
                 if n == 1:
-                    # Scelta obbligata: non è una decisione, la prendiamo noi.
+                    # A forced choice is not a decision: take it ourselves.
                     page.evaluate("() => window.__pk_apply(window.__pk_choices()[0])")
                     page.wait_for_timeout(100)
                     continue
-            avanzato = page.evaluate("() => window.__pk_avanza()")
-            if not avanzato:
-                fermi += 1
-                if fermi > 200:
+            advanced = page.evaluate("() => window.__pk_advance()")
+            if not advanced:
+                stuck += 1
+                if stuck > 200:
                     break
             else:
-                fermi = 0
-            page.wait_for_timeout(50 if avanzato else 100)
+                stuck = 0
+            page.wait_for_timeout(50 if advanced else 100)
 
-        stato = self.stato()
-        stato["bloccata"] = True
-        return stato
+        state = self.state()
+        state["stalled"] = True
+        return state

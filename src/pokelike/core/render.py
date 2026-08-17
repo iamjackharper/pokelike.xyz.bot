@@ -1,127 +1,127 @@
-"""Rendering testuale dello stato.
+"""Text rendering of the game state.
 
-Tutto quello che c'è qui è ricostruito da `state`, cioè da un oggetto
-JavaScript letto come JSON. Nessun pixel viene guardato: la mappa qui sotto non
-è letta da un'immagine, è disegnata da noi a partire dai nodi e dagli archi.
+Everything here is rebuilt from `state`, a JavaScript object read as JSON. No
+pixel is ever inspected: the map below is not read from an image, we draw it
+ourselves from the nodes and edges.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
-ICONE = {
+ICONS = {
     "start": "@", "battle": "x", "trainer": "T", "catch": "o", "item": "i",
     "pokecenter": "+", "question": "?", "trade": "$", "move_tutor": "M",
     "boss": "B", "shiny": "*", "pokemart": "S", "mutation": "%",
     "evil_team": "E", "silver": "s", "legendary": "L",
 }
 
-LEGENDA = (
-    "@ inizio   x lotta   T allenatore   o cattura   i oggetto   + centro cure\n"
-    "? ignoto   $ scambio  M tutor mosse  B boss     S negozio   * shiny"
+LEGEND = (
+    "@ start    x wild fight   T trainer   o catch    i item     + pokecenter\n"
+    "? unknown  $ trade        M move tutor  B boss   S shop     * shiny"
 )
 
 
-def mappa(m: dict[str, Any] | None) -> str:
+def map_view(m: dict[str, Any] | None) -> str:
     if not m:
-        return "  (nessuna mappa)"
-    per_livello: dict[int, list[dict]] = {}
-    for n in m["nodi"]:
-        if not n["rivelato"]:
+        return "  (no map)"
+    by_layer: dict[int, list[dict]] = {}
+    for n in m["nodes"]:
+        if not n["revealed"]:
             continue
-        per_livello.setdefault(n["livello"], []).append(n)
+        by_layer.setdefault(n["layer"], []).append(n)
 
-    righe = []
-    for liv in sorted(per_livello):
-        celle = []
-        for n in sorted(per_livello[liv], key=lambda x: x["colonna"]):
-            ic = ICONE.get(n["tipo"], ".")
-            if n["id"] == m.get("attuale"):
-                celle.append(f"[{ic}]")       # dove sei ora
-            elif n["accessibile"] and not n["visitato"]:
-                celle.append(f"<{ic}>")       # mossa legale
-            elif n["visitato"]:
-                celle.append(f" {ic}'")       # già fatto
+    rows = []
+    for layer in sorted(by_layer):
+        cells = []
+        for n in sorted(by_layer[layer], key=lambda x: x["col"]):
+            ic = ICONS.get(n["kind"], ".")
+            if n["id"] == m.get("current"):
+                cells.append(f"[{ic}]")       # where you are now
+            elif n["accessible"] and not n["visited"]:
+                cells.append(f"<{ic}>")       # a legal move
+            elif n["visited"]:
+                cells.append(f" {ic}'")       # already done
             else:
-                celle.append(f" {ic} ")
-        righe.append(f"  liv {liv:>2} | " + " ".join(celle))
-    return "\n".join(righe)
+                cells.append(f" {ic} ")
+        rows.append(f"  layer {layer:>2} | " + " ".join(cells))
+    return "\n".join(rows)
 
 
-def squadra(team: list[dict] | None) -> str:
+def team_view(team: list[dict] | None) -> str:
     if not team:
-        return "  (squadra vuota)"
-    righe = []
+        return "  (empty team)"
+    rows = []
     for i, p in enumerate(team):
-        pieno = round((p["hp"] / p["hp_max"]) * 10) if p["hp_max"] else 0
-        barra = "#" * max(0, pieno) + "." * max(0, 10 - pieno)
-        oggetto = f"  [{p['oggetto']}]" if p.get("oggetto") else ""
+        filled = round((p["hp"] / p["max_hp"]) * 10) if p["max_hp"] else 0
+        bar = "#" * max(0, filled) + "." * max(0, 10 - filled)
+        item = f"  [{p['item']}]" if p.get("item") else ""
         shiny = " *" if p.get("shiny") else ""
-        righe.append(
-            f"  {i}. {p['nome']:<13}Lv{p['livello']:>2}  {barra} {p['hp']:>3}/{p['hp_max']:<3}"
-            f"  {'/'.join(p.get('tipi') or [])}{oggetto}{shiny}"
+        rows.append(
+            f"  {i}. {p['name']:<13}Lv{p['level']:>2}  {bar} {p['hp']:>3}/{p['max_hp']:<3}"
+            f"  {'/'.join(p.get('types') or [])}{item}{shiny}"
         )
-    return "\n".join(righe)
+    return "\n".join(rows)
 
 
-def azioni(lista: list[dict]) -> str:
-    if not lista:
-        return "  (nessuna azione)"
-    righe = []
-    for i, a in enumerate(lista):
-        if a["tipo"] == "nodo":
-            righe.append(f"  [{i}] vai al nodo {a['id']:<6} ({a['nodo']})")
+def actions_view(actions: list[dict]) -> str:
+    if not actions:
+        return "  (no actions)"
+    rows = []
+    for i, a in enumerate(actions):
+        if a["kind"] == "node":
+            rows.append(f"  [{i}] go to node {a['id']:<6} ({a['node']})")
         else:
-            righe.append(f"  [{i}] {a['etichetta']}")
-    return "\n".join(righe)
+            rows.append(f"  [{i}] {a['label']}")
+    return "\n".join(rows)
 
 
-def schermo(obs: dict[str, Any], con_legenda: bool = False) -> str:
-    """La vista completa di un turno, in testo."""
+def screen(obs: dict[str, Any], with_legend: bool = False) -> str:
+    """The whole turn as text."""
     run = obs.get("run") or {}
-    testa = (
-        f"passo {obs.get('passi', 0)}   schermata: {obs.get('schermata')}   "
-        f"mappa {run.get('mappa', '-')}   medaglie {run.get('medaglie', '-')}"
+    head = (
+        f"step {obs.get('steps', 0)}   screen: {obs.get('screen')}   "
+        f"map {run.get('map', '-')}   badges {run.get('badges', '-')}"
     )
-    parti = ["=" * 72, testa, "=" * 72, "", "SQUADRA", squadra(obs.get("squadra"))]
+    parts = ["=" * 72, head, "=" * 72, "", "TEAM", team_view(obs.get("team"))]
 
-    zaino = obs.get("zaino") or []
-    if zaino:
-        parti += ["", "ZAINO", "  " + ", ".join(str(z) for z in zaino)]
+    bag = obs.get("bag") or []
+    if bag:
+        parts += ["", "BAG", "  " + ", ".join(str(b) for b in bag)]
 
-    if obs.get("mappa"):
-        parti += ["", "MAPPA   [qui]  <mossa legale>  x'=fatto", mappa(obs["mappa"])]
-        if con_legenda:
-            parti += ["", LEGENDA]
+    if obs.get("map"):
+        parts += ["", "MAP   [here]  <legal move>  x'=done", map_view(obs["map"])]
+        if with_legend:
+            parts += ["", LEGEND]
 
-    parti += ["", "AZIONI", azioni(obs.get("azioni") or [])]
+    parts += ["", "ACTIONS", actions_view(obs.get("actions") or [])]
 
-    if obs.get("finita"):
-        parti += ["", ">>> PARTITA FINITA <<<"]
-    return "\n".join(parti)
+    if obs.get("done"):
+        parts += ["", ">>> RUN OVER <<<"]
+    return "\n".join(parts)
 
 
-def punteggio(p: dict[str, Any] | None) -> str:
-    if not p:
-        return "punteggio non disponibile"
-    d = p.get("dettaglio") or {}
-    s = p.get("statistiche") or {}
-    righe = [
-        f"PUNTEGGIO: {p.get('punti')}   (senza bonus tempo: {p.get('punti_senza_tempo')})",
+def score_view(s: dict[str, Any] | None) -> str:
+    if not s:
+        return "score not available"
+    b = s.get("breakdown") or {}
+    st = s.get("stats") or {}
+    rows = [
+        f"SCORE: {s.get('points')}   (without time bonus: {s.get('points_no_time')})",
         "",
-        f"  bonus vittoria     {d.get('winBonus', 0):>6}",
-        f"  nemici sconfitti   {d.get('enemiesKO', 0):>6}  (x5)",
-        f"  svenimenti         {d.get('faints', 0):>6}  (x-10)",
-        f"  mappe completate   {d.get('mapsCleared', 0):>6}  (x50)",
-        f"  leggendari         {d.get('legendaries', 0):>6}  (x20)",
-        f"  shiny              {d.get('shinies', 0):>6}  (x20)",
-        f"  bonus tempo        {d.get('timeBonus', 0):>6}",
+        f"  win bonus           {b.get('winBonus', 0):>6}",
+        f"  enemies knocked out {b.get('enemiesKO', 0):>6}  (x5)",
+        f"  own faints          {b.get('faints', 0):>6}  (x-10)",
+        f"  maps cleared        {b.get('mapsCleared', 0):>6}  (x50)",
+        f"  legendaries         {b.get('legendaries', 0):>6}  (x20)",
+        f"  shinies             {b.get('shinies', 0):>6}  (x20)",
+        f"  time bonus          {b.get('timeBonus', 0):>6}",
         "",
-        f"  battaglie vinte    {s.get('battlesWon', 0):>6}",
-        f"  catture            {s.get('catches', 0):>6}",
-        f"  danno inflitto     {s.get('totalDamageDealt', 0):>6}",
-        f"  danno subito       {s.get('totalDamageTaken', 0):>6}",
-        f"  critici            {s.get('critHits', 0):>6}",
-        f"  livello massimo    {s.get('highestLevel', 0):>6}",
+        f"  battles won         {st.get('battlesWon', 0):>6}",
+        f"  catches             {st.get('catches', 0):>6}",
+        f"  damage dealt        {st.get('totalDamageDealt', 0):>6}",
+        f"  damage taken        {st.get('totalDamageTaken', 0):>6}",
+        f"  critical hits       {st.get('critHits', 0):>6}",
+        f"  highest level       {st.get('highestLevel', 0):>6}",
     ]
-    return "\n".join(righe)
+    return "\n".join(rows)

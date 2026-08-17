@@ -1,7 +1,7 @@
-"""Interfaccia a riga di comando.
+"""Command-line interface.
 
-È una faccia sottile sopra `core.game.Partita`: la stessa classe che usa l'API.
-Nessuna logica di gioco vive qui dentro.
+A thin face over `core.game.Game`, the same class the API uses. No game logic
+lives here.
 """
 
 from __future__ import annotations
@@ -11,267 +11,269 @@ import json
 import sys
 from pathlib import Path
 
-from ..assets.mirror import costruisci
-from ..assets.server import ServerAsset
+from ..assets.mirror import PHASES, build
+from ..assets.server import AssetServer
 from ..core import render
-from ..core.game import ErroreAzione, Partita
-from ..statistiche import formatta_riepilogo, registra, riepilogo, ultime
+from ..core.game import Game, IllegalAction
+from ..stats import format_summary, record, recent, summary
 
-RADICE_SITO = Path(__file__).resolve().parents[3] / "site"
+SITE_ROOT = Path(__file__).resolve().parents[3] / "site"
 
-AIUTO_REPL = """
-comandi:
-  <numero>   esegui l'azione con quel numero
-  s          mostra il punteggio
-  j          mostra lo stato grezzo in JSON
-  l          mostra la legenda dei simboli della mappa
-  n          nuova partita
-  q          esci
+REPL_HELP = """
+commands:
+  <number>   take the action with that number
+  s          show the score
+  j          show the raw state as JSON
+  l          show the legend of map symbols
+  n          new run
+  q          quit
 """
 
 
-def _server_e_partita(args) -> tuple[ServerAsset, Partita]:
-    if not RADICE_SITO.is_dir() or not (RADICE_SITO / "index.html").is_file():
+def _server_and_game(args) -> tuple[AssetServer, Game]:
+    if not SITE_ROOT.is_dir() or not (SITE_ROOT / "index.html").is_file():
         print(
-            f"copia offline assente in {RADICE_SITO}\n"
-            "eseguila una volta con:  pokelike mirror",
+            f"offline copy missing in {SITE_ROOT}\n"
+            "run it once with:  pokelike setup",
             file=sys.stderr,
         )
         raise SystemExit(2)
-    server = ServerAsset(RADICE_SITO, porta=args.porta)
-    server.avvia()
+    server = AssetServer(SITE_ROOT, port=args.port)
+    server.start()
 
-    vedi = getattr(args, "vedi", False)
-    # A finestra aperta le animazioni vanno lasciate correre alla loro velocità,
-    # altrimenti passa tutto in un lampo e non si vede niente. Headless invece le
-    # schiaccia a 1 ms perché nessuno le guarda.
-    gioco = Partita(url=server.url, visibile=vedi, attesa_max=100_000 if vedi else 1)
+    watch = getattr(args, "watch", False)
+    # With a window open the animations should run at their own speed, otherwise
+    # everything flashes past unseen. Headless squashes them to 1 ms because
+    # nobody is watching.
+    game = Game(url=server.url, watch=watch, max_delay=100_000 if watch else 1)
     try:
-        gioco.apri()
+        game.open()
     except Exception as e:  # noqa: BLE001
-        server.ferma()
-        if vedi:
+        server.stop()
+        if watch:
             print(
-                f"non riesco ad aprire la finestra: {e}\n\n"
-                "La modalità --vedi richiede il browser completo, non solo il guscio "
-                "headless:\n    .venv/bin/python -m playwright install chromium",
+                f"cannot open the window: {e}\n\n"
+                "--watch needs the full browser, not just the headless shell:\n"
+                "    uv run playwright install chromium",
                 file=sys.stderr,
             )
             raise SystemExit(3) from e
         raise
-    return server, gioco
+    return server, game
 
 
-# --------------------------------------------------------------------- comandi
+# -------------------------------------------------------------------- commands
 
 
 def cmd_setup(args) -> int:
-    """Prepara tutto: browser + copia offline del gioco. Da fare una volta sola."""
+    """Gets everything ready: browser + offline copy. Run once."""
     import subprocess
 
-    print("[1/2] scarico il browser headless (~120 MB)")
+    print("[1/2] downloading the headless browser (~120 MB)")
     r = subprocess.run(
         [sys.executable, "-m", "playwright", "install", "chromium", "--only-shell"]
     )
     if r.returncode != 0:
-        print("installazione del browser fallita", file=sys.stderr)
+        print("browser installation failed", file=sys.stderr)
         return r.returncode
 
-    if (RADICE_SITO / "index.html").is_file() and not args.riscarica:
-        print(f"[2/2] copia offline già presente in {RADICE_SITO} — salto")
-        print("      (usa --riscarica per rifarla)")
+    if (SITE_ROOT / "index.html").is_file() and not args.force:
+        print(f"[2/2] offline copy already in {SITE_ROOT} — skipping")
+        print("      (use --force to rebuild it)")
     else:
-        print("[2/2] scarico il gioco per l'uso offline (~130 MB, qualche minuto)")
-        costruisci(RADICE_SITO)
+        print("[2/2] downloading the game for offline use (~130 MB, a few minutes)")
+        build(SITE_ROOT)
 
-    print("\nPronto. Prova:  pokelike gioca")
+    print("\nReady. Try:  pokelike play")
     return 0
 
 
 def cmd_mirror(args) -> int:
-    costruisci(RADICE_SITO, fasi=args.fasi)
+    build(SITE_ROOT, phases=args.phase)
     return 0
 
 
-def cmd_gioca(args) -> int:
-    server, gioco = _server_e_partita(args)
+def cmd_play(args) -> int:
+    server, game = _server_and_game(args)
     try:
-        obs = gioco.nuova(seed=args.seed)
-        print(f"\nnuova partita — seed {args.seed}")
-        if args.foto:
-            print(f"immagini in {args.foto}/")
-        print(AIUTO_REPL)
+        obs = game.reset(seed=args.seed)
+        print(f"\nnew run — seed {args.seed}")
+        if args.shots:
+            print(f"images in {args.shots}/")
+        print(REPL_HELP)
         while True:
             print()
-            print(render.schermo(obs))
-            if args.foto:
-                f = gioco.foto(Path(args.foto) / f"{gioco.passi:03d}-{obs['schermata']}.png")
-                print(f"\n[immagine: {f}]")
-            if obs.get("finita"):
+            print(render.screen(obs))
+            if args.shots:
+                f = game.screenshot(Path(args.shots) / f"{game.steps:03d}-{obs['screen']}.png")
+                print(f"\n[image: {f}]")
+            if obs.get("done"):
                 print()
-                print(render.punteggio(gioco.punteggio()))
-                print("\n('n' per un'altra partita, 'q' per uscire)")
+                print(render.score_view(game.score()))
+                print("\n('n' for another run, 'q' to quit)")
 
             try:
-                riga = input("\n> ").strip().lower()
+                line = input("\n> ").strip().lower()
             except (EOFError, KeyboardInterrupt):
                 print()
                 return 0
 
-            if riga in {"q", "quit", "esci"}:
+            if line in {"q", "quit", "exit"}:
                 return 0
-            if riga == "n":
+            if line == "n":
                 args.seed += 1
-                obs = gioco.nuova(seed=args.seed)
-                print(f"\nnuova partita — seed {args.seed}")
+                obs = game.reset(seed=args.seed)
+                print(f"\nnew run — seed {args.seed}")
                 continue
-            if riga == "s":
+            if line == "s":
                 print()
-                print(render.punteggio(gioco.punteggio()))
+                print(render.score_view(game.score()))
                 continue
-            if riga == "j":
-                print(json.dumps(gioco.stato(), indent=1, ensure_ascii=False))
+            if line == "j":
+                print(json.dumps(game.state(), indent=1, ensure_ascii=False))
                 continue
-            if riga == "l":
+            if line == "l":
                 print()
-                print(render.LEGENDA)
+                print(render.LEGEND)
                 continue
-            if riga in {"?", "h", "help"}:
-                print(AIUTO_REPL)
+            if line in {"?", "h", "help"}:
+                print(REPL_HELP)
                 continue
-            if not riga.isdigit():
-                print("non ho capito — scrivi un numero, oppure '?' per l'aiuto")
+            if not line.isdigit():
+                print("did not understand — type a number, or '?' for help")
                 continue
 
             try:
-                obs = gioco.esegui(int(riga))
-            except ErroreAzione as e:
-                print(f"azione rifiutata: {e}")
+                obs = game.step(int(line))
+            except IllegalAction as e:
+                print(f"action refused: {e}")
     finally:
-        gioco.chiudi()
-        server.ferma()
+        game.close()
+        server.stop()
 
 
 def cmd_bot(args) -> int:
-    """Fa giocare un bot. Il bot decide le mosse, qui si gestisce solo il giro."""
-    from ..bot import crea
+    """Runs a bot. The bot decides the moves; this only drives the loop."""
+    from ..bot import create
 
     try:
-        bot = crea(args.bot, seed=args.seed)
+        bot = create(args.bot, seed=args.seed)
     except KeyError as e:
         print(e.args[0], file=sys.stderr)
         raise SystemExit(2) from e
 
-    server, gioco = _server_e_partita(args)
+    server, game = _server_and_game(args)
     try:
-        for i in range(args.partite):
+        for i in range(args.runs):
             seed = args.seed + i
-            obs = gioco.nuova(seed=seed)
-            bot.inizio(seed)
-            while not obs.get("finita") and obs.get("azioni") and gioco.passi < args.max_passi:
-                if args.foto:
-                    gioco.foto(Path(args.foto) / f"{i:02d}-{gioco.passi:03d}-{obs['schermata']}.png")
-                obs = gioco.esegui(bot.scegli(obs))
-                if args.vedi:
-                    gioco.sessione.page.wait_for_timeout(args.pausa)
-            p = gioco.punteggio() or {}
-            bot.fine(obs, p)
+            obs = game.reset(seed=seed)
+            bot.on_start(seed)
+            while not obs.get("done") and obs.get("actions") and game.steps < args.max_steps:
+                if args.shots:
+                    game.screenshot(
+                        Path(args.shots) / f"{i:02d}-{game.steps:03d}-{obs['screen']}.png"
+                    )
+                obs = game.step(bot.choose(obs))
+                if args.watch:
+                    game.session.page.wait_for_timeout(args.pause)
+            s = game.score() or {}
+            bot.on_end(obs, s)
             if not args.no_stats:
-                registra(bot=args.bot, seed=seed, stato=obs, punteggio=p,
-                         passi=gioco.passi, vivo=gioco.ultimo_vivo,
-                         extra=bot.note() if hasattr(bot, "note") else None)
-            d = p.get("dettaglio") or {}
-            # Si stampa `punti_senza_tempo` perché è l'unico confrontabile: il
-            # bonus tempo vale ~1000 su una scala dove il resto sta nelle decine,
-            # quindi `punti` fa sembrare buona anche una partita disastrosa.
+                record(bot=args.bot, seed=seed, state=obs, score=s, steps=game.steps,
+                       alive=game.last_alive,
+                       extra=bot.notes() if hasattr(bot, "notes") else None)
+            b = s.get("breakdown") or {}
+            badges = ((game.last_alive or {}).get("run") or {}).get("badges", 0)
+            # We print `points_no_time` because it is the only comparable one:
+            # the time bonus is worth ~1000 on a scale where everything else is
+            # in the tens, so `points` makes a disastrous run look fine.
             print(
-                f"partita {i + 1}/{args.partite}  seed {seed}  "
-                f"passi {gioco.passi:>3}  fine {obs.get('schermata'):<16} "
-                f"medaglie {(obs.get('run') or {}).get('medaglie', 0)}  "
-                f"punti {p.get('punti_senza_tempo')}  "
-                f"(KO {d.get('enemiesKO', 0)}, svenuti {d.get('faints', 0)}, "
-                f"mappe {d.get('mapsCleared', 0)})"
+                f"run {i + 1}/{args.runs}  seed {seed}  "
+                f"steps {game.steps:>3}  end {obs.get('screen'):<16} "
+                f"badges {badges}  score {s.get('points_no_time')}  "
+                f"(KO {b.get('enemiesKO', 0)}, faints {b.get('faints', 0)}, "
+                f"maps {b.get('mapsCleared', 0)})"
             )
         return 0
     finally:
-        gioco.chiudi()
-        server.ferma()
+        game.close()
+        server.stop()
 
 
 def cmd_stats(args) -> int:
-    print(formatta_riepilogo(riepilogo(), dettagli=args.dettagli))
-    if args.ultime:
+    print(format_summary(summary(), explain=args.explain))
+    if args.recent:
         print()
-        for r in ultime(args.ultime, bot=args.bot):
-            print(f"  #{r['id']:<5} {r['quando']}  {r['bot']:<10} seed {r['seed']:<5}"
-                  f" passi {r['passi']:>3}  {r['fine']:<16} punti {r['punti']}")
+        for r in recent(args.recent, bot=args.bot):
+            print(f"  #{r['id']:<5} {r['played_at']}  {r['bot']:<10} seed {r['seed']:<5}"
+                  f" steps {r['steps']:>3}  {r['ending']:<16} score {r['points']}")
     return 0
 
 
 def cmd_api(args) -> int:
-    from ..api.server import avvia_api
+    from ..api.server import serve
 
-    server, gioco = _server_e_partita(args)
+    server, game = _server_and_game(args)
     try:
-        # Una partita è già pronta all'avvio, così GET /stato risponde subito
-        # senza dover per forza chiamare POST /nuova.
-        gioco.nuova(seed=args.seed)
-        print(f"API su http://127.0.0.1:{args.porta_api}/   (ctrl-c per fermare)")
-        print(f"partita pronta con seed {args.seed} — prova: curl 127.0.0.1:{args.porta_api}/stato")
-        avvia_api(gioco, porta=args.porta_api)
+        # A run is ready as soon as the server starts, so GET /state answers
+        # right away without having to POST /new first.
+        game.reset(seed=args.seed)
+        print(f"API on http://127.0.0.1:{args.api_port}/   (ctrl-c to stop)")
+        print(f"run ready with seed {args.seed} — try: curl 127.0.0.1:{args.api_port}/state")
+        serve(game, port=args.api_port)
         return 0
     finally:
-        gioco.chiudi()
-        server.ferma()
+        game.close()
+        server.stop()
 
 
-# ------------------------------------------------------------------ argomenti
+# ------------------------------------------------------------------ arguments
 
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         prog="pokelike",
-        description="Gioca a pokelike.xyz headless, da riga di comando o via API.",
+        description="Play pokelike.xyz headless, from the command line or over HTTP.",
     )
-    p.add_argument("--porta", type=int, default=8422, help="porta del server dei file di gioco")
-    sub = p.add_subparsers(dest="comando", required=True)
+    p.add_argument("--port", type=int, default=8422, help="port of the game-file server")
+    sub = p.add_subparsers(dest="command", required=True)
 
-    s = sub.add_parser("setup", help="prepara tutto: browser + copia offline (una volta sola)")
-    s.add_argument("--riscarica", action="store_true", help="rifà la copia anche se c'è già")
+    s = sub.add_parser("setup", help="get everything ready: browser + offline copy (run once)")
+    s.add_argument("--force", action="store_true", help="rebuild the copy even if present")
     s.set_defaults(func=cmd_setup)
 
-    s = sub.add_parser("mirror", help="rifà solo la copia offline del gioco")
-    s.add_argument("--fasi", choices=["tutte", "statica", "numeri", "slug", "giocata", "verifica"],
-                   default="tutte", help="riprendi da una fase senza riscaricare")
+    s = sub.add_parser("mirror", help="rebuild only the offline copy of the game")
+    s.add_argument("--phase", choices=list(PHASES), default="all",
+                   help="resume from one phase without downloading everything again")
     s.set_defaults(func=cmd_mirror)
 
-    s = sub.add_parser("gioca", help="partita interattiva nel terminale")
-    s.add_argument("--seed", type=int, default=1, help="seed della partita")
-    s.add_argument("--vedi", action="store_true", help="apri una finestra vera e guarda")
-    s.add_argument("--foto", metavar="CARTELLA", help="salva un'immagine a ogni schermata")
-    s.set_defaults(func=cmd_gioca)
+    s = sub.add_parser("play", help="interactive run in the terminal")
+    s.add_argument("--seed", type=int, default=1, help="seed of the run")
+    s.add_argument("--watch", action="store_true", help="open a real window and watch")
+    s.add_argument("--shots", metavar="FOLDER", help="save an image of every screen")
+    s.set_defaults(func=cmd_play)
 
-    s = sub.add_parser("bot", help="fai giocare un bot")
-    s.add_argument("--bot", default="casuale", help="quale bot usare (vedi bot/DISPONIBILI)")
+    s = sub.add_parser("bot", help="run a bot")
+    s.add_argument("--bot", default="random", help="which bot to use (see bot/AVAILABLE)")
     s.add_argument("--seed", type=int, default=1)
-    s.add_argument("--partite", type=int, default=3)
-    s.add_argument("--max-passi", type=int, default=300)
-    s.add_argument("--vedi", action="store_true", help="apri una finestra vera e guarda")
-    s.add_argument("--foto", metavar="CARTELLA", help="salva un'immagine a ogni passo")
-    s.add_argument("--pausa", type=int, default=800, help="ms di pausa fra le mosse con --vedi")
-    s.add_argument("--no-stats", action="store_true", help="non registrare le partite")
+    s.add_argument("--runs", type=int, default=3)
+    s.add_argument("--max-steps", type=int, default=300)
+    s.add_argument("--watch", action="store_true", help="open a real window and watch")
+    s.add_argument("--shots", metavar="FOLDER", help="save an image at every step")
+    s.add_argument("--pause", type=int, default=800, help="ms between moves with --watch")
+    s.add_argument("--no-stats", action="store_true", help="do not record the runs")
     s.set_defaults(func=cmd_bot)
 
-    s = sub.add_parser("api", help="avvia l'API HTTP")
-    s.add_argument("--porta-api", type=int, default=8423)
-    s.add_argument("--seed", type=int, default=1, help="seed della partita iniziale")
+    s = sub.add_parser("api", help="start the HTTP API")
+    s.add_argument("--api-port", type=int, default=8423)
+    s.add_argument("--seed", type=int, default=1, help="seed of the initial run")
     s.set_defaults(func=cmd_api)
 
-    s = sub.add_parser("stats", help="riepilogo delle partite registrate")
-    s.add_argument("-d", "--dettagli", action="store_true",
-                   help="spiega cosa significa ogni colonna")
-    s.add_argument("--ultime", type=int, default=0, help="mostra anche le ultime N partite")
-    s.add_argument("--bot", default=None, help="filtra le ultime per bot")
+    s = sub.add_parser("stats", help="summary of the recorded runs")
+    s.add_argument("-d", "--explain", action="store_true",
+                   help="explain what each column means")
+    s.add_argument("--recent", type=int, default=0, help="also show the last N runs")
+    s.add_argument("--bot", default=None, help="filter the recent list by bot")
     s.set_defaults(func=cmd_stats)
 
     args = p.parse_args(argv)

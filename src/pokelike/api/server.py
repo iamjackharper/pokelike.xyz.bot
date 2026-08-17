@@ -1,17 +1,15 @@
-"""API HTTP JSON. Seconda faccia sopra la stessa `core.game.Partita`.
+"""HTTP JSON API. The second face over the same `core.game.Game`.
 
-Endpoint:
+Endpoints:
 
-    GET  /stato                 stato corrente (+ vista testuale)
-    GET  /azioni                solo le azioni legali
-    POST /nuova   {"seed": 42}  comincia una partita
-    POST /azione  {"indice": 1} esegue un'azione
-    GET  /punteggio             punteggio con la formula del gioco
+    GET  /state                 current state (+ a ready-to-print text view)
+    GET  /actions               just the legal actions
+    POST /new     {"seed": 42}  start a run
+    POST /action  {"index": 1}  take an action
+    GET  /score                 score using the game's own formula
 
-Il browser resta acceso fra una chiamata e l'altra: è il motivo per cui serve
-un processo vivo invece di un comando che parte e muore ogni volta.
-
-Volutamente a thread singolo: una partita, un giocatore per volta.
+The browser stays alive between calls: that is why this needs a running process
+rather than a command that starts and dies each time.
 """
 
 from __future__ import annotations
@@ -20,25 +18,25 @@ import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from ..core import render
-from ..core.game import ErroreAzione, Partita
+from ..core.game import Game, IllegalAction
 
 
-def _handler(gioco: Partita):
+def _handler(game: Game):
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *_args) -> None:
             pass
 
-        # ------------------------------------------------------------ utilità
+        # ------------------------------------------------------------ helpers
 
-        def _json(self, dati, codice: int = 200) -> None:
-            corpo = json.dumps(dati, ensure_ascii=False).encode("utf-8")
-            self.send_response(codice)
+        def _json(self, data, code: int = 200) -> None:
+            body = json.dumps(data, ensure_ascii=False).encode("utf-8")
+            self.send_response(code)
             self.send_header("Content-Type", "application/json; charset=utf-8")
-            self.send_header("Content-Length", str(len(corpo)))
+            self.send_header("Content-Length", str(len(body)))
             self.end_headers()
-            self.wfile.write(corpo)
+            self.wfile.write(body)
 
-        def _corpo(self) -> dict:
+        def _body(self) -> dict:
             n = int(self.headers.get("Content-Length") or 0)
             if not n:
                 return {}
@@ -47,70 +45,69 @@ def _handler(gioco: Partita):
             except json.JSONDecodeError:
                 return {}
 
-        def _con_vista(self, obs: dict) -> dict:
+        def _with_view(self, obs: dict) -> dict:
             obs = dict(obs)
-            obs["vista"] = render.schermo(obs)
+            obs["view"] = render.screen(obs)
             return obs
 
-        # ------------------------------------------------------------ percorsi
+        # ------------------------------------------------------------- routes
 
         def do_GET(self) -> None:  # noqa: N802
-            rotta = self.path.split("?")[0].rstrip("/") or "/"
-            if rotta == "/":
+            route = self.path.split("?")[0].rstrip("/") or "/"
+            if route == "/":
                 self._json({
-                    "servizio": "pokelike",
-                    "endpoint": ["/stato", "/azioni", "/nuova", "/azione", "/punteggio"],
+                    "service": "pokelike",
+                    "endpoints": ["/state", "/actions", "/new", "/action", "/score"],
                 })
-            elif rotta == "/stato":
-                self._json(self._con_vista(gioco.stato()))
-            elif rotta == "/azioni":
-                self._json({"azioni": gioco.azioni()})
-            elif rotta == "/punteggio":
-                self._json(gioco.punteggio() or {"errore": "punteggio non disponibile"})
+            elif route == "/state":
+                self._json(self._with_view(game.state()))
+            elif route == "/actions":
+                self._json({"actions": game.actions()})
+            elif route == "/score":
+                self._json(game.score() or {"error": "score not available"})
             else:
-                self._json({"errore": "percorso sconosciuto"}, 404)
+                self._json({"error": "unknown route"}, 404)
 
         def do_POST(self) -> None:  # noqa: N802
-            rotta = self.path.split("?")[0].rstrip("/") or "/"
-            corpo = self._corpo()
-            if rotta == "/nuova":
-                obs = gioco.nuova(seed=int(corpo.get("seed", 1)))
-                self._json(self._con_vista(obs))
-            elif rotta == "/azione":
-                if "indice" not in corpo:
-                    self._json({"errore": "manca il campo 'indice'"}, 400)
+            route = self.path.split("?")[0].rstrip("/") or "/"
+            body = self._body()
+            if route == "/new":
+                self._json(self._with_view(game.reset(seed=int(body.get("seed", 1)))))
+            elif route == "/action":
+                if "index" not in body:
+                    self._json({"error": "missing field 'index'"}, 400)
                     return
                 try:
-                    obs = gioco.esegui(int(corpo["indice"]))
-                except ErroreAzione as e:
-                    self._json({"errore": str(e)}, 409)
+                    obs = game.step(int(body["index"]))
+                except IllegalAction as e:
+                    self._json({"error": str(e)}, 409)
                     return
-                self._json(self._con_vista(obs))
+                self._json(self._with_view(obs))
             else:
-                self._json({"errore": "percorso sconosciuto"}, 404)
+                self._json({"error": "unknown route"}, 404)
 
     return Handler
 
 
-def crea_api(gioco: Partita, porta: int = 8423) -> HTTPServer:
-    """Costruisce il server senza avviarlo.
+def create_api(game: Game, port: int = 8423) -> HTTPServer:
+    """Builds the server without starting it.
 
-    Serve per poterlo fermare da codice: `httpd.shutdown()` si può chiamare da un
-    altro thread, mentre `serve_forever()` va lasciato sul thread che possiede la
-    partita (vedi la nota qui sotto).
+    Lets callers stop it from code: `httpd.shutdown()` is safe from another
+    thread, while `serve_forever()` must stay on the thread that owns the game
+    (see the note below).
     """
-    return HTTPServer(("127.0.0.1", porta), _handler(gioco))
+    return HTTPServer(("127.0.0.1", port), _handler(game))
 
 
-def avvia_api(gioco: Partita, porta: int = 8423) -> None:
-    """Serve le richieste finché non arriva un ctrl-c.
+def serve(game: Game, port: int = 8423) -> None:
+    """Serves requests until a ctrl-c arrives.
 
-    A thread singolo per necessità, non per pigrizia: l'API sincrona di
-    Playwright è legata al thread che l'ha creata, quindi i gestori devono girare
-    sullo stesso thread della partita. Servire da un thread diverso fallisce con
+    Single-threaded out of necessity, not laziness: Playwright's sync API is
+    bound to the thread that created it, so handlers must run on the same thread
+    as the game. Serving from a different thread fails with
     `greenlet.error: Cannot switch to a different thread`.
     """
-    httpd = crea_api(gioco, porta)
+    httpd = create_api(game, port)
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

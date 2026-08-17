@@ -1,1 +1,1 @@
-"""Interfaccia a riga di comando."""
+"""Command-line interface."""
