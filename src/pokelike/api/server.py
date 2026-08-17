@@ -92,8 +92,25 @@ def _handler(gioco: Partita):
     return Handler
 
 
+def crea_api(gioco: Partita, porta: int = 8423) -> HTTPServer:
+    """Costruisce il server senza avviarlo.
+
+    Serve per poterlo fermare da codice: `httpd.shutdown()` si può chiamare da un
+    altro thread, mentre `serve_forever()` va lasciato sul thread che possiede la
+    partita (vedi la nota qui sotto).
+    """
+    return HTTPServer(("127.0.0.1", porta), _handler(gioco))
+
+
 def avvia_api(gioco: Partita, porta: int = 8423) -> None:
-    httpd = HTTPServer(("127.0.0.1", porta), _handler(gioco))
+    """Serve le richieste finché non arriva un ctrl-c.
+
+    A thread singolo per necessità, non per pigrizia: l'API sincrona di
+    Playwright è legata al thread che l'ha creata, quindi i gestori devono girare
+    sullo stesso thread della partita. Servire da un thread diverso fallisce con
+    `greenlet.error: Cannot switch to a different thread`.
+    """
+    httpd = crea_api(gioco, porta)
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

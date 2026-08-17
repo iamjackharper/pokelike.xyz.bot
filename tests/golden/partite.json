@@ -1,0 +1,263 @@
+{
+ "1-fissa": {
+  "seed": 1,
+  "politica": "fissa",
+  "passi": 20,
+  "schermata_finale": "gameover-screen",
+  "punti": -65,
+  "dettaglio": {
+   "winBonus": 0,
+   "enemiesKO": 9,
+   "faints": 11,
+   "mapsCleared": 0,
+   "legendaries": 0,
+   "shinies": 0,
+   "timeBonus": 999
+  },
+  "squadra": [
+   {
+    "nome": "Bulbasaur",
+    "livello": 11,
+    "hp": 0,
+    "hp_max": 30
+   },
+   {
+    "nome": "Venonat",
+    "livello": 10,
+    "hp": 0,
+    "hp_max": 32
+   },
+   {
+    "nome": "Geodude",
+    "livello": 10,
+    "hp": 0,
+    "hp_max": 28
+   },
+   {
+    "nome": "Zubat",
+    "livello": 10,
+    "hp": 0,
+    "hp_max": 28
+   },
+   {
+    "nome": "Bellsprout",
+    "livello": 10,
+    "hp": 0,
+    "hp_max": 30
+   },
+   {
+    "nome": "Tangela",
+    "livello": 10,
+    "hp": 27,
+    "hp_max": 33
+   }
+  ],
+  "traccia": [
+   "trainer-screen|2|el0:BOY",
+   "starter-screen|3|el0:Bulbasaur Lv. 5 GRASS POISON SP.A 11 SPE",
+   "map-screen|2|n1_0:catch",
+   "catch-screen|3|el0:Venonat Lv. 4 BUG POISON ATK 9 SPE 8 HP ",
+   "map-screen|2|n2_0:catch",
+   "catch-screen|3|el0:Geodude Lv. 4 ROCK GROUND ATK 11 SPE 6 H",
+   "map-screen|2|n3_0:catch",
+   "catch-screen|3|el0:★ Shiny Zubat Lv. 4 POISON FLYING ATK 8 ",
+   "catch-screen|3|el0:Bellsprout Lv. 4 GRASS POISON ATK 11 SPE",
+   "map-screen|2|n5_0:item",
+   "item-screen|3|el0:Choice Scarf +50% Speed",
+   "item-equip-modal|7|el0:EQUIP",
+   "map-screen|2|n1_0:catch",
+   "catch-screen|3|el0:Tangela Lv. 8 GRASS SP.A 21 SPE 14 HP 28",
+   "map-screen|2|n2_0:item",
+   "item-screen|3|el0:Rare Candy Gives a Pokémon +3 levels USA",
+   "map-screen|2|n3_0:item",
+   "item-screen|3|el0:Choice Band +40% physical damage, -20% D",
+   "item-equip-modal|8|el0:SWAP",
+   "map-screen|2|n5_0:battle"
+  ]
+ },
+ "2-fissa": {
+  "seed": 2,
+  "politica": "fissa",
+  "passi": 35,
+  "schermata_finale": "gameover-screen",
+  "punti": 5,
+  "dettaglio": {
+   "winBonus": 0,
+   "enemiesKO": 25,
+   "faints": 12,
+   "mapsCleared": 0,
+   "legendaries": 0,
+   "shinies": 0,
+   "timeBonus": 999
+  },
+  "squadra": [
+   {
+    "nome": "Porygon",
+    "livello": 26,
+    "hp": 0,
+    "hp_max": 69
+   },
+   {
+    "nome": "Venonat",
+    "livello": 29,
+    "hp": 0,
+    "hp_max": 73
+   },
+   {
+    "nome": "Cubone",
+    "livello": 24,
+    "hp": 0,
+    "hp_max": 58
+   },
+   {
+    "nome": "Porygon",
+    "livello": 22,
+    "hp": 0,
+    "hp_max": 60
+   },
+   {
+    "nome": "Haunter",
+    "livello": 23,
+    "hp": 0,
+    "hp_max": 53
+   },
+   {
+    "nome": "Ivysaur",
+    "livello": 27,
+    "hp": 47,
+    "hp_max": 69
+   }
+  ],
+  "traccia": [
+   "trainer-screen|2|el0:BOY",
+   "starter-screen|3|el0:Bulbasaur Lv. 5 GRASS POISON SP.A 11 SPE",
+   "map-screen|2|n1_0:catch",
+   "catch-screen|3|el0:Venonat Lv. 4 BUG POISON ATK 9 SPE 8 HP ",
+   "map-screen|2|n2_0:battle",
+   "map-screen|2|n3_0:item",
+   "item-screen|3|el0:Expert Belt +100% damage on super effect",
+   "item-equip-modal|4|el0:EQUIP",
+   "item-screen|3|el0:TM Upgrades a Pokémon's move tier by 1 U",
+   "map-screen|2|n5_0:trainer",
+   "map-screen|2|n1_0:catch",
+   "catch-screen|3|el0:Cubone Lv. 8 GROUND ATK 13 SPE 10 HP 26 ",
+   "map-screen|2|n2_0:trainer",
+   "map-screen|2|n3_0:item",
+   "item-screen|3|el0:Moon Stone Force evolves a Pokémon regar",
+   "map-screen|2|n5_0:question",
+   "map-screen|2|n1_0:catch",
+   "catch-screen|3|el0:Porygon Lv. 14 NORMAL SP.A 28 SPE 16 HP ",
+   "map-screen|2|n2_0:catch",
+   "catch-screen|3|el0:Haunter Lv. 15 GHOST POISON SP.A 39 SPE ",
+   "map-screen|2|n3_0:question",
+   "item-screen|3|el0:🤍 Silk Scarf +40% Normal move damage; at",
+   "item-equip-modal|7|el0:SWAP",
+   "item-screen|3|el0:Choice Specs +30% special damage",
+   "item-equip-modal|7|el0:SWAP",
+   "map-screen|2|n5_0:trade",
+   "catch-screen|3|el0:Ivysaur Lv. 21 GRASS POISON SP.A 38 SPE ",
+   "map-screen|2|n1_0:catch",
+   "catch-screen|3|el0:Gyarados Lv. 21 WATER FLYING ATK 57 SPE ",
+   "swap-screen|6|el0:Ivysaur Lv. 24 GRASS POISON SP.A 43 SPE ",
+   "map-screen|2|n2_0:trainer",
+   "map-screen|2|n3_0:catch",
+   "catch-screen|3|el0:Porygon Lv. 24 NORMAL SP.A 45 SPE 24 HP ",
+   "swap-screen|6|el0:Gyarados Lv. 23 WATER FLYING ATK 62 SPE ",
+   "map-screen|2|n5_0:trainer"
+  ]
+ },
+ "3-ciclica": {
+  "seed": 3,
+  "politica": "ciclica",
+  "passi": 14,
+  "schermata_finale": "gameover-screen",
+  "punti": -20,
+  "dettaglio": {
+   "winBonus": 0,
+   "enemiesKO": 2,
+   "faints": 3,
+   "mapsCleared": 0,
+   "legendaries": 0,
+   "shinies": 0,
+   "timeBonus": 1000
+  },
+  "squadra": [
+   {
+    "nome": "Charmander",
+    "livello": 7,
+    "hp": 11,
+    "hp_max": 22
+   },
+   {
+    "nome": "Drowzee",
+    "livello": 6,
+    "hp": 23,
+    "hp_max": 23
+   },
+   {
+    "nome": "Pidgey",
+    "livello": 4,
+    "hp": 17,
+    "hp_max": 17
+   }
+  ],
+  "traccia": [
+   "trainer-screen|2|el0:BOY",
+   "starter-screen|3|el1:Charmander Lv. 5 FIRE SP.A 11 SPE 11 HP ",
+   "map-screen|2|n1_0:catch",
+   "catch-screen|3|el0:Drowzee Lv. 4 PSYCHIC ATK 8 SPE 8 HP 18 ",
+   "map-screen|2|n2_0:trainer",
+   "map-screen|2|n3_1:item",
+   "item-screen|3|el0:Charcoal +40% Fire move damage; attempts",
+   "item-equip-modal|4|el3:CANCEL",
+   "item-screen|3|el2:Choice Band +40% physical damage, -20% D",
+   "item-equip-modal|4|el1:EQUIP",
+   "map-screen|2|n4_0:catch",
+   "catch-screen|3|el2:Pidgey Lv. 4 NORMAL FLYING ATK 8 SPE 9 H",
+   "map-screen|2|n5_0:move_tutor",
+   "item-equip-modal|4|el1:→ ZEN HEADBUTT"
+  ]
+ },
+ "7-ciclica": {
+  "seed": 7,
+  "politica": "ciclica",
+  "passi": 10,
+  "schermata_finale": "gameover-screen",
+  "punti": -10,
+  "dettaglio": {
+   "winBonus": 0,
+   "enemiesKO": 2,
+   "faints": 2,
+   "mapsCleared": 0,
+   "legendaries": 0,
+   "shinies": 0,
+   "timeBonus": 1000
+  },
+  "squadra": [
+   {
+    "nome": "Charmander",
+    "livello": 6,
+    "hp": 0,
+    "hp_max": 20
+   },
+   {
+    "nome": "Drowzee",
+    "livello": 6,
+    "hp": 20,
+    "hp_max": 23
+   }
+  ],
+  "traccia": [
+   "trainer-screen|2|el0:BOY",
+   "starter-screen|3|el1:Charmander Lv. 5 FIRE SP.A 11 SPE 11 HP ",
+   "map-screen|2|n1_0:catch",
+   "catch-screen|3|el0:Drowzee Lv. 4 PSYCHIC ATK 8 SPE 8 HP 18 ",
+   "map-screen|2|n2_0:battle",
+   "map-screen|2|n3_1:battle",
+   "map-screen|2|n4_0:item",
+   "item-screen|3|el1:Rocky Helmet Attacker takes 12% of their",
+   "item-equip-modal|4|el0:EQUIP",
+   "map-screen|2|n5_1:trainer"
+  ]
+ }
+}
