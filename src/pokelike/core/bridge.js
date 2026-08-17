@@ -133,6 +133,52 @@
     return null;
   };
 
+  // One step of the settle loop: is the game ready, and if not, nudge it.
+  //
+  // Returns true when there is a real decision to make or the run is over. It
+  // has a side effect on purpose — a forced single choice, or a Continue button,
+  // is taken here rather than reported back for Python to take.
+  //
+  // BECAUSE it has side effects, it must never be handed to a poller as a
+  // predicate. Call it from `__pk_settle` below, which controls the cadence.
+  window.__pk_pump = () => {
+    const point = window.__pk_point();
+    if (point === 'terminal') return { ready: true, acted: false };
+    if (point === 'decision') {
+      const n = window.__pk_choices().length;
+      if (n > 1) return { ready: true, acted: false };
+      if (n === 1) {
+        window.__pk_apply(window.__pk_choices()[0]);
+        return { ready: false, acted: true };
+      }
+    }
+    return { ready: false, acted: Boolean(window.__pk_advance()) };
+  };
+
+  // Run the pump until the game is ready, all inside one call.
+  //
+  // It must NOT be used as a polling predicate. `__pk_pump` clicks things, and a
+  // poller calls its predicate an unpredictable number of times: the clicks then
+  // land at different moments, the engine consumes its seeded Math.random in a
+  // different order, and the same seed stops replaying the same run. That was a
+  // real regression, caught by the determinism test.
+  //
+  // So the loop lives here, its iteration count driven by the game rather than
+  // by a poller, and paced with a real timeout so a click never lands in the
+  // middle of the redraw the previous one caused.
+  window.__pk_settle = async (timeoutMs) => {
+    const started = performance.now();
+    while (performance.now() - started < timeoutMs) {
+      const r = window.__pk_pump();
+      if (r.ready) return true;
+      // Pace only after actually clicking, so the click never lands on top of
+      // the redraw it caused. While merely waiting for the engine's own async
+      // work there is nothing to disturb, so check often.
+      await new Promise((k) => window.__pk_realTimeout(k, r.acted ? 15 : 2));
+    }
+    return false;
+  };
+
   // What the screen is asking. Without it a choice can be read backwards: the
   // swap screen lists your team and its prompt is "Choose a Pokémon to
   // release", but a bot seeing only the list may take it for "choose your

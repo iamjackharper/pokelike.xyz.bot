@@ -33,6 +33,9 @@ INIT_SCRIPT = """
   let clock = 1700000000000;
   Date.now = () => (clock += 16);
   const st = window.setTimeout.bind(window);
+  // Kept aside because the line below caps every delay to 1 ms: the settle loop
+  // needs a real one to pace itself, or it clicks faster than the game redraws.
+  window.__pk_realTimeout = st;
   window.setTimeout = (fn, d, ...a) => st(fn, Math.min(Number(d) || 0, cfg.max_delay), ...a);
   window.requestAnimationFrame = (fn) => st(() => fn(performance.now()), 0);
   try { localStorage.clear(); } catch (e) {}
@@ -52,6 +55,8 @@ GAME_MODALS = [
     "submap-pick-modal", "vitamin-apply-modal", "legend-voucher-modal", "shop-modal",
 ]
 
+IMAGE_SUFFIXES = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg")
+
 BLOCKED_HOSTS = (
     "fuseplatform", "googletagmanager", "googlesyndication", "doubleclick",
     "amazon-adsystem", "fonts.googleapis", "fonts.gstatic", "google-analytics",
@@ -70,6 +75,10 @@ class Session:
     url: str
     watch: bool = False
     max_delay: int = 1
+    # Sprites are decoration: a bot reads the game state, never pixels. Skipping
+    # them removes a few hundred decodes and layout passes per run. Off by
+    # default, because --watch and --shots obviously do want them.
+    load_images: bool = True
     _pw: object | None = field(default=None, repr=False)
     browser: Browser | None = field(default=None, repr=False)
     page: Page | None = field(default=None, repr=False)
@@ -95,7 +104,14 @@ class Session:
             INIT_SCRIPT % json.dumps({"seed": seed, "max_delay": self.max_delay})
         )
         page.goto(self.url, wait_until="domcontentloaded")
-        page.wait_for_timeout(1500)
+        # Wait for the engine to exist rather than for a fixed 1.5 s. On a fast
+        # machine that sleep was most of the page load; on a slow one it was
+        # sometimes not enough.
+        page.wait_for_function(
+            "() => { try { return typeof state !== 'undefined'"
+            " && typeof onNodeClick === 'function'; } catch (e) { return false; } }",
+            timeout=30000,
+        )
 
         page.evaluate(
             "cfg => { window.__PK_CFG = cfg; }",
@@ -119,6 +135,9 @@ class Session:
         """
         url = route.request.url
         if any(b in url for b in BLOCKED_HOSTS):
+            route.abort()
+            return
+        if not self.load_images and url.endswith(IMAGE_SUFFIXES):
             route.abort()
             return
         if not url.startswith(("http://127.0.0.1", "http://localhost")):

@@ -34,6 +34,7 @@ class Game:
     watch: bool = False
     max_delay: int = 1
     scoring: bool = True
+    load_images: bool = True
 
     session: Session | None = field(default=None, repr=False)
     seed: int | None = None
@@ -45,7 +46,8 @@ class Game:
     # ------------------------------------------------------------------ setup
 
     def open(self) -> None:
-        self.session = Session(url=self.url, watch=self.watch, max_delay=self.max_delay)
+        self.session = Session(url=self.url, watch=self.watch, max_delay=self.max_delay,
+                               load_images=self.load_images)
         self.session.start()
 
     def close(self) -> None:
@@ -169,34 +171,23 @@ class Game:
         return self.session.page.evaluate("() => window.__pk_point()") == "terminal"
 
     def _settle(self, timeout_s: float = 90.0) -> dict[str, Any]:
-        """Runs through everything that is not a choice, then returns the state."""
+        """Runs through everything that is not a choice, then returns the state.
+
+        The loop lives in the page (`__pk_settle`) and is driven in ONE call.
+        The previous version made three round-trips per iteration and slept
+        100 ms between them, so a battle spent most of its time with Python
+        waiting on a fixed tick.
+
+        It is deliberately not a `wait_for_function` predicate: that pumps an
+        unpredictable number of times, and since pumping clicks things, the
+        engine ends up consuming its seeded RNG in a different order and the
+        same seed stops replaying the same run.
+        """
         assert self.session is not None and self.session.page is not None
-        page = self.session.page
-        started = time.monotonic()
-        stuck = 0
-
-        while time.monotonic() - started < timeout_s:
-            point = page.evaluate("() => window.__pk_point()")
-            if point == "terminal":
-                return self.state()
-            if point == "decision":
-                n = page.evaluate("() => window.__pk_choices().length")
-                if n > 1:
-                    return self.state()
-                if n == 1:
-                    # A forced choice is not a decision: take it ourselves.
-                    page.evaluate("() => window.__pk_apply(window.__pk_choices()[0])")
-                    page.wait_for_timeout(100)
-                    continue
-            advanced = page.evaluate("() => window.__pk_advance()")
-            if not advanced:
-                stuck += 1
-                if stuck > 200:
-                    break
-            else:
-                stuck = 0
-            page.wait_for_timeout(50 if advanced else 100)
-
+        settled = self.session.page.evaluate(
+            "ms => window.__pk_settle(ms)", timeout_s * 1000
+        )
         state = self.state()
-        state["stalled"] = True
+        if not settled:
+            state["stalled"] = True
         return state
