@@ -216,13 +216,21 @@ def build_index(root: Path) -> dict[str, Any]:
             "score_stdev": s.get("score_stdev"),
             "score_best": s.get("score_best"),
             "badges_mean": s.get("badges_mean"),
+            "badges_best": s.get("badges_best"),
             "maps_mean": s.get("maps_mean"),
             "completed": s.get("completed"),
             "runs": s.get("runs"),
             "game": (e.get("game") or {}).get("sha256"),
             "artifacts": len(e.get("artifacts") or []),
         })
-    rows.sort(key=lambda r: (r["score_mean"] is None, -(r["score_mean"] or 0)))
+    # Ranked by badges, not by score. Badges are the game's own progression
+    # counter in Story mode; the engine's score formula was written for the
+    # Battle Tower and two of its terms (mapsCleared, winBonus) never fire here,
+    # so it rewards fighting rather than getting further. See
+    # training/common/rewards.py for the full story.
+    rows.sort(key=lambda r: (
+        r["badges_mean"] is None, -(r["badges_mean"] or 0), -(r["score_mean"] or 0)
+    ))
     index = {"entries": rows}
     (Path(root) / "index.json").write_text(json.dumps(index, indent=1), encoding="utf-8")
     return index
@@ -232,17 +240,17 @@ def format_table(index: dict[str, Any]) -> str:
     rows = index.get("entries") or []
     if not rows:
         return "no submissions yet"
-    head = (f"{'bot':<20}{'category':>10}{'runs':>6}{'score~':>9}{'stdev':>8}"
-            f"{'best':>7}{'badge~':>8}{'maps~':>7}{'done':>6}")
+    head = (f"{'bot':<20}{'category':>10}{'runs':>6}{'badge~':>8}{'badge+':>8}"
+            f"{'score~':>9}{'stdev':>8}{'best':>7}{'done':>6}")
     out = [head, "-" * len(head)]
     for r in rows:
         out.append(
             f"{(r['bot'] or '')[:19]:<20}{(r['category'] or ''):>10}{r['runs'] or 0:>6}"
+            f"{r['badges_mean'] if r['badges_mean'] is not None else '-':>8}"
+            f"{r['badges_best'] if r.get('badges_best') is not None else '-':>8}"
             f"{r['score_mean'] if r['score_mean'] is not None else '-':>9}"
             f"{r['score_stdev'] if r['score_stdev'] is not None else '-':>8}"
             f"{r['score_best'] if r['score_best'] is not None else '-':>7}"
-            f"{r['badges_mean'] if r['badges_mean'] is not None else '-':>8}"
-            f"{r['maps_mean'] if r['maps_mean'] is not None else '-':>7}"
             f"{r['completed'] if r['completed'] is not None else '-':>6}"
         )
     return "\n".join(out)

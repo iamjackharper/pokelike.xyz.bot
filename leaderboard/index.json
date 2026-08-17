@@ -1,22 +1,6 @@
 {
  "entries": [
   {
-   "id": "dyna-q-v1-2ea235",
-   "bot": "dyna-q-v1",
-   "author": "pierpierpy",
-   "category": "rl",
-   "description": "tabular Dyna-Q, 90 episodes, n=30 planning steps, encoding v1",
-   "score_mean": 4.9,
-   "score_stdev": 26.8,
-   "score_best": 85,
-   "badges_mean": 0.62,
-   "maps_mean": 0,
-   "completed": 0,
-   "runs": 50,
-   "game": "eceae50bbda9e32b",
-   "artifacts": 2
-  },
-  {
    "id": "random-baseline-3ec0a5",
    "bot": "random-baseline",
    "author": "pierpierpy",
@@ -26,11 +10,29 @@
    "score_stdev": 20.9,
    "score_best": 65,
    "badges_mean": 0.68,
+   "badges_best": 3,
    "maps_mean": 0,
    "completed": 0,
    "runs": 50,
    "game": "eceae50bbda9e32b",
    "artifacts": 0
+  },
+  {
+   "id": "dyna-q-v1-2ea235",
+   "bot": "dyna-q-v1",
+   "author": "pierpierpy",
+   "category": "rl",
+   "description": "tabular Dyna-Q, 90 episodes, n=30 planning steps, encoding v1",
+   "score_mean": 4.9,
+   "score_stdev": 26.8,
+   "score_best": 85,
+   "badges_mean": 0.62,
+   "badges_best": 3,
+   "maps_mean": 0,
+   "completed": 0,
+   "runs": 50,
+   "game": "eceae50bbda9e32b",
+   "artifacts": 2
   }
  ]
 }

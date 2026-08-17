@@ -55,14 +55,14 @@ def play_random(env: TrainingEnv, seed: int) -> dict:
 
 
 def evaluate(table: str = "dyna_q_v1.json", episodes: int = 30,
-             seed0: int = 5000, port: int = 8601) -> dict:
+             seed0: int = 5000, port: int = 8601, reward: str = "progress") -> dict:
     agent = DynaQ.load(MODELS / table)
     print(f"loaded {table}: {agent.summary()}\n")
 
     from tqdm import tqdm
 
     trained, baseline = [], []
-    with TrainingEnv(port=port) as env:
+    with TrainingEnv(port=port, reward=reward) as env:
         bar = tqdm(range(episodes), desc="dyna-q vs random", unit="seed")
         for i in bar:
             seed = seed0 + i
@@ -106,8 +106,9 @@ def main() -> int:
     p.add_argument("--seed0", type=int, default=5000,
                    help="held-out seeds: keep these away from the training range")
     p.add_argument("--port", type=int, default=8601)
+    p.add_argument("--reward", default="progress")
     a = p.parse_args()
-    evaluate(table=a.table, episodes=a.episodes, seed0=a.seed0, port=a.port)
+    evaluate(table=a.table, episodes=a.episodes, seed0=a.seed0, port=a.port, reward=a.reward)
     return 0
 
 

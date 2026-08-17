@@ -22,7 +22,8 @@ from typing import Any
 from pokelike.assets import AssetServer
 from pokelike.core.game import Game
 
-from .features import action_key, state_key, step_reward
+from .features import action_key, state_key
+from .rewards import get as get_reward
 
 SITE = Path(__file__).resolve().parents[2] / "site"
 
@@ -34,7 +35,8 @@ class TrainingEnv:
     every episode reuses it: `reset()` starts a new run inside the same browser.
     """
 
-    def __init__(self, port: int = 8600, max_steps: int = 300) -> None:
+    def __init__(self, port: int = 8600, max_steps: int = 300,
+                 reward: str = "progress") -> None:
         if not (SITE / "index.html").is_file():
             raise RuntimeError(
                 f"offline copy missing in {SITE}\nrun it once with: pokelike setup"
@@ -44,8 +46,10 @@ class TrainingEnv:
         self.game = Game(url=self.server.url)
         self.game.open()
         self.max_steps = max_steps
+        self.reward_name = reward
+        self.reward_fn = get_reward(reward)
         self._obs: dict[str, Any] | None = None
-        self._stats: dict[str, Any] | None = None
+        self._prev: dict[str, Any] | None = None
 
     # ------------------------------------------------------------- lifecycle
 
@@ -63,7 +67,7 @@ class TrainingEnv:
 
     def reset(self, seed: int) -> tuple[tuple, list[str]]:
         self._obs = self.game.reset(seed=seed)
-        self._stats = self._obs.get("stats")
+        self._prev = None
         return state_key(self._obs), self.legal_actions()
 
     def legal_actions(self) -> list[str]:
@@ -83,13 +87,18 @@ class TrainingEnv:
         if index is None:
             raise KeyError(f"action '{key}' is not legal here: {self.legal_actions()}")
 
-        before = self._stats
+        before = self._obs
+        self._prev = before
         self._obs = self.game.step(index)
-        self._stats = self._obs.get("stats")
 
         done = bool(self._obs.get("done")) or self.game.steps >= self.max_steps
         won = self._obs.get("screen") == "win-screen"
-        reward = step_reward(before, self._stats, done=done, won=won)
+        # At game over the engine wipes `state`, so the badge count and the team
+        # are gone from the final observation. Reward against the last live
+        # snapshot instead, or the last transition of every run would look like a
+        # catastrophic loss of everything.
+        after = self._obs if self._obs.get("run") else (self.game.last_alive or before)
+        reward = self.reward_fn(before, after, done, won)
 
         return state_key(self._obs), self.legal_actions(), reward, done
 

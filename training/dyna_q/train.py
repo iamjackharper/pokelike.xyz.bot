@@ -38,6 +38,7 @@ def train(
     epsilon: float = 0.3,
     optimistic: float = 0.0,
     port: int = 8600,
+    reward: str = "progress",
     out: str = "q_table.json",
     log_every: int = 10,
 ) -> dict:
@@ -49,7 +50,7 @@ def train(
 
     from tqdm import tqdm
 
-    with TrainingEnv(port=port) as env:
+    with TrainingEnv(port=port, reward=reward) as env:
         bar = tqdm(range(episodes), desc="dyna-q", unit="ep")
         for ep in bar:
             seed = seed0 if fixed_seed else seed0 + ep
@@ -99,7 +100,8 @@ def train(
     log = RUNS / (Path(out).stem + "_history.json")
     log.write_text(json.dumps(history, indent=1), encoding="utf-8")
 
-    print(f"\ntrained on {episodes} episodes in {elapsed / 60:.1f} min")
+    print(f"\ntrained on {episodes} episodes with reward '{reward}' "
+          f"in {elapsed / 60:.1f} min")
     print(f"agent: {agent.summary()}")
     print(f"table: {table}")
     print(f"history: {log}")
@@ -119,13 +121,15 @@ def main() -> int:
     p.add_argument("--optimistic", type=float, default=0.0,
                    help="initial Q value; > 0 encourages early exploration")
     p.add_argument("--port", type=int, default=8600)
+    p.add_argument("--reward", default="progress",
+                   help="which reward function (see training/common/rewards.py)")
     p.add_argument("--out", default="q_table.json")
     p.add_argument("--log-every", type=int, default=10)
     a = p.parse_args()
 
     train(episodes=a.episodes, seed0=a.seed0, fixed_seed=a.fixed_seed,
           planning_steps=a.planning_steps, alpha=a.alpha, gamma=a.gamma,
-          epsilon=a.epsilon, optimistic=a.optimistic, port=a.port, out=a.out,
+          epsilon=a.epsilon, optimistic=a.optimistic, port=a.port, reward=a.reward, out=a.out,
           log_every=a.log_every)
     return 0
 

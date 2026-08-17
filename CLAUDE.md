@@ -115,6 +115,13 @@ All of these were hit for real. Worth rereading before changing anything:
 - **The map is SVG**: nodes have no `.click()`.
 - **The bundle filename carries a content hash** and changes with every game
   release. If something breaks all at once, first thing: `pokelike mirror`.
+- **The engine's score formula is a Battle Tower formula.** Two of its six terms
+  are dead in Story mode: `mapsCleared` is incremented in exactly one place in
+  the bundle, inside `bumpEndlessCounters()`, which only runs on the endless
+  path; and `winBonus` needs the whole League beaten. What is left is
+  `5·KO − 10·faints`, and badges do not appear at all — which is how a run with
+  three badges scores −5. Rank Story runs by **badges**, and see
+  `training/common/rewards.py` before designing any objective on top of it.
 
 ## Scoring
 

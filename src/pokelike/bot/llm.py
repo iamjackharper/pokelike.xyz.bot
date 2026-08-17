@@ -29,41 +29,94 @@ from ..core import render
 from .base import Bot
 
 # -------------------------------------------------------------------- prompts
+#
+# Prompts are swappable so they can be compared rather than argued about:
+#
+#     POKELIKE_LLM_STRATEGY=survivor pokelike bot --bot llm --runs 5
+#
+# What every prompt must get right, because it is easy to get wrong:
+#
+#   * BADGES ARE THE GOAL. The engine's score formula was written for the Battle
+#     Tower and two of its terms never fire in Story mode, so telling the model
+#     to chase "maps cleared" points it at something that is always zero. An
+#     earlier version of this prompt did exactly that.
+#   * Choosing a node CLOSES the others on that layer, forever.
+#   * Trainers scale: 1 Pokemon on map 0, 2 on maps 1-2, 3 from map 3 onwards.
+#     Read out of the bundle, not guessed.
+#   * Battles resolve themselves. The model never picks a move.
 
-SYSTEM = """You are playing Pokelike, a Pokemon roguelike. You play to score points.
+RULES = """You are playing Pokelike, a Pokemon roguelike.
 
-HOW IT WORKS
-- The map is a layered graph, top to bottom. The boss sits at the bottom.
-- Each turn you pick one node among the legal ones. The moment you pick one, the
-  other nodes on that layer CLOSE FOREVER: the choice is irreversible.
-- Battles resolve themselves — you do not pick moves. What you decide is where to
+YOUR GOAL: earn as many gym badges as you can before your team is wiped out.
+Badges measure how far you got. A run ends when every Pokemon has fainted.
+
+HOW A TURN WORKS
+- The map is a layered graph running top to bottom, with a boss at the bottom.
+- You pick one node from the legal ones. The moment you pick, every other node on
+  that layer CLOSES FOREVER. The choice is irreversible and it also decides which
+  nodes you will be able to reach next.
+- Battles resolve themselves. You never choose moves. What you decide is where to
   go, who to catch, which item to take and who to give it to.
-- The team holds up to 6 Pokemon. If they all faint, the run is over.
+- Your team holds up to 6 Pokemon.
 
 NODE TYPES
   o catch        adds a Pokemon to your team
-  x wild fight   a wild Pokemon, gives experience
+  x wild fight   one wild Pokemon, gives experience
   T trainer      1 Pokemon on map 0, 2 on maps 1-2, 3 from map 3 onwards
-  i item         an item to equip or keep in the bag
+  i item         an item to equip or keep
   + pokecenter   restores HP
-  ? unknown      only revealed once you enter it
+  ? unknown      only revealed when you enter it
   $ trade        M move tutor    S shop    B boss
 
-HOW POINTS WORK
-  +5 per enemy knocked out, +50 per map cleared, +20 per shiny or legendary
-  -10 for every Pokemon of yours that faints, +500 if you finish the run
-So: losing Pokemon is expensive, and making progress is worth far more than
-grinding.
+WHAT ACTUALLY KILLS RUNS
+Losing Pokemon. Every faint is permanent for that run, and once the team is empty
+it is over, no matter how well you were doing.
+"""
 
-ADVICE THAT ACTUALLY HELPS
-- You start with a single Pokemon: if it faints you have lost. Widen the team first.
-- A Pokemon on low HP entering a fight risks fainting: that is -10 points.
-- Type matchups decide battles: check your team before choosing a fight.
+STRATEGIES = {
+    # The plain one: the rules, and let the model work it out.
+    "baseline": RULES + """
+Think briefly, then call `play` with your chosen index. Always call `play`.""",
 
-HOW TO ANSWER
-You may call the read-only tools to understand the situation better. Once you
-have decided, call `play` with the index of the action. ALWAYS call `play` to end
-the turn. Keep your reasoning short."""
+    # Bias towards not dying. Faints are what ends runs.
+    "survivor": RULES + """
+PLAY LIKE THIS
+- Early on you have one Pokemon. If it faints you have lost. Widening the team is
+  worth more than any experience you could gain.
+- Never walk a Pokemon on low HP into a fight. Heal first if a pokecenter is
+  reachable.
+- Prefer a wild fight over a trainer when your team is thin: trainers bring more
+  Pokemon and scale with the map.
+- Type matchups decide battles. Check your team before choosing a fight.
+
+Think briefly, then call `play`. Always call `play`.""",
+
+    # Bias towards progression. Badges only come from moving forward.
+    "explorer": RULES + """
+PLAY LIKE THIS
+- Badges are the only thing that counts, and they come from pushing down the map.
+  Do not linger on safe nodes that add nothing.
+- Before choosing, use `what_lies_ahead`: the node you take decides what is
+  reachable next, and closing off a good branch costs more than one bad fight.
+- A slightly risky fight that opens a good path beats a safe node that leads
+  nowhere.
+- Keep enough team to survive, but survival on its own scores nothing.
+
+Think briefly, then call `play`. Always call `play`.""",
+
+    # Force the model to look before it leaps.
+    "analyst": RULES + """
+HOW TO DECIDE
+Before choosing, gather what you need:
+1. Call `team_details` if any HP or type matchup could matter here.
+2. Call `what_lies_ahead` whenever you are on the map. What a node leads to
+   matters as much as the node itself, because the others close forever.
+Only then call `play`, naming in one sentence the option you rejected and why.
+
+Always finish with `play`.""",
+}
+
+DEFAULT_STRATEGY = "survivor"
 
 TOOLS = [
     {
@@ -124,6 +177,7 @@ class LLMBot(Bot):
         max_tokens: int = 1500,
         temperature: float = 0.6,
         memory: int = 6,
+        strategy: str | None = None,
         verbose: bool = False,
     ) -> None:
         self.endpoint = (endpoint or os.environ.get("FW_ENDPOINT", "")).rstrip("/")
@@ -140,6 +194,15 @@ class LLMBot(Bot):
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.memory = memory
+        self.strategy = (
+            strategy or os.environ.get("POKELIKE_LLM_STRATEGY") or DEFAULT_STRATEGY
+        )
+        if self.strategy not in STRATEGIES:
+            raise LLMError(
+                f"unknown strategy '{self.strategy}' — available: "
+                f"{', '.join(sorted(STRATEGIES))}"
+            )
+        self.system = STRATEGIES[self.strategy]
         self.verbose = verbose or bool(os.environ.get("POKELIKE_VERBOSE"))
 
         # counters for the stats registry
@@ -160,10 +223,48 @@ class LLMBot(Bot):
         """Ends up in the `extra` column of the run registry."""
         return {
             "model": self.model,
+            "strategy": self.strategy,
             "calls": self.calls,
             "tokens": self.tokens_used,
             "fallbacks": self.fallbacks,
         }
+
+    def artifacts(self) -> list:
+        """What a submission of this bot carries.
+
+        The prompt and the model reference, never the key. An LLM result cannot
+        be reproduced exactly — providers change models behind a fixed name and
+        sampling is stochastic — so the least we can do is record precisely what
+        was asked of which model.
+        """
+        from ..leaderboard import Artifact
+
+        return [
+            Artifact(
+                name="prompt.md",
+                kind="prompt",
+                description=f"system prompt, strategy '{self.strategy}'",
+                text=self.system,
+            ),
+            Artifact(
+                name="model.json",
+                kind="model-ref",
+                description="which model answered, and how it was asked",
+                data={
+                    "model": self.model,
+                    "strategy": self.strategy,
+                    "temperature": self.temperature,
+                    "max_tokens": self.max_tokens,
+                    "max_rounds": self.max_rounds,
+                    "tools": [t["function"]["name"] for t in TOOLS],
+                    "reproducible": False,
+                    "why_not": (
+                        "providers change models behind a fixed name and sampling is "
+                        "stochastic; rerunning this will not give identical results"
+                    ),
+                },
+            ),
+        ]
 
     # --------------------------------------------------------------- decision
 
@@ -210,7 +311,7 @@ class LLMBot(Bot):
 
     def _agentic_round(self, state: dict[str, Any]) -> tuple[int, str]:
         messages: list[dict[str, Any]] = [
-            {"role": "system", "content": SYSTEM},
+            {"role": "system", "content": self.system},
             {"role": "user", "content": self._situation(state)},
         ]
 

@@ -37,10 +37,28 @@ they are *not* stable by position: index 2 is a battle now and a catch next
 turn. So actions are keyed by what they are (`node:catch`, `btn:skip`), which is
 what makes `Q(s, a)` accumulate meaningfully.
 
-**Reward.** The game's own scoring weights, applied per step from the deltas of
-the engine's counters: +5 per enemy KO, −10 per own faint, +50 per map cleared,
-+500 for finishing. Same numbers the scoreboard uses, so we are not optimising a
-proxy.
+**Reward.** Selectable, from a registry in `common/rewards.py`, because here the
+choice of reward matters more than the choice of algorithm and that claim is
+worth testing rather than asserting.
+
+```bash
+uv run python -m training.dyna_q.train --reward progress --episodes 200
+```
+
+| reward | signal | density |
+|---|---|---|
+| `game` | the engine's own weights, verbatim | medium |
+| `badges` | +100 a badge, −10 a faint | very sparse |
+| `progress` | badges, plus payment per layer descended | dense |
+| `survival` | +1 per step, −50 a faint | densest |
+| `composite` | progress plus damage efficiency | dense |
+
+`game` is kept as the honest baseline, but be careful with it: the engine's
+formula was written for the Battle Tower, and in Story mode `mapsCleared` never
+increments (it only happens inside `bumpEndlessCounters()`) while `winBonus`
+essentially never fires. What survives is `5·KO − 10·faints`, which says nothing
+about getting further and does not mention badges at all. That is why a run with
+three badges can score −5, and why `progress` is the default.
 
 **Episode.** One run, from picking a starter to game over. Typically 12–35
 decisions.
@@ -71,8 +89,12 @@ measures which one got the nicer maps, so `evaluate.py` runs both on **the same
 seeds** and reports the head-to-head. Use held-out seeds well away from the
 training range, or you are grading on the training set.
 
-The baseline to beat is the random bot: it dies in 12–17 moves, scores between
-−35 and +20, and never clears a map.
+**Rank by badges, not by score.** Badges are the game's own progression counter
+in Story mode; the score formula, for the reasons above, rewards fighting rather
+than advancing.
+
+The baseline to beat is the random bot: 0.68 badges on average over the 50
+benchmark seeds, dead in 17 moves.
 
 ## Adding another algorithm
 
