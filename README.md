@@ -96,11 +96,15 @@ uv run pokelike bot --runs 1 -d          # + log every decision it made
 uv run pokelike stats                    # how it went
 ```
 
-`-d` prints one block per decision, recorded by the shared run loop so it reads
-the same whatever is playing: the screen, every option, which one was taken.
-`-dd` adds the team. The last line is the only bot-specific part — an LLM's
-stated reason, Dyna-Q's learned values — and it is simply absent for a bot with
-nothing to say:
+`-d` streams one line per decision as it happens, so you watch the bot play
+rather than read a report afterwards. `>` marks what it took:
+
+```
+    2 map-screen        b0 m0 | >catch   battle
+    3 catch-screen      b0 m0 |  Venonat Lv4  >Slowpoke Lv4   Nidoran-f Lv4
+```
+
+`-dd` adds the bot's own reasoning, `-ddd` the team as well:
 
 ```
     2 | map-screen         map 0  badges 0
@@ -108,6 +112,10 @@ nothing to say:
       | -> battle
       |    Q: catch=5.8, battle=7.3
 ```
+
+Everything but that last line is recorded by the shared run loop, so a log means
+the same thing whatever is playing. The reasoning comes from an optional
+`explain()` hook and is simply absent for a bot with nothing to say.
 
 The LLM bot needs your own credentials for any OpenAI-compatible endpoint
 (OpenAI, vLLM, Ollama, a company endpoint — whatever you have):

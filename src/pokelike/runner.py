@@ -26,10 +26,32 @@ def short_label(a: dict[str, Any]) -> str:
     if a.get("kind") == "node":
         return a["node"]
     label = (a.get("label") or "").strip()
+
+    # Row context: "EQUIP — Ponyta Lv8 — empty — EQUIP". The informative half is
+    # the context, not the button word: five identical "EQUIP" entries in a log
+    # say nothing about what was chosen.
     if "—" in label:
         parts = [p.strip() for p in label.split("—")]
-        return f"{parts[0]}:{parts[1]}"[:38]
-    return label[:34] or f"slot{a.get('idx', 0)}"
+        return f"{parts[0]}:{_name_and_level(parts[1])}"[:30]
+
+    # A Pokemon card reads "Squirtle Lv. 5 WATER SP.A 10 SPE 9 HP 19 ...", and
+    # the stats are already in `state["team"]` or on the catch screen. A log line
+    # wants the identity, not the sheet.
+    short = _name_and_level(label)
+    return short[:30] or f"slot{a.get('idx', 0)}"
+
+
+_POKEMON = None
+
+
+def _name_and_level(text: str) -> str:
+    global _POKEMON
+    if _POKEMON is None:
+        import re
+
+        _POKEMON = re.compile(r"^([A-Za-z][\w'.-]*)\s+Lv\.?\s*(\d+)")
+    m = _POKEMON.match(text.strip())
+    return f"{m.group(1)} Lv{m.group(2)}" if m else text.strip()
 
 
 def play_run(
@@ -38,12 +60,14 @@ def play_run(
     seed: int,
     max_steps: int = 400,
     on_step=None,
+    on_decision=None,
 ) -> dict[str, Any]:
     """Plays one run start to finish and returns what happened.
 
     `on_step(obs, steps)` is called before each decision, which is how the CLI
     saves a screenshot per turn without this function knowing what a screenshot
-    is.
+    is. `on_decision(entry)` is called right after one, with the trace entry, so
+    a log can stream as the run happens instead of arriving once it is over.
 
     The metrics come from `last_alive` rather than the final observation on
     purpose: at game over the engine wipes `state`, so the team and the badge
@@ -75,6 +99,8 @@ def play_run(
             "chosen_label": short_label(options[chosen]) if 0 <= chosen < len(options) else "?",
             "why": (bot.explain() or "").strip(),
         })
+        if on_decision:
+            on_decision(trace[-1])
 
         obs = game.step(chosen)
 

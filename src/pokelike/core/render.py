@@ -127,15 +127,31 @@ def score_view(s: dict[str, Any] | None) -> str:
     return "\n".join(rows)
 
 
-def trace_view(trace: list[dict[str, Any]], with_team: bool = False) -> str:
-    """The detailed log of a run: one block per decision.
+def trace_line(t: dict[str, Any]) -> str:
+    """One decision on one line. `>` marks what was taken, so no second column."""
+    options = "  ".join(
+        f"{'>' if i == t['chosen'] else ' '}{o}" for i, o in enumerate(t["options"])
+    )
+    return (f"  {t['step']:>3} {t['screen']:<17} b{t.get('badges', 0)} "
+            f"m{t.get('map', 0)} | {options}")
 
-    Everything here is recorded by the shared run loop, so it reads the same
-    whatever was playing. The `why` line is the only bot-specific part, and it is
-    empty for bots that have nothing to say — which is honest, not a gap.
+
+def trace_view(trace: list[dict[str, Any]], detail: int = 1) -> str:
+    """The log of a run.
+
+    detail 1  one line per decision
+    detail 2  a block per decision, with the bot's own explanation
+    detail 3  and the team at every step
+
+    Everything except the explanation is recorded by the shared run loop, so it
+    reads the same whatever was playing. The explanation is empty for bots that
+    have nothing to say — which is honest, not a gap.
     """
     if not trace:
         return "  (no decisions recorded)"
+    if detail <= 1:
+        return "\n".join(trace_line(t) for t in trace)
+    with_team = detail >= 3
     out = []
     for t in trace:
         head = (f"  {t['step']:>3} | {t['screen']:<18} "

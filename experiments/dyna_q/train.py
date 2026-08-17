@@ -73,11 +73,16 @@ def train(
 
             agent.end_episode()
             score = env.score() or {}
+            alive = env.game.last_alive or {}
             row = {
                 "episode": ep,
                 "seed": seed,
                 "steps": steps,
                 "reward": round(total_reward, 1),
+                # Badges are the metric that matters; total reward per episode
+                # conflates playing well with surviving long, so a curve drawn
+                # from reward alone can mislead in either direction.
+                "badges": (alive.get("run") or {}).get("badges", 0),
                 "score": score.get("points_no_time"),
                 "ending": (env.observation or {}).get("screen"),
                 "epsilon": round(agent.epsilon, 4),
@@ -87,8 +92,8 @@ def train(
 
             window = history[-log_every:]
             bar.set_postfix(
-                reward=row["reward"],
-                mean=round(sum(h["reward"] for h in window) / len(window), 1),
+                badges=round(sum(h["badges"] for h in window) / len(window), 2),
+                reward=round(sum(h["reward"] for h in window) / len(window), 1),
                 eps=round(agent.epsilon, 3),
                 states=row["states"],
             )
