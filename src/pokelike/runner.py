@@ -16,6 +16,17 @@ from typing import Any
 from .core.game import Game
 
 
+# The engine's own name for a node is not always the clearest one to read.
+# `question` is what the bundle calls it; what it means to a player is that the
+# node is unknown until you step on it. The engine's name stays the action key —
+# only the display changes, so logs read well without the encoding drifting.
+DISPLAY_NAMES = {
+    "question": "unknown",
+    "move_tutor": "tutor",
+    "evil_team": "evil-team",
+}
+
+
 def short_label(a: dict[str, Any]) -> str:
     """A compact name for an action, for logs and traces.
 
@@ -24,7 +35,7 @@ def short_label(a: dict[str, Any]) -> str:
     identical "EQUIP" entries in a log tell you nothing about what was chosen.
     """
     if a.get("kind") == "node":
-        return a["node"]
+        return DISPLAY_NAMES.get(a["node"], a["node"])
     label = (a.get("label") or "").strip()
 
     # Row context: "EQUIP — Ponyta Lv8 — empty — EQUIP". The informative half is

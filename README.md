@@ -97,12 +97,30 @@ uv run pokelike stats                    # how it went
 ```
 
 `-d` streams one line per decision as it happens, so you watch the bot play
-rather than read a report afterwards. `>` marks what it took:
+rather than read a report afterwards. `>` marks what it took, `b` is badges and
+`m` is which map:
 
 ```
+$ pokelike bot --runs 1 -d
+
+--- run 1/1, seed 1 ---
+    0 trainer-screen    b0 m0 | >BOY   GIRL
+    1 starter-screen    b0 m0 |  Bulbasaur Lv5   Charmander Lv5  >Squirtle Lv5
     2 map-screen        b0 m0 | >catch   battle
     3 catch-screen      b0 m0 |  Venonat Lv4  >Slowpoke Lv4   Nidoran-f Lv4
+    4 map-screen        b0 m0 | >catch   battle
+    5 catch-screen      b0 m0 |  Geodude Lv4  >Zubat Lv4   Venonat Lv4
+    6 map-screen        b0 m0 |  catch  >battle
+    7 map-screen        b0 m0 |  catch  >battle
+    8 map-screen        b0 m0 |  tutor  >catch
+    9 catch-screen      b0 m0 | >Voltorb Lv4   Poliwag Lv4   Magnemite Lv4
+   10 map-screen        b0 m0 | >trainer   unknown
+   11 map-screen        b0 m0 |  pokecenter  >unknown
+run 1/1  seed 1  steps 12  end gameover-screen  badges 0  score -15  (KO 5, faints 4, maps 0)
 ```
+
+That is the random bot, and you can watch it lose: it takes `unknown` over
+`pokecenter` on the last turn with a hurt team.
 
 `-dd` adds the bot's own reasoning, `-ddd` the team as well:
 

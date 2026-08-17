@@ -73,7 +73,7 @@ NODE_KINDS = {
     "trainer": "1 Pokemon on map 0, 2 on maps 1-2, 3 from map 3 onwards",
     "item": "pick one of three items",
     "pokecenter": "restores HP",
-    "question": "unknown until you enter it",
+    "question": "unknown until you enter it (shown as `unknown` in logs)",
     "boss": "the gym leader at the bottom of the map",
     "trade": "trade a Pokemon",
     "move_tutor": "teach a move",

@@ -18,7 +18,7 @@ ICONS = {
 
 LEGEND = (
     "@ start    x wild fight   T trainer   o catch    i item     + pokecenter\n"
-    "? unknown  $ trade        M move tutor  B boss   S shop     * shiny"
+    "? unknown  $ trade        M tutor      B boss   S shop     * shiny"
 )
 
 
