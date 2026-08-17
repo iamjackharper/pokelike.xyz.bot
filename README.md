@@ -100,55 +100,20 @@ uv run pokelike stats                    # how it went
 rather than read a report afterwards. `>` marks what it took, `b` is badges and
 `m` is which map:
 
-```
-$ pokelike bot --runs 1 -d
+![the random bot, one line per decision](img/random.png)
 
---- run 1/1, seed 1 ---
-    0 trainer-screen    b0 m0 | >BOY   GIRL
-    1 starter-screen    b0 m0 |  Bulbasaur Lv5   Charmander Lv5  >Squirtle Lv5
-    2 map-screen        b0 m0 | >catch   battle
-    3 catch-screen      b0 m0 |  Venonat Lv4  >Slowpoke Lv4   Nidoran-f Lv4
-    4 map-screen        b0 m0 | >catch   battle
-    5 catch-screen      b0 m0 |  Geodude Lv4  >Zubat Lv4   Venonat Lv4
-    6 map-screen        b0 m0 |  catch  >battle
-    7 map-screen        b0 m0 |  catch  >battle
-    8 map-screen        b0 m0 |  tutor  >catch
-    9 catch-screen      b0 m0 | >Voltorb Lv4   Poliwag Lv4   Magnemite Lv4
-   10 map-screen        b0 m0 | >trainer   unknown
-   11 map-screen        b0 m0 |  pokecenter  >unknown
-run 1/1  seed 1  steps 12  end gameover-screen  badges 0  score -15  (KO 5, faints 4, maps 0)
-```
+That is the random bot, and you can watch it lose: on the last turn, with a hurt
+team, it takes `unknown` over `pokecenter`.
 
-That is the random bot, and you can watch it lose: it takes `unknown` over
-`pokecenter` on the last turn with a hurt team.
+`-dd` adds the bot's own reasoning, `-ddd` the team as well. With an LLM the
+reasoning is the whole point:
 
-`-dd` adds the bot's own reasoning, `-ddd` the team as well:
+![the LLM bot explaining each decision](img/llm.png)
 
-```
-    2 | map-screen         map 0  badges 0
-      | [0] catch  [1]*battle
-      | -> battle
-      |    Q: catch=5.8, battle=7.3
-```
-
-Everything but that last line is recorded by the shared run loop, so a log means
-the same thing whatever is playing. The reasoning comes from an optional
-`explain()` hook and is simply absent for a bot with nothing to say.
-
-The LLM bot needs your own credentials for any OpenAI-compatible endpoint
-(OpenAI, vLLM, Ollama, a company endpoint — whatever you have):
-
-```bash
-export FW_ENDPOINT="https://your-endpoint"    # no trailing /v1
-export FW_TOKEN="your-key"
-export MODEL_ID="your-model-name"
-
-uv run pokelike bot --bot llm --runs 3
-POKELIKE_VERBOSE=1 uv run pokelike bot --bot llm --runs 1   # with its reasoning
-```
-
-Credentials are read **only** from the environment: they never reach the code or
-the run registry.
+Everything except that reasoning line is recorded by the shared run loop, so a
+log means the same thing whatever is playing. The reasoning comes from an
+optional `explain()` hook: Dyna-Q reports its learned values (`Q: catch=5.8,
+battle=7.3`), the random bot has nothing to say and says nothing.
 
 ## Watch what happens
 
@@ -314,7 +279,11 @@ Two optional hooks for bots that need memory across turns: `on_start(seed)` and
 it.
 
 **`llm`** ([bot/llm.py](src/pokelike/bot/llm.py)) is self-contained: prompts,
-tools, agentic loop and the HTTP call with `urllib`. Each turn the model gets the
+tools, agentic loop and the HTTP call with `urllib`. Four prompt strategies ship
+with it, selectable with `POKELIKE_LLM_STRATEGY`, and
+[experiments/llm/compare.py](experiments/llm/compare.py) plays them against each
+other on identical seeds so the better prompt is measured rather than argued
+about. Each turn the model gets the
 situation and the numbered actions, may call read-only tools, and closes with
 `play(index)`:
 
@@ -329,7 +298,12 @@ that layer forever, and without reading the edges the model cannot know that.
 
 If the model returns a bad index, times out, or never calls `play`, the bot falls
 back to a safe choice and the fallback is counted. **A run never dies because of
-the model.**
+one flaky request.**
+
+Authentication failures are the exception and stop the run instead. A 401 will
+fail identically forever, and falling back on it would play the whole run on the
+backup heuristic while reporting it as an LLM result — which through `bench`
+would put an entry on the leaderboard labelled `llm` that no model ever played.
 
 **`dyna_q`** ([bot/dyna_q.py](src/pokelike/bot/dyna_q.py)) plays a policy trained
 by [experiments/dyna_q](experiments/dyna_q/). It doubles as the worked example of what
