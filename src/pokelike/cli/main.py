@@ -241,7 +241,7 @@ def main(argv: list[str] | None = None) -> int:
     s.set_defaults(func=cmd_setup)
 
     s = sub.add_parser("mirror", help="rifà solo la copia offline del gioco")
-    s.add_argument("--fasi", choices=["tutte", "statica", "slug", "giocata", "verifica"],
+    s.add_argument("--fasi", choices=["tutte", "statica", "numeri", "slug", "giocata", "verifica"],
                    default="tutte", help="riprendi da una fase senza riscaricare")
     s.set_defaults(func=cmd_mirror)
 

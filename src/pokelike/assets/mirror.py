@@ -157,6 +157,30 @@ CARTELLE_SLUG = (
 RE_SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 
 
+# Cartelle i cui URL sono prefisso + NUMERO + ".png" (badge, sfondi mappa).
+# Vanno provate a parte: la ricerca per slug cerca nomi a parole e non becca
+# mai "2.png", quindi senza questo restano tutti i badge oltre il primo.
+CARTELLE_NUMERICHE = (
+    "img/sprites/badges/",
+    "img/maps/g1/", "img/maps/g2/", "img/maps/g3/", "img/maps/g4/",
+)
+MAX_NUMERO = 60
+
+
+def fase_numeri(radice: Path, log=_stampa) -> dict[str, int]:
+    """Prova i percorsi numerati finché non finiscono."""
+    trovati = 0
+    for cartella in CARTELLE_NUMERICHE:
+        n = 0
+        for i in range(1, MAX_NUMERO + 1):
+            percorso = f"{cartella}{i}.png"
+            if (radice / percorso).is_file() or _scarica(percorso, radice):
+                n += 1
+        trovati += n
+        log(f"  {cartella}: {n}")
+    return {"trovati": trovati}
+
+
 def fase_slug(radice: Path, log=_stampa) -> dict[str, int]:
     """Prova ogni slug plausibile del bundle nelle cartelle a URL dinamico.
 
@@ -270,12 +294,17 @@ def costruisci(radice: Path, fasi: str = "tutte", log=_stampa) -> dict:
     st = gi = ve = None
 
     if fasi in ("tutte", "statica"):
-        log("[1/4] fase statica: scarico index, bundle e asset citati")
+        log("[1/5] fase statica: scarico index, bundle e asset citati")
         st = fase_statica(radice, log=log)
         log(f"      {st['ok']} file scaricati, {st['falliti']} non disponibili")
 
+    if fasi in ("tutte", "numeri"):
+        log("[2/5] fase numeri: badge e sfondi mappa, che sono numerati")
+        nu = fase_numeri(radice, log=log)
+        log(f"      {nu['trovati']} file numerati")
+
     if fasi in ("tutte", "slug"):
-        log("[2/4] fase slug: provo gli URL costruiti come prefisso + nome")
+        log("[3/5] fase slug: provo gli URL costruiti come prefisso + nome")
         sl = fase_slug(radice, log=log)
         log(f"      {sl['trovati']} trovati su {sl['tentativi']} tentativi")
         # Rete di sicurezza: il sito risponde 200 con index.html per i file
@@ -284,7 +313,7 @@ def costruisci(radice: Path, fasi: str = "tutte", log=_stampa) -> dict:
         pulisci(radice, log=log)
 
     if fasi in ("tutte", "giocata"):
-        log("[3/4] fase giocata: cerco gli URL costruiti a runtime")
+        log("[4/5] fase giocata: cerco gli URL costruiti a runtime")
         gi = fase_giocata(radice, log=log)
         log(f"      {gi['recuperati']} file recuperati giocando")
 
@@ -292,7 +321,7 @@ def costruisci(radice: Path, fasi: str = "tutte", log=_stampa) -> dict:
         file = sum(1 for _ in radice.rglob("*") if _.is_file())
         return {"statica": st, "giocata": gi, "verifica": None, "file": file}
 
-    log("[4/4] verifica: rigioco con la rete chiusa")
+    log("[5/5] verifica: rigioco con la rete chiusa")
     ve = fase_verifica(radice, log=log)
 
     # Ciclo verifica -> riparazione -> riverifica. L'elenco dei mancanti lo
