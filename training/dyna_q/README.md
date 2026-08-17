@@ -98,15 +98,33 @@ that actually drives things is +50 per map cleared.
 
 ## Results so far
 
-Only a 20-episode smoke run, which is far too short to claim anything:
+Trained on 90 episodes (n=30 planning steps, 22 minutes, 569 states discovered,
+46159 Q updates), then benchmarked on the 50 standard seeds against the random
+baseline. Both played **the same seeds**, so this is a paired comparison.
 
 ```
-               mean   median   worst    best
-dyna-q           25     25.0      -5      55
-random         11.2     12.5       0      20
-head to head: dyna-q wins 2/4
+                score~  stdev   worst   best   steps~  faints~
+dyna-q v1          4.9   26.8     -70     85     29.7      3.0
+random            -3.5   20.9     -55     65     17.1      4.1
+
+paired difference: +8.4 per seed, t = 1.70
+wins 24, draws 6, losses 20
 ```
 
-Four seeds is noise. Treat this as evidence that the pipeline runs end to end,
-not as evidence that the agent learned. A real number needs a few hundred
-training episodes and at least 30 evaluation seeds.
+**Read this honestly.** t = 1.70 is not significant: with 50 seeds and this much
+variance, +8.4 points could be luck. Winning 24 of 50 is barely a coin flip.
+
+But two numbers are not ambiguous at all. The agent **survives 74% longer**
+(29.7 steps against 17.1) and **loses a quarter fewer Pokemon** (3.0 faints
+against 4.1). It clearly learned the part of the reward it was hit with most
+often: -10 every time something faints.
+
+What it did **not** learn is to make progress. `maps cleared` is 0 for both, and
+that is where the +50s live. So the policy is currently a good survivor and a bad
+climber, which makes sense: staying alive is rewarded locally and constantly,
+while clearing a map is a long chain of decisions ending in a single payout that
+90 episodes almost never reached.
+
+That is the thing to attack next, and it points at the algorithm rather than the
+hyperparameters: sparse delayed reward is what n-step methods (Chapter 7) and
+prioritised sweeping (8.4) are for.

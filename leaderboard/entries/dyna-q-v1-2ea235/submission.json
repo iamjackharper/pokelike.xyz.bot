@@ -1,0 +1,603 @@
+{
+ "bot": "dyna-q-v1",
+ "author": "pierpierpy",
+ "category": "rl",
+ "description": "tabular Dyna-Q, 90 episodes, n=30 planning steps, encoding v1",
+ "submitted_at": "2026-08-17T15:57:18+00:00",
+ "pokelike_version": "0.1.0",
+ "game": {
+  "file": "bundle.eceae50bbd.js",
+  "sha256": "eceae50bbda9e32b"
+ },
+ "seeds": [
+  10000,
+  10001,
+  10002,
+  10003,
+  10004,
+  10005,
+  10006,
+  10007,
+  10008,
+  10009,
+  10010,
+  10011,
+  10012,
+  10013,
+  10014,
+  10015,
+  10016,
+  10017,
+  10018,
+  10019,
+  10020,
+  10021,
+  10022,
+  10023,
+  10024,
+  10025,
+  10026,
+  10027,
+  10028,
+  10029,
+  10030,
+  10031,
+  10032,
+  10033,
+  10034,
+  10035,
+  10036,
+  10037,
+  10038,
+  10039,
+  10040,
+  10041,
+  10042,
+  10043,
+  10044,
+  10045,
+  10046,
+  10047,
+  10048,
+  10049
+ ],
+ "summary": {
+  "runs": 50,
+  "score_mean": 4.9,
+  "score_median": 0.0,
+  "score_best": 85,
+  "score_worst": -70,
+  "score_stdev": 26.8,
+  "badges_mean": 0.62,
+  "badges_best": 3,
+  "maps_mean": 0,
+  "completed": 0,
+  "steps_mean": 29.7
+ },
+ "runs": [
+  {
+   "seed": 10000,
+   "steps": 5,
+   "score": 0,
+   "badges": 0,
+   "maps": 0,
+   "kos": 2,
+   "faints": 1,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10001,
+   "steps": 15,
+   "score": 5,
+   "badges": 1,
+   "maps": 0,
+   "kos": 7,
+   "faints": 3,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10002,
+   "steps": 25,
+   "score": -25,
+   "badges": 1,
+   "maps": 0,
+   "kos": 7,
+   "faints": 6,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10003,
+   "steps": 12,
+   "score": 0,
+   "badges": 0,
+   "maps": 0,
+   "kos": 4,
+   "faints": 2,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10004,
+   "steps": 4,
+   "score": -5,
+   "badges": 0,
+   "maps": 0,
+   "kos": 1,
+   "faints": 1,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10005,
+   "steps": 16,
+   "score": 5,
+   "badges": 1,
+   "maps": 0,
+   "kos": 7,
+   "faints": 3,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10006,
+   "steps": 12,
+   "score": -5,
+   "badges": 0,
+   "maps": 0,
+   "kos": 5,
+   "faints": 3,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10007,
+   "steps": 7,
+   "score": -5,
+   "badges": 0,
+   "maps": 0,
+   "kos": 1,
+   "faints": 1,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10008,
+   "steps": 22,
+   "score": -5,
+   "badges": 1,
+   "maps": 0,
+   "kos": 9,
+   "faints": 5,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10009,
+   "steps": 4,
+   "score": -5,
+   "badges": 0,
+   "maps": 0,
+   "kos": 1,
+   "faints": 1,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10010,
+   "steps": 10,
+   "score": 30,
+   "badges": 1,
+   "maps": 0,
+   "kos": 8,
+   "faints": 1,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10011,
+   "steps": 23,
+   "score": -15,
+   "badges": 1,
+   "maps": 0,
+   "kos": 9,
+   "faints": 6,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10012,
+   "steps": 4,
+   "score": -5,
+   "badges": 0,
+   "maps": 0,
+   "kos": 1,
+   "faints": 1,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10013,
+   "steps": 24,
+   "score": 75,
+   "badges": 2,
+   "maps": 0,
+   "kos": 21,
+   "faints": 3,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10014,
+   "steps": 22,
+   "score": -20,
+   "badges": 1,
+   "maps": 0,
+   "kos": 10,
+   "faints": 7,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10015,
+   "steps": 34,
+   "score": -25,
+   "badges": 2,
+   "maps": 0,
+   "kos": 15,
+   "faints": 10,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10016,
+   "steps": 4,
+   "score": -5,
+   "badges": 0,
+   "maps": 0,
+   "kos": 1,
+   "faints": 1,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10017,
+   "steps": 18,
+   "score": -70,
+   "badges": 1,
+   "maps": 0,
+   "kos": 8,
+   "faints": 11,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10018,
+   "steps": 12,
+   "score": 40,
+   "badges": 1,
+   "maps": 0,
+   "kos": 12,
+   "faints": 2,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10019,
+   "steps": 34,
+   "score": 10,
+   "badges": 2,
+   "maps": 0,
+   "kos": 14,
+   "faints": 6,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10020,
+   "steps": 18,
+   "score": 30,
+   "badges": 1,
+   "maps": 0,
+   "kos": 14,
+   "faints": 4,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10021,
+   "steps": 400,
+   "score": 15,
+   "badges": 0,
+   "maps": 0,
+   "kos": 3,
+   "faints": 0,
+   "ending": "item-screen"
+  },
+  {
+   "seed": 10022,
+   "steps": 4,
+   "score": -5,
+   "badges": 0,
+   "maps": 0,
+   "kos": 1,
+   "faints": 1,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10023,
+   "steps": 9,
+   "score": -10,
+   "badges": 0,
+   "maps": 0,
+   "kos": 2,
+   "faints": 2,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10024,
+   "steps": 7,
+   "score": -5,
+   "badges": 0,
+   "maps": 0,
+   "kos": 3,
+   "faints": 2,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10025,
+   "steps": 16,
+   "score": 10,
+   "badges": 1,
+   "maps": 0,
+   "kos": 10,
+   "faints": 4,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10026,
+   "steps": 11,
+   "score": 0,
+   "badges": 0,
+   "maps": 0,
+   "kos": 4,
+   "faints": 2,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10027,
+   "steps": 23,
+   "score": 85,
+   "badges": 2,
+   "maps": 0,
+   "kos": 25,
+   "faints": 4,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10028,
+   "steps": 28,
+   "score": 80,
+   "badges": 3,
+   "maps": 0,
+   "kos": 32,
+   "faints": 8,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10029,
+   "steps": 7,
+   "score": 0,
+   "badges": 0,
+   "maps": 0,
+   "kos": 2,
+   "faints": 1,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10030,
+   "steps": 8,
+   "score": -5,
+   "badges": 0,
+   "maps": 0,
+   "kos": 3,
+   "faints": 2,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10031,
+   "steps": 6,
+   "score": 5,
+   "badges": 0,
+   "maps": 0,
+   "kos": 3,
+   "faints": 1,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10032,
+   "steps": 18,
+   "score": 25,
+   "badges": 1,
+   "maps": 0,
+   "kos": 7,
+   "faints": 1,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10033,
+   "steps": 11,
+   "score": 10,
+   "badges": 0,
+   "maps": 0,
+   "kos": 4,
+   "faints": 1,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10034,
+   "steps": 4,
+   "score": -5,
+   "badges": 0,
+   "maps": 0,
+   "kos": 1,
+   "faints": 1,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10035,
+   "steps": 7,
+   "score": 5,
+   "badges": 0,
+   "maps": 0,
+   "kos": 3,
+   "faints": 1,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10036,
+   "steps": 4,
+   "score": -5,
+   "badges": 0,
+   "maps": 0,
+   "kos": 1,
+   "faints": 1,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10037,
+   "steps": 6,
+   "score": 5,
+   "badges": 0,
+   "maps": 0,
+   "kos": 3,
+   "faints": 1,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10038,
+   "steps": 16,
+   "score": -5,
+   "badges": 1,
+   "maps": 0,
+   "kos": 7,
+   "faints": 4,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10039,
+   "steps": 8,
+   "score": 15,
+   "badges": 0,
+   "maps": 0,
+   "kos": 5,
+   "faints": 1,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10040,
+   "steps": 10,
+   "score": 0,
+   "badges": 0,
+   "maps": 0,
+   "kos": 2,
+   "faints": 1,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10041,
+   "steps": 13,
+   "score": 15,
+   "badges": 0,
+   "maps": 0,
+   "kos": 5,
+   "faints": 1,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10042,
+   "steps": 24,
+   "score": -30,
+   "badges": 1,
+   "maps": 0,
+   "kos": 6,
+   "faints": 6,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10043,
+   "steps": 18,
+   "score": -5,
+   "badges": 1,
+   "maps": 0,
+   "kos": 9,
+   "faints": 5,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10044,
+   "steps": 400,
+   "score": 15,
+   "badges": 0,
+   "maps": 0,
+   "kos": 3,
+   "faints": 0,
+   "ending": "item-screen"
+  },
+  {
+   "seed": 10045,
+   "steps": 19,
+   "score": 0,
+   "badges": 1,
+   "maps": 0,
+   "kos": 10,
+   "faints": 5,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10046,
+   "steps": 20,
+   "score": -20,
+   "badges": 1,
+   "maps": 0,
+   "kos": 6,
+   "faints": 5,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10047,
+   "steps": 20,
+   "score": 50,
+   "badges": 1,
+   "maps": 0,
+   "kos": 16,
+   "faints": 3,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10048,
+   "steps": 15,
+   "score": 20,
+   "badges": 1,
+   "maps": 0,
+   "kos": 6,
+   "faints": 1,
+   "ending": "gameover-screen"
+  },
+  {
+   "seed": 10049,
+   "steps": 27,
+   "score": -20,
+   "badges": 1,
+   "maps": 0,
+   "kos": 8,
+   "faints": 6,
+   "ending": "gameover-screen"
+  }
+ ],
+ "notes": {
+  "table": "dyna-q-v1.json",
+  "states_known": 563,
+  "decisions": 1484,
+  "unseen_states": 268
+ },
+ "id": "dyna-q-v1-2ea235",
+ "bot_source_file": "dyna_q.py",
+ "artifacts": [
+  {
+   "name": "weights.json",
+   "kind": "weights-json",
+   "description": "Q-table, 563 states, encoding v1",
+   "bytes": 71804,
+   "sha256": "93e17f21a954674769621274118a66eaee310d91b2b70f75e5ee2ea3d173af94"
+  },
+  {
+   "name": "config.json",
+   "kind": "config",
+   "description": "how the policy was trained",
+   "bytes": 291,
+   "sha256": "493f2f52c870f69d7969c95f1dbe4c3c76f1311ca798f96204910f80a2313684"
+  }
+ ]
+}

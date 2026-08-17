@@ -54,23 +54,26 @@ def play_random(env: TrainingEnv, seed: int) -> dict:
             "steps": env.steps, "ending": (env.observation or {}).get("screen")}
 
 
-def evaluate(table: str = "q_table.json", episodes: int = 30,
+def evaluate(table: str = "dyna_q_v1.json", episodes: int = 30,
              seed0: int = 5000, port: int = 8601) -> dict:
     agent = DynaQ.load(MODELS / table)
     print(f"loaded {table}: {agent.summary()}\n")
 
+    from tqdm import tqdm
+
     trained, baseline = [], []
     with TrainingEnv(port=port) as env:
-        for i in range(episodes):
+        bar = tqdm(range(episodes), desc="dyna-q vs random", unit="seed")
+        for i in bar:
             seed = seed0 + i
             t = play_greedy(env, agent, seed)
             b = play_random(env, seed)
             trained.append(t)
             baseline.append(b)
-            print(f"  seed {seed:>5}   dyna-q {str(t['score']):>6}   "
-                  f"random {str(b['score']):>6}   "
-                  f"{'+' if (t['score'] or 0) > (b['score'] or 0) else ' '}",
-                  flush=True)
+            wins = sum(1 for x, y in zip(trained, baseline)
+                       if (x["score"] or 0) > (y["score"] or 0))
+            bar.set_postfix(dyna=t["score"], random=b["score"],
+                            wins=f"{wins}/{len(trained)}")
 
     def stats(rows, field="score"):
         vals = [r[field] for r in rows if r[field] is not None]
@@ -98,7 +101,7 @@ def evaluate(table: str = "q_table.json", episodes: int = 30,
 
 def main() -> int:
     p = argparse.ArgumentParser(description="Compare a trained Dyna-Q agent with random.")
-    p.add_argument("--table", default="q_table.json")
+    p.add_argument("--table", default="dyna_q_v1.json")
     p.add_argument("--episodes", type=int, default=30)
     p.add_argument("--seed0", type=int, default=5000,
                    help="held-out seeds: keep these away from the training range")

@@ -1,0 +1,1825 @@
+{
+ "encoding_version": 1,
+ "hyperparameters": {
+  "alpha": 0.1,
+  "gamma": 0.95,
+  "epsilon": 0.22291808906285737,
+  "planning_steps": 30,
+  "optimistic": 0.0
+ },
+ "updates": 46159,
+ "Q": {
+  "('starter-screen', 0, 0, 0, 0, 0, ('starter-screen:slot0', 'starter-screen:slot1', 'starter-screen:slot2'))": {
+   "starter-screen:slot2": 6.287283940983281,
+   "starter-screen:slot0": 6.308502899240853,
+   "starter-screen:slot1": 6.173290553567566
+  },
+  "('trainer-screen', 0, 0, 0, 0, 0, ('trainer-screen:slot0', 'trainer-screen:slot1'))": {
+   "trainer-screen:slot0": 5.2885674379118655,
+   "trainer-screen:slot1": 5.198421987471458
+  },
+  "('map-screen', 1, 3, 0, 0, 0, ('node:battle', 'node:catch'))": {
+   "node:catch": 5.7876405799545685,
+   "node:battle": 7.323587758158094
+  },
+  "('catch-screen', 1, 3, 0, 0, 0, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot2": 5.130831428158263,
+   "catch-screen:slot0": 4.120790337570517,
+   "catch-screen:slot1": 6.575758716873066
+  },
+  "('map-screen', 2, 3, 0, 0, 0, ('node:battle', 'node:catch'))": {
+   "node:catch": 4.654811395493827,
+   "node:battle": -1.7282127827798313
+  },
+  "('catch-screen', 2, 3, 0, 0, 0, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot0": 0.3124537279559463,
+   "catch-screen:slot1": 6.7015092518559305,
+   "catch-screen:slot2": 4.349577783560852
+  },
+  "('map-screen', 3, 3, 0, 0, 0, ('node:battle', 'node:catch'))": {
+   "node:battle": 9.797807982646201
+  },
+  "('map-screen', 3, 2, 0, 1, 0, ('node:battle', 'node:catch'))": {
+   "node:catch": 16.51825713602101
+  },
+  "('catch-screen', 3, 2, 0, 1, 0, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot2": 17.80795909782059
+  },
+  "('map-screen', 4, 2, 0, 1, 0, ('node:item', 'node:move_tutor'))": {
+   "node:move_tutor": 19.45694731055811
+  },
+  "('item-equip-modal', 4, 2, 0, 1, 0, ('btn:skip', 'item-equip-modal:slot0', 'item-equip-modal:slot1', 'item-equip-modal:slot2', 'item-equip-modal:slot3'))": {
+   "item-equip-modal:slot3": 21.184988882900047
+  },
+  "('map-screen', 4, 2, 0, 1, 0, ('node:trainer',))": {
+   "node:trainer": 22.39254139987227
+  },
+  "('map-screen', 4, 3, 1, 0, 1, ('node:battle', 'node:catch'))": {
+   "node:catch": 0.15637591889006158,
+   "node:battle": 6.489858955157119
+  },
+  "('catch-screen', 4, 3, 1, 0, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot1": 0.13745021500998897,
+   "catch-screen:slot0": 0.0
+  },
+  "('map-screen', 5, 3, 1, 0, 1, ('node:catch', 'node:item'))": {
+   "node:catch": 1.8116220431096455
+  },
+  "('catch-screen', 5, 3, 1, 0, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot0": 2.0274364381721677
+  },
+  "('map-screen', 6, 3, 1, 0, 1, ('node:item',))": {
+   "node:item": 4.512498053639898
+  },
+  "('item-screen', 6, 3, 1, 1, 1, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot1": 4.749999871961503
+  },
+  "('item-equip-modal', 6, 3, 1, 1, 1, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:bag": 4.999999994623472
+  },
+  "('map-screen', 6, 1, 1, 1, 1, ('node:battle', 'node:item'))": {
+   "node:battle": -4.999999992624791
+  },
+  "('map-screen', 6, 0, 1, 1, 1, ('node:item', 'node:trainer'))": {
+   "node:item": 0.0
+  },
+  "('item-screen', 6, 0, 1, 2, 1, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot1": 0.0,
+   "item-screen:slot2": 0.0,
+   "item-screen:slot0": 0.0
+  },
+  "('item-equip-modal', 6, 0, 1, 2, 1, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:equip": 0.0
+  },
+  "('map-screen', 3, 3, 0, 0, 0, ('node:battle',))": {
+   "node:battle": 0.0
+  },
+  "('map-screen', 2, 3, 0, 0, 0, ('node:item', 'node:trainer'))": {
+   "node:trainer": 7.305253679516528
+  },
+  "('map-screen', 2, 3, 0, 0, 0, ('node:battle', 'node:item'))": {
+   "node:battle": 8.74364511362002
+  },
+  "('catch-screen', 2, 3, 0, 1, 0, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot0": 5.5070320096906595,
+   "catch-screen:slot2": 3.8889646072156583,
+   "catch-screen:slot1": 5.148655807102382
+  },
+  "('map-screen', 3, 3, 0, 1, 0, ('node:catch', 'node:move_tutor'))": {
+   "node:catch": 7.675893480423428
+  },
+  "('catch-screen', 3, 3, 0, 1, 0, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot1": 6.061164127617154,
+   "catch-screen:slot0": 0.03467517035356639,
+   "catch-screen:slot2": 1.6472828637206915
+  },
+  "('map-screen', 4, 3, 0, 1, 0, ('node:move_tutor', 'node:trainer'))": {
+   "node:move_tutor": 8.955632805360699
+  },
+  "('item-equip-modal', 4, 3, 0, 2, 0, ('btn:skip', 'item-equip-modal:slot0', 'item-equip-modal:slot1', 'item-equip-modal:slot2', 'item-equip-modal:slot3'))": {
+   "item-equip-modal:slot3": 14.761190645576486
+  },
+  "('map-screen', 4, 3, 0, 2, 0, ('node:pokecenter', 'node:trainer'))": {
+   "node:pokecenter": 0.0,
+   "node:trainer": 20.179844356312188
+  },
+  "('item-equip-modal', 2, 3, 0, 1, 0, ('btn:skip', 'item-equip-modal:slot0', 'item-equip-modal:slot1'))": {
+   "item-equip-modal:slot1": 9.333015441206168,
+   "btn:skip": 7.834746304701703
+  },
+  "('map-screen', 2, 3, 0, 1, 0, ('node:question', 'node:trainer'))": {
+   "node:trainer": 6.940133234908597
+  },
+  "('map-screen', 2, 3, 0, 0, 0, ('node:trainer',))": {
+   "node:trainer": 7.65043722502258
+  },
+  "('map-screen', 2, 3, 0, 0, 0, ('node:question', 'node:trade'))": {
+   "node:question": 11.432630957113313
+  },
+  "('map-screen', 2, 3, 0, 1, 0, ('node:item', 'node:trainer'))": {
+   "node:trainer": 5.482491944159503
+  },
+  "('map-screen', 2, 1, 0, 1, 0, ('node:move_tutor',))": {
+   "node:move_tutor": 5.802150235425824
+  },
+  "('item-equip-modal', 2, 1, 0, 1, 0, ('btn:skip', 'item-equip-modal:slot0', 'item-equip-modal:slot1'))": {
+   "btn:skip": 6.583555798427919
+  },
+  "('catch-screen', 2, 1, 0, 2, 0, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot1": 6.698165234082028
+  },
+  "('item-screen', 3, 1, 0, 2, 0, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot0": 6.612640435841481,
+   "item-screen:slot2": 5.595909651761294
+  },
+  "('item-equip-modal', 3, 1, 0, 2, 0, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:cancel": 6.832246939929911
+  },
+  "('map-screen', 3, 3, 1, 0, 1, ('node:battle', 'node:catch'))": {
+   "node:battle": -2.194089501962505,
+   "node:catch": 5.152287217591175
+  },
+  "('map-screen', 3, 0, 1, 0, 1, ('node:battle', 'node:item'))": {
+   "node:item": 4.790793057751372
+  },
+  "('item-screen', 3, 0, 1, 0, 1, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot1": 5.66087282230518
+  },
+  "('item-equip-modal', 3, 0, 1, 0, 1, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:equip": 6.747488781056212
+  },
+  "('map-screen', 3, 0, 1, 0, 1, ('node:battle',))": {
+   "node:battle": 7.8879230367924436
+  },
+  "('map-screen', 3, 0, 1, 1, 1, ('node:item', 'node:trainer'))": {
+   "node:trainer": 0.0,
+   "node:item": 4.302110329428434
+  },
+  "('map-screen', 2, 3, 0, 0, 0, ('node:catch', 'node:trainer'))": {
+   "node:catch": 5.152307318131323,
+   "node:trainer": 4.774777405427783
+  },
+  "('map-screen', 3, 3, 0, 0, 0, ('node:battle', 'node:item'))": {
+   "node:battle": 7.976158976855136
+  },
+  "('map-screen', 3, 3, 0, 1, 0, ('node:battle', 'node:catch'))": {
+   "node:catch": 7.9171027448357405
+  },
+  "('map-screen', 4, 3, 0, 1, 0, ('node:move_tutor', 'node:question'))": {
+   "node:question": 4.425897328481675
+  },
+  "('map-screen', 4, 3, 0, 1, 0, ('node:trainer',))": {
+   "node:trainer": -12.757118241181354
+  },
+  "('catch-screen', 4, 3, 0, 2, 0, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot2": 12.831505796152507
+  },
+  "('map-screen', 5, 3, 1, 0, 1, ('node:battle', 'node:catch'))": {
+   "node:catch": 1.7066347381474545
+  },
+  "('map-screen', 6, 3, 1, 0, 1, ('node:catch',))": {
+   "node:catch": 0.01677498428637035
+  },
+  "('catch-screen', 6, 3, 1, 0, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot2": 9.024047521125507
+  },
+  "('swap-screen', 6, 3, 1, 0, 1, ('swap-screen:slot0', 'swap-screen:slot1', 'swap-screen:slot2', 'swap-screen:slot3', 'swap-screen:slot4', 'swap-screen:slot5'))": {
+   "swap-screen:slot2": 9.499955953291431
+  },
+  "('map-screen', 6, 3, 1, 0, 1, ('node:item', 'node:trainer'))": {
+   "node:trainer": 9.999999522688926
+  },
+  "('map-screen', 6, 1, 1, 1, 1, ('node:trade', 'node:trainer'))": {
+   "node:trade": 0.0
+  },
+  "('map-screen', 6, 1, 1, 1, 1, ('node:catch', 'node:trainer'))": {
+   "node:trainer": 0.0
+  },
+  "('map-screen', 2, 3, 0, 0, 0, ('node:battle', 'node:trainer'))": {
+   "node:battle": 8.04343932791471,
+   "node:trainer": 2.339214130500462
+  },
+  "('map-screen', 2, 0, 0, 0, 0, ('node:battle', 'node:trainer'))": {
+   "node:battle": 0.039704731703398076,
+   "node:trainer": 13.980571661358931
+  },
+  "('map-screen', 2, 0, 0, 1, 0, ('node:catch', 'node:item'))": {
+   "node:catch": 8.05875085153415
+  },
+  "('catch-screen', 2, 0, 0, 1, 0, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot0": 1.6689005775686516,
+   "catch-screen:slot2": 6.859615192009759
+  },
+  "('map-screen', 3, 0, 0, 1, 0, ('node:catch', 'node:trainer'))": {
+   "node:trainer": 22.956295415446107,
+   "node:catch": 1.9140873050749174
+  },
+  "('map-screen', 3, 0, 0, 1, 0, ('node:move_tutor', 'node:question'))": {
+   "node:move_tutor": 0.0
+  },
+  "('item-equip-modal', 3, 0, 0, 2, 0, ('btn:skip', 'item-equip-modal:slot0', 'item-equip-modal:slot1', 'item-equip-modal:slot2'))": {
+   "item-equip-modal:slot0": 0.0,
+   "item-equip-modal:slot1": 0.0
+  },
+  "('map-screen', 3, 0, 0, 2, 0, ('node:battle', 'node:pokecenter'))": {
+   "node:battle": 0.0
+  },
+  "('map-screen', 2, 1, 0, 1, 0, ('node:item', 'node:question'))": {
+   "node:question": 14.093009300791671
+  },
+  "('item-screen', 2, 1, 0, 1, 0, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot2": 15.031210054821365
+  },
+  "('item-equip-modal', 2, 1, 0, 1, 0, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:equip": 15.79608652384835
+  },
+  "('map-screen', 2, 3, 1, 0, 1, ('node:battle', 'node:catch'))": {
+   "node:battle": 4.999992279621008,
+   "node:catch": 5.661464920965363
+  },
+  "('map-screen', 2, 0, 1, 0, 1, ('node:battle', 'node:item'))": {
+   "node:battle": -4.605724347385697
+  },
+  "('map-screen', 2, 0, 1, 0, 1, ('node:catch', 'node:question'))": {
+   "node:catch": 0.8154033221907953
+  },
+  "('catch-screen', 2, 0, 1, 1, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot1": 1.8720665063078272
+  },
+  "('map-screen', 3, 0, 1, 1, 1, ('node:catch', 'node:trainer'))": {
+   "node:trainer": 0.0,
+   "node:catch": 3.1214432053137036
+  },
+  "('map-screen', 1, 3, 0, 0, 0, ('node:catch',))": {
+   "node:catch": 5.839922653685401
+  },
+  "('map-screen', 2, 3, 0, 0, 0, ('node:catch',))": {
+   "node:catch": 5.762344449974448
+  },
+  "('map-screen', 3, 3, 0, 1, 0, ('node:question', 'node:trainer'))": {
+   "node:question": 4.837074378773139,
+   "node:trainer": 0.021150047787850755
+  },
+  "('item-screen', 3, 3, 0, 1, 0, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot0": 0.9909898008858874,
+   "item-screen:slot2": 5.465517585901346
+  },
+  "('map-screen', 3, 2, 0, 1, 0, ('node:catch', 'node:trainer'))": {
+   "node:trainer": 4.999996306260454
+  },
+  "('map-screen', 3, 2, 0, 2, 0, ('node:pokecenter', 'node:trainer'))": {
+   "node:pokecenter": 0.0
+  },
+  "('map-screen', 1, 3, 0, 0, 0, ('node:battle', 'node:trainer'))": {
+   "node:trainer": 7.466156968607095
+  },
+  "('map-screen', 1, 1, 0, 0, 0, ('node:catch',))": {
+   "node:catch": 0.7099442327800454
+  },
+  "('catch-screen', 1, 1, 0, 1, 0, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot0": 1.5003172239959237
+  },
+  "('map-screen', 2, 1, 0, 1, 0, ('node:catch', 'node:move_tutor'))": {
+   "node:catch": 2.21424000456982
+  },
+  "('catch-screen', 2, 1, 0, 1, 0, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot2": 2.961043294186088
+  },
+  "('map-screen', 3, 1, 0, 1, 0, ('node:item', 'node:question'))": {
+   "node:question": 4.999998956778852
+  },
+  "('map-screen', 3, 1, 0, 1, 0, ('node:question', 'node:trainer'))": {
+   "node:trainer": -4.999953693064344
+  },
+  "('map-screen', 3, 0, 0, 2, 0, ('node:pokecenter', 'node:trainer'))": {
+   "node:trainer": 0.0
+  },
+  "('map-screen', 2, 3, 0, 0, 0, ('node:catch', 'node:item'))": {
+   "node:catch": 7.695501277388539,
+   "node:item": 3.689631088967091
+  },
+  "('map-screen', 3, 3, 0, 0, 0, ('node:trainer',))": {
+   "node:trainer": 8.621187683756869
+  },
+  "('map-screen', 4, 3, 0, 1, 0, ('node:trade', 'node:trainer'))": {
+   "node:trainer": 17.111842153426945
+  },
+  "('map-screen', 5, 3, 1, 0, 1, ('node:catch', 'node:trainer'))": {
+   "node:trainer": -9.999635646105794
+  },
+  "('map-screen', 5, 0, 1, 0, 1, ('node:catch', 'node:trainer'))": {
+   "node:trainer": 0.0,
+   "node:catch": 0.0
+  },
+  "('map-screen', 5, 0, 1, 1, 1, ('node:battle', 'node:trainer'))": {
+   "node:trainer": 0.0
+  },
+  "('map-screen', 3, 2, 0, 1, 0, ('node:item', 'node:trade'))": {
+   "node:trade": 20.454219810270054
+  },
+  "('map-screen', 3, 2, 0, 1, 0, ('node:trade', 'node:trainer'))": {
+   "node:trainer": 21.292040999048332
+  },
+  "('map-screen', 3, 2, 0, 2, 0, ('node:pokecenter', 'node:question'))": {
+   "node:pokecenter": 16.036501220887548
+  },
+  "('catch-screen', 3, 3, 1, 0, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot1": 0.0,
+   "catch-screen:slot2": 1.58799868123382,
+   "catch-screen:slot0": 5.51076481127829
+  },
+  "('map-screen', 4, 3, 1, 0, 1, ('node:battle', 'node:item'))": {
+   "node:battle": -4.982442468351202
+  },
+  "('map-screen', 4, 0, 1, 0, 1, ('node:question', 'node:trainer'))": {
+   "node:question": 0.2159066890348825,
+   "node:trainer": 9.667930066683207
+  },
+  "('item-screen', 4, 0, 1, 1, 1, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot1": 0.9804770387749125,
+   "item-screen:slot0": 0.033308895224699216,
+   "item-screen:slot2": 0.802497972923083
+  },
+  "('item-equip-modal', 4, 0, 1, 1, 1, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:cancel": 0.1621290743515581,
+   "btn:bag": 0.0,
+   "btn:equip": 0.023076546933887356
+  },
+  "('map-screen', 4, 0, 1, 1, 1, ('node:battle', 'node:move_tutor'))": {
+   "node:move_tutor": 5.269767090951648
+  },
+  "('item-equip-modal', 4, 0, 1, 1, 1, ('btn:skip', 'item-equip-modal:slot0', 'item-equip-modal:slot1', 'item-equip-modal:slot2', 'item-equip-modal:slot3'))": {
+   "item-equip-modal:slot1": 7.118606688515879
+  },
+  "('map-screen', 4, 0, 1, 1, 1, ('node:trade', 'node:trainer'))": {
+   "node:trainer": 6.12579511
+  },
+  "('map-screen', 1, 3, 0, 0, 0, ('node:catch', 'node:trainer'))": {
+   "node:catch": 8.829830955838027,
+   "node:trainer": 10.33799364193258
+  },
+  "('map-screen', 2, 3, 0, 0, 0, ('node:battle',))": {
+   "node:battle": 9.02418560720276
+  },
+  "('map-screen', 2, 1, 0, 1, 0, ('node:battle', 'node:catch'))": {
+   "node:catch": 2.2247458380663514
+  },
+  "('map-screen', 3, 1, 0, 1, 0, ('node:battle', 'node:question'))": {
+   "node:question": 7.154654603453768
+  },
+  "('item-screen', 3, 1, 0, 1, 0, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot1": 8.266297769951446,
+   "item-screen:slot2": 8.708188041523451
+  },
+  "('item-equip-modal', 3, 1, 0, 1, 0, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:equip": 3.1745310891275995,
+   "btn:cancel": 7.24059565794138
+  },
+  "('map-screen', 3, 1, 0, 1, 0, ('node:battle', 'node:trainer'))": {
+   "node:battle": 0.0,
+   "node:trainer": 9.584936891118208
+  },
+  "('map-screen', 1, 3, 0, 0, 0, ('node:catch', 'node:item'))": {
+   "node:item": 4.59831365318078
+  },
+  "('item-screen', 1, 3, 0, 0, 0, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot0": 6.617700774080088
+  },
+  "('item-equip-modal', 1, 3, 0, 0, 0, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:bag": 6.088493119171195
+  },
+  "('map-screen', 1, 3, 0, 0, 0, ('node:catch', 'node:trade'))": {
+   "node:catch": 9.696080156474107
+  },
+  "('catch-screen', 1, 3, 0, 1, 0, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot0": 7.089956067020055
+  },
+  "('map-screen', 2, 3, 0, 1, 0, ('node:item', 'node:move_tutor'))": {
+   "node:move_tutor": 9.808548406810347
+  },
+  "('map-screen', 2, 3, 0, 1, 0, ('node:battle', 'node:catch'))": {
+   "node:battle": 5.021298665378177,
+   "node:catch": 8.502466348789264
+  },
+  "('map-screen', 2, 3, 0, 1, 0, ('node:question',))": {
+   "node:question": 9.012692243176263
+  },
+  "('item-screen', 2, 3, 0, 2, 0, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot1": 5.386637740349257,
+   "item-screen:slot0": 10.13230666264447
+  },
+  "('item-equip-modal', 2, 3, 0, 2, 0, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:cancel": 9.504574766491887,
+   "btn:equip": 11.631632865620709
+  },
+  "('map-screen', 2, 2, 1, 0, 1, ('node:catch', 'node:trainer'))": {
+   "node:catch": 0.03016892654909551
+  },
+  "('catch-screen', 2, 2, 1, 0, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot1": 0.09432907573140006
+  },
+  "('map-screen', 3, 2, 1, 0, 1, ('node:trade', 'node:trainer'))": {
+   "node:trade": 0.1923302835651738
+  },
+  "('map-screen', 3, 2, 1, 1, 1, ('node:catch', 'node:trainer'))": {
+   "node:catch": 0.5561051845473874
+  },
+  "('catch-screen', 3, 2, 1, 1, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot0": 0.0,
+   "catch-screen:slot2": 1.4453810412134698
+  },
+  "('map-screen', 4, 2, 1, 1, 1, ('node:item', 'node:trainer'))": {
+   "node:trainer": 0.0
+  },
+  "('map-screen', 2, 3, 0, 0, 0, ('node:item',))": {
+   "node:item": 8.74828183466896
+  },
+  "('item-screen', 2, 3, 0, 1, 0, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot1": 9.046160683100489,
+   "item-screen:slot0": 8.450428416090242,
+   "item-screen:slot2": 2.882752758715435
+  },
+  "('item-equip-modal', 2, 3, 0, 1, 0, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:cancel": 9.087399643943023,
+   "btn:bag": 6.792743173938512
+  },
+  "('map-screen', 3, 3, 0, 1, 0, ('node:trainer',))": {
+   "node:trainer": 5.805460662271596
+  },
+  "('map-screen', 3, 2, 0, 1, 0, ('node:battle', 'node:trainer'))": {
+   "node:battle": 25.83465066119852
+  },
+  "('map-screen', 3, 1, 0, 2, 0, ('node:pokecenter', 'node:trainer'))": {
+   "node:trainer": 21.012788583313675
+  },
+  "('map-screen', 4, 3, 1, 0, 1, ('node:battle', 'node:trainer'))": {
+   "node:trainer": -2.836981677565642
+  },
+  "('map-screen', 4, 0, 1, 0, 1, ('node:item', 'node:question'))": {
+   "node:item": 0.3053091961544717
+  },
+  "('map-screen', 4, 0, 1, 1, 1, ('node:item', 'node:trainer'))": {
+   "node:trainer": 0.0
+  },
+  "('map-screen', 2, 2, 0, 0, 0, ('node:trainer',))": {
+   "node:trainer": 18.316798255742803
+  },
+  "('map-screen', 2, 3, 0, 1, 0, ('node:trainer',))": {
+   "node:trainer": 5.812976298484339
+  },
+  "('catch-screen', 2, 3, 1, 0, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot1": 5.1494453367035735,
+   "catch-screen:slot2": -7.354742034811141
+  },
+  "('map-screen', 3, 3, 1, 0, 1, ('node:trainer',))": {
+   "node:trainer": -9.310879250874013
+  },
+  "('map-screen', 3, 3, 1, 0, 1, ('node:item',))": {
+   "node:item": 0.0
+  },
+  "('item-screen', 3, 3, 1, 1, 1, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot0": 0.0,
+   "item-screen:slot1": 0.0
+  },
+  "('item-equip-modal', 3, 3, 1, 1, 1, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:bag": 0.0
+  },
+  "('map-screen', 3, 3, 1, 1, 1, ('node:catch',))": {
+   "node:catch": 0.009025
+  },
+  "('catch-screen', 3, 3, 1, 1, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot0": 0.0,
+   "catch-screen:slot2": 0.421447561875
+  },
+  "('item-screen', 4, 3, 1, 2, 1, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot0": 0.0,
+   "item-screen:slot1": 0.0
+  },
+  "('item-equip-modal', 4, 3, 1, 2, 1, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:cancel": 0.0
+  },
+  "('map-screen', 2, 3, 0, 0, 0, ('node:question', 'node:trainer'))": {
+   "node:trainer": 12.61097692853158
+  },
+  "('map-screen', 2, 3, 0, 1, 0, ('node:catch', 'node:trainer'))": {
+   "node:trainer": 7.222650138413497,
+   "node:catch": 8.242165980129776
+  },
+  "('map-screen', 2, 3, 0, 1, 0, ('node:battle', 'node:item'))": {
+   "node:battle": 13.368200704268515
+  },
+  "('map-screen', 2, 3, 0, 2, 0, ('node:battle', 'node:pokecenter'))": {
+   "node:battle": 20.64386966194168,
+   "node:pokecenter": 0.0
+  },
+  "('map-screen', 2, 3, 1, 0, 1, ('node:item', 'node:trainer'))": {
+   "node:item": 4.489285135877452
+  },
+  "('item-screen', 2, 3, 1, 0, 1, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot0": 6.002727476100034
+  },
+  "('item-equip-modal', 2, 3, 1, 0, 1, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:bag": 6.914055682688133
+  },
+  "('map-screen', 2, 3, 1, 0, 1, ('node:catch', 'node:question'))": {
+   "node:question": 7.8398314246107175
+  },
+  "('item-screen', 2, 3, 1, 1, 1, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot2": 8.452921195093666
+  },
+  "('item-equip-modal', 2, 3, 1, 1, 1, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:bag": 8.994359482150282
+  },
+  "('catch-screen', 2, 3, 1, 1, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot0": 9.492717693127707
+  },
+  "('map-screen', 3, 3, 1, 1, 1, ('node:battle', 'node:trainer'))": {
+   "node:trainer": 9.999059538913015
+  },
+  "('map-screen', 3, 3, 1, 1, 1, ('node:move_tutor',))": {
+   "node:move_tutor": 0.0
+  },
+  "('item-equip-modal', 3, 3, 1, 2, 1, ('btn:skip', 'item-equip-modal:slot0', 'item-equip-modal:slot1', 'item-equip-modal:slot2'))": {
+   "item-equip-modal:slot2": 0.0
+  },
+  "('map-screen', 3, 3, 1, 2, 1, ('node:pokecenter', 'node:question'))": {
+   "node:question": 0.0
+  },
+  "('item-screen', 3, 3, 1, 2, 1, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot2": 0.0
+  },
+  "('item-equip-modal', 3, 3, 1, 2, 1, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:equip": 0.0
+  },
+  "('map-screen', 4, 3, 0, 1, 0, ('node:battle', 'node:trainer'))": {
+   "node:trainer": 12.122906619983203
+  },
+  "('map-screen', 4, 1, 0, 1, 0, ('node:battle', 'node:question'))": {
+   "node:question": 7.159248319225972
+  },
+  "('catch-screen', 5, 0, 1, 1, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot1": 0.0,
+   "catch-screen:slot0": 0.0
+  },
+  "('map-screen', 6, 0, 1, 1, 1, ('node:move_tutor', 'node:question'))": {
+   "node:move_tutor": 0.0
+  },
+  "('item-equip-modal', 6, 0, 1, 1, 1, ('btn:skip', 'item-equip-modal:slot0', 'item-equip-modal:slot1', 'item-equip-modal:slot2', 'item-equip-modal:slot3', 'item-equip-modal:slot4', 'item-equip-modal:slot5'))": {
+   "item-equip-modal:slot3": 0.0
+  },
+  "('map-screen', 6, 0, 1, 1, 1, ('node:item',))": {
+   "node:item": 0.0
+  },
+  "('item-screen', 6, 0, 1, 1, 1, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot1": 0.0
+  },
+  "('item-equip-modal', 6, 0, 1, 2, 1, ('btn:skip', 'item-equip-modal:slot0', 'item-equip-modal:slot1', 'item-equip-modal:slot2', 'item-equip-modal:slot3', 'item-equip-modal:slot4', 'item-equip-modal:slot5'))": {
+   "item-equip-modal:slot1": 0.0
+  },
+  "('map-screen', 2, 3, 0, 1, 0, ('node:battle', 'node:trainer'))": {
+   "node:trainer": 0.005574768710911587
+  },
+  "('map-screen', 2, 3, 0, 1, 0, ('node:catch', 'node:item'))": {
+   "node:catch": 9.40055627013516,
+   "node:item": 4.748061603375892
+  },
+  "('map-screen', 3, 3, 0, 1, 0, ('node:catch', 'node:question'))": {
+   "node:question": 15.77658270079271
+  },
+  "('item-screen', 3, 3, 0, 2, 0, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot2": 15.526192805600314,
+   "item-screen:slot0": 0.20541711075776542
+  },
+  "('item-equip-modal', 3, 3, 0, 2, 0, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:cancel": 15.615779302510708,
+   "btn:bag": 11.00381778051134
+  },
+  "('map-screen', 4, 3, 1, 0, 1, ('node:catch', 'node:trainer'))": {
+   "node:trainer": 13.418394066581987
+  },
+  "('map-screen', 4, 3, 1, 0, 1, ('node:question', 'node:trainer'))": {
+   "node:question": 17.112779797005444
+  },
+  "('map-screen', 4, 3, 1, 1, 1, ('node:catch', 'node:move_tutor'))": {
+   "node:catch": 10.333113538203193
+  },
+  "('catch-screen', 4, 3, 1, 1, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot2": 4.7371655303371,
+   "catch-screen:slot0": 13.03656487372342
+  },
+  "('map-screen', 5, 3, 1, 1, 1, ('node:battle', 'node:question'))": {
+   "node:battle": 4.999203660445574
+  },
+  "('map-screen', 5, 3, 1, 1, 1, ('node:catch', 'node:question'))": {
+   "node:catch": 0.0
+  },
+  "('catch-screen', 5, 3, 1, 2, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot0": 0.0
+  },
+  "('item-screen', 6, 3, 1, 2, 1, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot1": 0.0,
+   "item-screen:slot0": 0.0
+  },
+  "('item-equip-modal', 6, 3, 1, 2, 1, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:bag": 0.0
+  },
+  "('map-screen', 2, 2, 0, 1, 0, ('node:battle', 'node:item'))": {
+   "node:item": 16.73646841238705
+  },
+  "('item-screen', 2, 2, 0, 1, 0, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot1": 18.219347281261584
+  },
+  "('item-equip-modal', 2, 2, 0, 1, 0, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:bag": 15.347032913343265,
+   "btn:equip": 19.589241505592952
+  },
+  "('map-screen', 2, 2, 0, 1, 0, ('node:item', 'node:trade'))": {
+   "node:item": 16.920059608154574
+  },
+  "('shiny-screen', 2, 2, 0, 2, 0, ('btn:skip', 'shiny-screen:slot0'))": {
+   "btn:skip": 20.703680471393284
+  },
+  "('map-screen', 2, 3, 1, 0, 1, ('node:battle', 'node:trainer'))": {
+   "node:trainer": 0.0
+  },
+  "('map-screen', 2, 0, 1, 0, 1, ('node:question', 'node:trainer'))": {
+   "node:question": 0.0
+  },
+  "('item-screen', 2, 0, 1, 1, 1, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot2": 0.0
+  },
+  "('item-equip-modal', 2, 0, 1, 1, 1, ('btn:bag', 'btn:cancel', 'btn:equip', 'item-equip-modal:slot0'))": {
+   "item-equip-modal:slot0": 0.0
+  },
+  "('map-screen', 2, 0, 1, 1, 1, ('node:item', 'node:trainer'))": {
+   "node:item": 0.0
+  },
+  "('map-screen', 2, 0, 1, 1, 1, ('node:question', 'node:trainer'))": {
+   "node:trainer": 0.0
+  },
+  "('map-screen', 3, 3, 0, 0, 0, ('node:trade', 'node:trainer'))": {
+   "node:trainer": 5.010898529568835
+  },
+  "('item-equip-modal', 3, 3, 0, 1, 0, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:equip": 7.679515817110985
+  },
+  "('map-screen', 3, 3, 0, 1, 0, ('node:battle', 'node:trainer'))": {
+   "node:battle": 12.727714826276689,
+   "node:trainer": 17.745412345529623
+  },
+  "('map-screen', 3, 2, 0, 1, 0, ('node:catch', 'node:trade'))": {
+   "node:catch": 11.238274841455347
+  },
+  "('catch-screen', 3, 2, 0, 2, 0, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot2": 0.0,
+   "catch-screen:slot1": 16.013788619304055
+  },
+  "('map-screen', 4, 2, 0, 2, 0, ('node:battle', 'node:pokecenter'))": {
+   "node:pokecenter": -3.3701320312039917
+  },
+  "('map-screen', 5, 3, 1, 0, 1, ('node:item', 'node:trainer'))": {
+   "node:item": 0.0,
+   "node:trainer": 0.0
+  },
+  "('item-screen', 5, 3, 1, 0, 1, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot0": 0.0
+  },
+  "('item-equip-modal', 5, 3, 1, 0, 1, ('btn:bag', 'btn:cancel', 'btn:equip', 'item-equip-modal:slot0'))": {
+   "btn:bag": 0.0
+  },
+  "('map-screen', 5, 3, 1, 0, 1, ('node:trade', 'node:trainer'))": {
+   "node:trade": 0.0
+  },
+  "('catch-screen', 5, 3, 1, 1, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot2": 0.0
+  },
+  "('map-screen', 6, 3, 1, 1, 1, ('node:trade', 'node:trainer'))": {
+   "node:trainer": -39.74817251598989
+  },
+  "('map-screen', 6, 0, 1, 1, 1, ('node:question', 'node:trainer'))": {
+   "node:question": 0.0,
+   "node:trainer": 0.22876792454961
+  },
+  "('item-equip-modal', 6, 0, 1, 2, 1, ('btn:bag', 'btn:cancel', 'btn:equip', 'item-equip-modal:slot0'))": {
+   "btn:bag": 0.0,
+   "item-equip-modal:slot0": 0.0
+  },
+  "('map-screen', 2, 0, 0, 1, 0, ('node:item', 'node:trainer'))": {
+   "node:trainer": 10.460401886315722,
+   "node:item": 1.6785531751835088
+  },
+  "('map-screen', 2, 0, 0, 1, 0, ('node:battle', 'node:question'))": {
+   "node:question": 0.0
+  },
+  "('map-screen', 2, 2, 0, 1, 0, ('node:catch', 'node:trade'))": {
+   "node:catch": 2.6153435030461636
+  },
+  "('catch-screen', 2, 2, 0, 1, 0, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot0": 0.014551890899573143,
+   "catch-screen:slot2": 1.9339143412964728
+  },
+  "('map-screen', 3, 2, 0, 1, 0, ('node:item',))": {
+   "node:item": 0.11158785121984137
+  },
+  "('item-screen', 3, 2, 0, 1, 0, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot1": 0.0,
+   "item-screen:slot2": 0.30054874640755447
+  },
+  "('map-screen', 2, 1, 0, 0, 0, ('node:battle', 'node:item'))": {
+   "node:battle": 3.848487809420649
+  },
+  "('map-screen', 2, 0, 0, 1, 0, ('node:catch', 'node:trade'))": {
+   "node:catch": 11.906656819360615
+  },
+  "('map-screen', 3, 0, 0, 1, 0, ('node:trainer',))": {
+   "node:trainer": 20.514288130796515
+  },
+  "('catch-screen', 3, 0, 0, 2, 0, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot2": 0.0,
+   "catch-screen:slot1": 17.182399240182797
+  },
+  "('map-screen', 3, 3, 0, 0, 0, ('node:catch', 'node:trainer'))": {
+   "node:catch": 7.509861218220209,
+   "node:trainer": 6.7372533562467565
+  },
+  "('map-screen', 4, 3, 0, 1, 0, ('node:item', 'node:question'))": {
+   "node:item": 4.658172275507541
+  },
+  "('item-screen', 4, 3, 0, 1, 0, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot2": 4.531327340629952,
+   "item-screen:slot0": 4.423741573287394
+  },
+  "('item-equip-modal', 4, 3, 0, 1, 0, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:cancel": 4.5227305071380615,
+   "btn:bag": 4.2494379098499655
+  },
+  "('map-screen', 4, 3, 0, 1, 0, ('node:question', 'node:trainer'))": {
+   "node:trainer": 2.001025610083876
+  },
+  "('map-screen', 4, 2, 0, 1, 0, ('node:trade', 'node:trainer'))": {
+   "node:trainer": 1.7905351739463218
+  },
+  "('map-screen', 4, 2, 1, 0, 1, ('node:trainer',))": {
+   "node:trainer": 9.993038013908691
+  },
+  "('map-screen', 4, 0, 1, 0, 1, ('node:catch', 'node:trainer'))": {
+   "node:catch": 0.0
+  },
+  "('catch-screen', 4, 0, 1, 1, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot2": 0.0,
+   "catch-screen:slot0": 0.0,
+   "catch-screen:slot1": 0.0
+  },
+  "('map-screen', 5, 0, 1, 1, 1, ('node:catch', 'node:question'))": {
+   "node:catch": 0.0
+  },
+  "('map-screen', 6, 0, 1, 1, 1, ('node:battle', 'node:catch'))": {
+   "node:catch": 0.0
+  },
+  "('catch-screen', 6, 0, 1, 1, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot0": 0.0
+  },
+  "('swap-screen', 6, 0, 1, 1, 1, ('swap-screen:slot0', 'swap-screen:slot1', 'swap-screen:slot2', 'swap-screen:slot3', 'swap-screen:slot4', 'swap-screen:slot5'))": {
+   "swap-screen:slot0": 0.0
+  },
+  "('map-screen', 6, 3, 1, 0, 1, ('node:question', 'node:trainer'))": {
+   "node:question": 0.0
+  },
+  "('shiny-screen', 6, 3, 1, 2, 1, ('btn:skip', 'shiny-screen:slot0'))": {
+   "btn:skip": 0.0
+  },
+  "('map-screen', 4, 3, 0, 1, 0, ('node:item', 'node:trainer'))": {
+   "node:item": 4.531933325161138
+  },
+  "('item-screen', 4, 2, 0, 2, 0, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot1": 0.0
+  },
+  "('map-screen', 3, 3, 0, 0, 0, ('node:catch',))": {
+   "node:catch": 8.11877089732347
+  },
+  "('map-screen', 4, 3, 0, 1, 0, ('node:item', 'node:trade'))": {
+   "node:item": 4.713733759351828
+  },
+  "('item-screen', 4, 3, 0, 2, 0, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot2": 4.3860591291376
+  },
+  "('item-equip-modal', 4, 3, 0, 2, 0, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:bag": 0.0,
+   "btn:equip": 3.0656196023049764
+  },
+  "('map-screen', 3, 3, 0, 0, 0, ('node:catch', 'node:question'))": {
+   "node:question": 7.238150793145796
+  },
+  "('map-screen', 4, 3, 0, 1, 0, ('node:catch', 'node:item'))": {
+   "node:catch": 0.0
+  },
+  "('catch-screen', 4, 3, 0, 1, 0, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot2": 0.0
+  },
+  "('map-screen', 2, 3, 0, 1, 0, ('node:item', 'node:question'))": {
+   "node:item": 9.041221746603643
+  },
+  "('map-screen', 2, 3, 0, 1, 0, ('node:catch', 'node:question'))": {
+   "node:catch": 8.923351507445242
+  },
+  "('map-screen', 2, 3, 0, 1, 0, ('node:trade', 'node:trainer'))": {
+   "node:trade": 6.227299607461962
+  },
+  "('map-screen', 2, 3, 0, 1, 0, ('node:move_tutor', 'node:trainer'))": {
+   "node:trainer": 7.762315153080048
+  },
+  "('map-screen', 2, 2, 0, 1, 0, ('node:catch', 'node:question'))": {
+   "node:question": 0.0
+  },
+  "('item-screen', 2, 2, 0, 2, 0, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot0": 0.0
+  },
+  "('item-equip-modal', 2, 2, 0, 2, 0, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:equip": 0.0
+  },
+  "('map-screen', 2, 2, 0, 2, 0, ('node:pokecenter', 'node:trainer'))": {
+   "node:pokecenter": 0.0
+  },
+  "('map-screen', 2, 0, 0, 1, 0, ('node:move_tutor', 'node:trainer'))": {
+   "node:move_tutor": 7.0583622109861555
+  },
+  "('item-equip-modal', 2, 0, 0, 2, 0, ('btn:skip', 'item-equip-modal:slot0', 'item-equip-modal:slot1'))": {
+   "item-equip-modal:slot1": 5.56237058970089
+  },
+  "('map-screen', 3, 0, 1, 0, 1, ('node:question', 'node:trade'))": {
+   "node:trade": 2.2968466333596074
+  },
+  "('item-screen', 3, 0, 1, 1, 1, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot1": 6.019314778074363
+  },
+  "('item-equip-modal', 3, 0, 1, 1, 1, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:bag": 7.179007324406271
+  },
+  "('map-screen', 3, 0, 1, 1, 1, ('node:move_tutor', 'node:trainer'))": {
+   "node:move_tutor": 8.527184576324856
+  },
+  "('item-equip-modal', 3, 0, 1, 1, 1, ('btn:skip', 'item-equip-modal:slot0', 'item-equip-modal:slot1', 'item-equip-modal:slot2'))": {
+   "item-equip-modal:slot2": 9.363096689835153
+  },
+  "('map-screen', 3, 0, 1, 1, 1, ('node:question', 'node:trainer'))": {
+   "node:trainer": 9.969567472778296
+  },
+  "('catch-screen', 3, 0, 1, 2, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot2": 0.0
+  },
+  "('map-screen', 2, 0, 0, 0, 0, ('node:catch',))": {
+   "node:catch": 7.949743389466734
+  },
+  "('item-equip-modal', 3, 0, 0, 1, 0, ('btn:skip', 'item-equip-modal:slot0', 'item-equip-modal:slot1', 'item-equip-modal:slot2'))": {
+   "item-equip-modal:slot1": 18.738224294066622
+  },
+  "('map-screen', 4, 2, 1, 0, 1, ('node:item', 'node:trainer'))": {
+   "node:trainer": 9.184760676000895
+  },
+  "('map-screen', 4, 0, 1, 0, 1, ('node:catch', 'node:question'))": {
+   "node:question": 9.95052325649752
+  },
+  "('map-screen', 4, 0, 1, 1, 1, ('node:item', 'node:trade'))": {
+   "node:item": 0.16815993415458508
+  },
+  "('map-screen', 4, 0, 1, 1, 1, ('node:battle', 'node:item'))": {
+   "node:item": 0.1964835076618417
+  },
+  "('item-equip-modal', 4, 0, 1, 1, 1, ('btn:bag', 'btn:cancel', 'btn:equip', 'item-equip-modal:slot0'))": {
+   "btn:equip": 0.9738326884750002,
+   "btn:bag": 1.8428302685684876
+  },
+  "('map-screen', 4, 0, 1, 1, 1, ('node:battle', 'node:trainer'))": {
+   "node:trainer": 0.0,
+   "node:battle": 3.8561603772519497
+  },
+  "('map-screen', 4, 0, 1, 2, 1, ('node:item', 'node:pokecenter'))": {
+   "node:pokecenter": 0.0,
+   "node:item": 0.0
+  },
+  "('map-screen', 2, 0, 0, 0, 0, ('node:item', 'node:question'))": {
+   "node:item": 1.5897164021046761
+  },
+  "('item-screen', 2, 0, 0, 1, 0, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot0": 1.5255734439483002,
+   "item-screen:slot2": 1.405045140645723,
+   "item-screen:slot1": 1.3536105422110931
+  },
+  "('item-equip-modal', 2, 0, 0, 1, 0, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:equip": 0.7885331496010415
+  },
+  "('map-screen', 2, 0, 0, 1, 0, ('node:battle', 'node:catch'))": {
+   "node:battle": 20.78925563738168
+  },
+  "('map-screen', 3, 3, 1, 0, 1, ('node:catch', 'node:trainer'))": {
+   "node:catch": 5.29516230166707
+  },
+  "('map-screen', 4, 3, 1, 0, 1, ('node:item',))": {
+   "node:item": 0.0
+  },
+  "('item-screen', 4, 3, 1, 1, 1, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot0": 0.0,
+   "item-screen:slot2": 0.0,
+   "item-screen:slot1": 0.0
+  },
+  "('item-equip-modal', 4, 3, 1, 1, 1, ('btn:bag', 'btn:cancel', 'btn:equip', 'item-equip-modal:slot0'))": {
+   "btn:cancel": 0.0,
+   "btn:bag": 0.0
+  },
+  "('map-screen', 4, 3, 1, 1, 1, ('node:catch', 'node:item'))": {
+   "node:item": 0.0
+  },
+  "('map-screen', 4, 3, 1, 1, 1, ('node:battle', 'node:trainer'))": {
+   "node:trainer": 0.0
+  },
+  "('map-screen', 4, 0, 1, 1, 1, ('node:move_tutor', 'node:question'))": {
+   "node:question": -0.156545109225749
+  },
+  "('map-screen', 4, 0, 1, 2, 1, ('node:battle', 'node:pokecenter'))": {
+   "node:battle": 0.0,
+   "node:pokecenter": 0.0
+  },
+  "('map-screen', 2, 3, 0, 0, 0, ('node:catch', 'node:trade'))": {
+   "node:trade": 8.816504243438638
+  },
+  "('catch-screen', 2, 0, 0, 2, 0, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot2": 15.024320842088802,
+   "catch-screen:slot0": 0.0
+  },
+  "('map-screen', 3, 0, 0, 2, 0, ('node:item', 'node:pokecenter'))": {
+   "node:pokecenter": 15.912352916119534
+  },
+  "('map-screen', 3, 1, 0, 1, 0, ('node:trade', 'node:trainer'))": {
+   "node:trade": 8.318300886979584
+  },
+  "('map-screen', 3, 1, 0, 1, 0, ('node:move_tutor', 'node:trainer'))": {
+   "node:trainer": 4.981214489369318
+  },
+  "('map-screen', 3, 1, 0, 2, 0, ('node:catch', 'node:pokecenter'))": {
+   "node:pokecenter": 0.0
+  },
+  "('map-screen', 3, 3, 0, 0, 0, ('node:question', 'node:trainer'))": {
+   "node:trainer": 0.7024978678599197
+  },
+  "('map-screen', 3, 3, 0, 1, 0, ('node:question',))": {
+   "node:question": 4.853687638809879
+  },
+  "('map-screen', 3, 3, 0, 1, 0, ('node:catch', 'node:item'))": {
+   "node:catch": 8.15757977646172
+  },
+  "('item-equip-modal', 4, 3, 0, 2, 0, ('btn:bag', 'btn:cancel', 'btn:equip', 'item-equip-modal:slot0'))": {
+   "btn:bag": 16.72639786817835
+  },
+  "('map-screen', 4, 2, 1, 0, 1, ('node:catch', 'node:trainer'))": {
+   "node:catch": 4.158320424246846
+  },
+  "('catch-screen', 4, 2, 1, 0, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot0": 5.155512965380767
+  },
+  "('map-screen', 5, 2, 1, 0, 1, ('node:battle', 'node:item'))": {
+   "node:battle": 5.741927767730983
+  },
+  "('map-screen', 5, 1, 1, 1, 1, ('node:catch', 'node:trainer'))": {
+   "node:catch": 1.3212946368494376
+  },
+  "('catch-screen', 5, 1, 1, 1, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot2": 1.3963574817784825
+  },
+  "('map-screen', 6, 1, 1, 1, 1, ('node:item', 'node:question'))": {
+   "node:question": 0.8173008210113322
+  },
+  "('catch-screen', 6, 1, 1, 1, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot2": 0.48276764798095
+  },
+  "('swap-screen', 6, 1, 1, 1, 1, ('swap-screen:slot0', 'swap-screen:slot1', 'swap-screen:slot2', 'swap-screen:slot3', 'swap-screen:slot4', 'swap-screen:slot5'))": {
+   "swap-screen:slot0": 0.09368696094639098
+  },
+  "('catch-screen', 6, 3, 1, 2, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot2": 0.0
+  },
+  "('swap-screen', 6, 3, 1, 2, 1, ('swap-screen:slot0', 'swap-screen:slot1', 'swap-screen:slot2', 'swap-screen:slot3', 'swap-screen:slot4', 'swap-screen:slot5'))": {
+   "swap-screen:slot0": 0.0
+  },
+  "('map-screen', 2, 1, 0, 0, 0, ('node:battle', 'node:catch'))": {
+   "node:battle": 10.392478177068142
+  },
+  "('map-screen', 2, 1, 0, 1, 0, ('node:question', 'node:trainer'))": {
+   "node:question": 6.324631404887269
+  },
+  "('map-screen', 2, 0, 0, 1, 0, ('node:item', 'node:question'))": {
+   "node:question": 1.5556370647771693
+  },
+  "('map-screen', 2, 0, 0, 0, 0, ('node:catch', 'node:trade'))": {
+   "node:trade": 5.541819504275223
+  },
+  "('item-equip-modal', 2, 0, 0, 1, 0, ('btn:skip', 'item-equip-modal:slot0', 'item-equip-modal:slot1'))": {
+   "item-equip-modal:slot1": 8.96139237584346
+  },
+  "('map-screen', 2, 0, 0, 1, 0, ('node:battle', 'node:trainer'))": {
+   "node:battle": 0.0
+  },
+  "('item-screen', 2, 3, 0, 0, 0, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot2": 4.39133237829866,
+   "item-screen:slot1": 4.0923583132294095
+  },
+  "('item-equip-modal', 2, 3, 0, 0, 0, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:cancel": 3.442371690997342,
+   "btn:equip": 5.379714449112366
+  },
+  "('map-screen', 3, 3, 0, 0, 0, ('node:item', 'node:trainer'))": {
+   "node:trainer": 2.7367110031078075
+  },
+  "('map-screen', 3, 0, 0, 1, 0, ('node:item', 'node:trainer'))": {
+   "node:item": 4.406437935371992
+  },
+  "('item-screen', 3, 0, 0, 1, 0, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot2": 3.725857283438167,
+   "item-screen:slot0": 10.562510318443467
+  },
+  "('map-screen', 3, 0, 0, 1, 0, ('node:catch', 'node:trade'))": {
+   "node:catch": 3.1436577713305836
+  },
+  "('catch-screen', 3, 0, 0, 1, 0, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot2": 0.8589477246717067
+  },
+  "('map-screen', 4, 0, 0, 1, 0, ('node:question', 'node:trainer'))": {
+   "node:question": 21.3903703354651
+  },
+  "('map-screen', 4, 0, 0, 2, 0, ('node:pokecenter', 'node:trainer'))": {
+   "node:pokecenter": 17.09374731310695
+  },
+  "('map-screen', 4, 3, 1, 0, 1, ('node:item', 'node:trainer'))": {
+   "node:item": 3.2580174720464568
+  },
+  "('item-screen', 4, 3, 1, 0, 1, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot1": 4.160937315351108
+  },
+  "('item-equip-modal', 4, 3, 1, 0, 1, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:cancel": 2.9738459722203388,
+   "btn:equip": 4.780890808395986
+  },
+  "('map-screen', 4, 3, 1, 0, 1, ('node:catch', 'node:item'))": {
+   "node:catch": 9.562323929369041
+  },
+  "('map-screen', 5, 3, 1, 1, 1, ('node:catch', 'node:trainer'))": {
+   "node:trainer": 14.514314998564975
+  },
+  "('map-screen', 5, 3, 1, 1, 1, ('node:battle', 'node:trainer'))": {
+   "node:battle": 4.971367915514888
+  },
+  "('map-screen', 5, 2, 1, 1, 1, ('node:item', 'node:move_tutor'))": {
+   "node:move_tutor": 0.0
+  },
+  "('item-equip-modal', 5, 2, 1, 2, 1, ('btn:skip', 'item-equip-modal:slot0', 'item-equip-modal:slot1', 'item-equip-modal:slot2', 'item-equip-modal:slot3', 'item-equip-modal:slot4'))": {
+   "item-equip-modal:slot4": 0.0
+  },
+  "('map-screen', 4, 1, 1, 0, 1, ('node:catch', 'node:item'))": {
+   "node:item": 5.698418251760169
+  },
+  "('item-screen', 4, 1, 1, 1, 1, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot0": 6.949760557043115,
+   "item-screen:slot1": 7.129277517621463
+  },
+  "('item-equip-modal', 4, 1, 1, 1, 1, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:cancel": 5.181733793043154,
+   "btn:bag": 8.264497184958987
+  },
+  "('map-screen', 4, 1, 1, 1, 1, ('node:trainer',))": {
+   "node:trainer": 9.892247363356942
+  },
+  "('map-screen', 4, 1, 1, 1, 1, ('node:battle', 'node:move_tutor'))": {
+   "node:move_tutor": 0.0
+  },
+  "('item-equip-modal', 4, 1, 1, 1, 1, ('btn:skip', 'item-equip-modal:slot0', 'item-equip-modal:slot1', 'item-equip-modal:slot2', 'item-equip-modal:slot3'))": {
+   "item-equip-modal:slot1": 0.0
+  },
+  "('map-screen', 4, 1, 1, 1, 1, ('node:catch', 'node:question'))": {
+   "node:question": 0.0
+  },
+  "('item-screen', 4, 1, 1, 2, 1, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot2": 0.0
+  },
+  "('item-equip-modal', 4, 1, 1, 2, 1, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:cancel": 0.0,
+   "btn:equip": 0.0,
+   "btn:bag": 0.0
+  },
+  "('map-screen', 3, 3, 0, 1, 0, ('node:battle', 'node:question'))": {
+   "node:battle": 20.247666664256766
+  },
+  "('map-screen', 4, 3, 1, 0, 1, ('node:battle',))": {
+   "node:battle": 5.129128309916684
+  },
+  "('map-screen', 4, 2, 1, 1, 1, ('node:catch', 'node:move_tutor'))": {
+   "node:move_tutor": 2.331191237107699
+  },
+  "('item-equip-modal', 4, 2, 1, 1, 1, ('btn:skip', 'item-equip-modal:slot0', 'item-equip-modal:slot1', 'item-equip-modal:slot2', 'item-equip-modal:slot3'))": {
+   "item-equip-modal:slot2": 4.073684233934388
+  },
+  "('map-screen', 4, 2, 1, 1, 1, ('node:item', 'node:trade'))": {
+   "node:item": 0.18497428478917044
+  },
+  "('item-screen', 4, 2, 1, 1, 1, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot1": 0.04801797709030221,
+   "item-screen:slot2": 0.7048939071805378
+  },
+  "('item-equip-modal', 4, 2, 1, 1, 1, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:bag": 1.5453137440049076
+  },
+  "('map-screen', 4, 2, 1, 1, 1, ('node:item', 'node:question'))": {
+   "node:question": 0.0,
+   "node:item": 0.3460866158545392
+  },
+  "('map-screen', 3, 3, 0, 1, 0, ('node:move_tutor', 'node:trade'))": {
+   "node:move_tutor": 11.600540577944294
+  },
+  "('item-equip-modal', 3, 3, 0, 1, 0, ('btn:skip', 'item-equip-modal:slot0', 'item-equip-modal:slot1', 'item-equip-modal:slot2'))": {
+   "btn:skip": 10.90866560322852
+  },
+  "('map-screen', 3, 3, 0, 1, 0, ('node:item', 'node:trainer'))": {
+   "node:trainer": 13.135245473211745,
+   "node:item": 4.920655108808618
+  },
+  "('map-screen', 4, 3, 1, 0, 1, ('node:catch', 'node:question'))": {
+   "node:question": 0.5394876768165099
+  },
+  "('shiny-screen', 4, 3, 1, 1, 1, ('btn:skip', 'shiny-screen:slot0'))": {
+   "shiny-screen:slot0": 0.7695931441496238
+  },
+  "('map-screen', 5, 3, 1, 1, 1, ('node:question', 'node:trainer'))": {
+   "node:trainer": 0.7777644289067981
+  },
+  "('map-screen', 5, 0, 1, 1, 1, ('node:item', 'node:trade'))": {
+   "node:item": 0.21927512274731129
+  },
+  "('item-screen', 5, 0, 1, 1, 1, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot1": 0.17282885134781517
+  },
+  "('item-equip-modal', 5, 0, 1, 1, 1, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:equip": 0.801991768375195
+  },
+  "('map-screen', 5, 0, 1, 1, 1, ('node:trainer',))": {
+   "node:trainer": 9.866972053527089
+  },
+  "('item-screen', 5, 0, 1, 2, 1, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot1": 0.0,
+   "item-screen:slot2": 0.0
+  },
+  "('item-equip-modal', 5, 0, 1, 2, 1, ('btn:bag', 'btn:cancel', 'btn:equip', 'item-equip-modal:slot0'))": {
+   "btn:bag": 0.0
+  },
+  "('map-screen', 3, 3, 0, 0, 0, ('node:battle', 'node:trainer'))": {
+   "node:battle": 8.107331253205505
+  },
+  "('catch-screen', 4, 0, 0, 2, 0, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot1": 0.0
+  },
+  "('catch-screen', 5, 0, 0, 2, 0, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot0": 0.0
+  },
+  "('map-screen', 4, 2, 1, 0, 1, ('node:battle', 'node:catch'))": {
+   "node:battle": 4.874042286665192
+  },
+  "('map-screen', 4, 2, 1, 1, 1, ('node:catch', 'node:trainer'))": {
+   "node:catch": 0.013877281271368579
+  },
+  "('catch-screen', 4, 2, 1, 1, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot1": 0.0021798654557989615
+  },
+  "('map-screen', 5, 2, 1, 1, 1, ('node:item', 'node:trainer'))": {
+   "node:trainer": 18.604704171924844
+  },
+  "('item-screen', 5, 1, 1, 2, 1, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot0": 0.0
+  },
+  "('item-equip-modal', 5, 1, 1, 2, 1, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:bag": 0.0
+  },
+  "('map-screen', 3, 3, 0, 0, 0, ('node:battle', 'node:trade'))": {
+   "node:trade": 7.425757500287878
+  },
+  "('map-screen', 3, 3, 0, 1, 0, ('node:item',))": {
+   "node:item": 4.77994662467759
+  },
+  "('map-screen', 2, 2, 0, 0, 0, ('node:trade',))": {
+   "node:trade": 8.089377988933483
+  },
+  "('map-screen', 2, 2, 0, 1, 0, ('node:catch', 'node:item'))": {
+   "node:catch": 3.237707116975766
+  },
+  "('map-screen', 3, 2, 0, 1, 0, ('node:question', 'node:trainer'))": {
+   "node:trainer": 14.833770385711862,
+   "node:question": 2.130703825419248
+  },
+  "('map-screen', 3, 3, 0, 2, 0, ('node:catch', 'node:pokecenter'))": {
+   "node:catch": 9.647625904662368
+  },
+  "('catch-screen', 3, 3, 0, 2, 0, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot0": 4.631339263283341
+  },
+  "('map-screen', 4, 2, 1, 0, 1, ('node:battle', 'node:item'))": {
+   "node:battle": 4.946104223042209
+  },
+  "('map-screen', 4, 2, 1, 1, 1, ('node:battle', 'node:question'))": {
+   "node:question": 0.16336959954027697
+  },
+  "('map-screen', 2, 3, 0, 1, 0, ('node:item', 'node:trade'))": {
+   "node:item": 8.793034319883914
+  },
+  "('map-screen', 2, 3, 0, 1, 0, ('node:move_tutor', 'node:question'))": {
+   "node:move_tutor": 13.295131577541936
+  },
+  "('item-equip-modal', 2, 3, 0, 2, 0, ('btn:skip', 'item-equip-modal:slot0', 'item-equip-modal:slot1'))": {
+   "item-equip-modal:slot0": 15.231117929506523
+  },
+  "('map-screen', 3, 3, 1, 0, 1, ('node:battle',))": {
+   "node:battle": 4.9225131135125775
+  },
+  "('map-screen', 4, 3, 1, 1, 1, ('node:question', 'node:trainer'))": {
+   "node:question": 0.0,
+   "node:trainer": 1.90857375
+  },
+  "('map-screen', 3, 0, 0, 1, 0, ('node:trade', 'node:trainer'))": {
+   "node:trade": 6.47398938160029
+  },
+  "('map-screen', 3, 0, 0, 1, 0, ('node:battle', 'node:move_tutor'))": {
+   "node:battle": 9.579118581478049
+  },
+  "('map-screen', 3, 0, 0, 1, 0, ('node:move_tutor', 'node:trainer'))": {
+   "node:trainer": 17.926927132777543
+  },
+  "('map-screen', 3, 2, 1, 0, 1, ('node:catch', 'node:trainer'))": {
+   "node:catch": 0.0
+  },
+  "('catch-screen', 3, 2, 1, 0, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot1": 0.0
+  },
+  "('map-screen', 4, 2, 1, 0, 1, ('node:battle', 'node:trainer'))": {
+   "node:trainer": -9.749684449500677,
+   "node:battle": 2.6085155
+  },
+  "('map-screen', 4, 0, 1, 1, 1, ('node:question', 'node:trade'))": {
+   "node:trade": 0.0
+  },
+  "('catch-screen', 4, 0, 1, 2, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot0": 0.0,
+   "catch-screen:slot1": -9.528987130275375
+  },
+  "('map-screen', 3, 3, 0, 1, 0, ('node:catch', 'node:trainer'))": {
+   "node:trainer": -0.05825858023852662,
+   "node:catch": 3.34343987428257
+  },
+  "('map-screen', 3, 0, 1, 0, 1, ('node:battle', 'node:trade'))": {
+   "node:trade": 1.26566613812092
+  },
+  "('map-screen', 3, 0, 1, 1, 1, ('node:battle', 'node:trade'))": {
+   "node:trade": 2.0813481205367035
+  },
+  "('catch-screen', 3, 0, 1, 1, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot2": 4.147913090731304
+  },
+  "('map-screen', 4, 0, 1, 1, 1, ('node:battle', 'node:catch'))": {
+   "node:battle": 4.8748422247503385
+  },
+  "('item-screen', 4, 0, 1, 2, 1, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot1": 0.0,
+   "item-screen:slot2": 0.0
+  },
+  "('item-equip-modal', 4, 0, 1, 2, 1, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:bag": 0.0
+  },
+  "('map-screen', 2, 3, 0, 1, 0, ('node:battle', 'node:question'))": {
+   "node:battle": 15.396237861441591
+  },
+  "('map-screen', 4, 0, 1, 1, 1, ('node:move_tutor', 'node:trainer'))": {
+   "node:move_tutor": 5.941774677732135,
+   "node:trainer": 9.618479575523054
+  },
+  "('map-screen', 4, 0, 1, 1, 1, ('node:catch', 'node:trainer'))": {
+   "node:catch": 0.0
+  },
+  "('map-screen', 5, 0, 1, 2, 1, ('node:battle', 'node:pokecenter'))": {
+   "node:pokecenter": 0.0
+  },
+  "('map-screen', 4, 3, 0, 2, 0, ('node:battle', 'node:pokecenter'))": {
+   "node:pokecenter": 6.799309847375824
+  },
+  "('map-screen', 3, 3, 0, 0, 0, ('node:item',))": {
+   "node:item": 4.659962816923132
+  },
+  "('map-screen', 4, 0, 1, 0, 1, ('node:catch',))": {
+   "node:catch": 0.6278531614221453
+  },
+  "('catch-screen', 4, 0, 1, 0, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot2": 0.6876704027139557
+  },
+  "('map-screen', 5, 0, 1, 0, 1, ('node:item',))": {
+   "node:item": 0.4507689908070508
+  },
+  "('item-equip-modal', 5, 0, 1, 1, 1, ('btn:bag', 'btn:cancel', 'btn:equip', 'item-equip-modal:slot0'))": {
+   "item-equip-modal:slot0": 0.0
+  },
+  "('map-screen', 5, 0, 1, 1, 1, ('node:move_tutor', 'node:question'))": {
+   "node:move_tutor": 0.013107630196835746
+  },
+  "('item-equip-modal', 5, 0, 1, 1, 1, ('btn:skip', 'item-equip-modal:slot0', 'item-equip-modal:slot1', 'item-equip-modal:slot2', 'item-equip-modal:slot3', 'item-equip-modal:slot4'))": {
+   "item-equip-modal:slot0": 0.0,
+   "item-equip-modal:slot1": 0.13797505470353416
+  },
+  "('map-screen', 1, 3, 0, 0, 0, ('node:battle', 'node:item'))": {
+   "node:battle": 13.522004512767161
+  },
+  "('map-screen', 1, 1, 0, 0, 0, ('node:question', 'node:trainer'))": {
+   "node:trainer": 8.389051497876624
+  },
+  "('map-screen', 1, 1, 0, 1, 0, ('node:item', 'node:trainer'))": {
+   "node:trainer": 4.860935805278154
+  },
+  "('map-screen', 1, 1, 0, 1, 0, ('node:trainer',))": {
+   "node:trainer": 0.0
+  },
+  "('map-screen', 3, 1, 0, 1, 0, ('node:battle', 'node:item'))": {
+   "node:item": 8.004155057918142
+  },
+  "('map-screen', 4, 0, 1, 1, 1, ('node:item', 'node:question'))": {
+   "node:item": 0.12680646653027045
+  },
+  "('map-screen', 4, 0, 1, 1, 1, ('node:trainer',))": {
+   "node:trainer": 5.610563462921525
+  },
+  "('map-screen', 4, 0, 1, 1, 1, ('node:item',))": {
+   "node:item": 0.0
+  },
+  "('item-equip-modal', 4, 0, 1, 2, 1, ('btn:bag', 'btn:cancel', 'btn:equip', 'item-equip-modal:slot0'))": {
+   "btn:bag": 0.0
+  },
+  "('map-screen', 2, 0, 0, 0, 0, ('node:catch', 'node:trainer'))": {
+   "node:catch": 7.915432225039928
+  },
+  "('map-screen', 4, 0, 0, 1, 0, ('node:trade', 'node:trainer'))": {
+   "node:trainer": 0.0
+  },
+  "('map-screen', 2, 0, 0, 0, 0, ('node:question', 'node:trainer'))": {
+   "node:question": 1.6380060676055175
+  },
+  "('map-screen', 3, 2, 0, 1, 0, ('node:move_tutor', 'node:trainer'))": {
+   "node:trainer": 22.922431564105736
+  },
+  "('map-screen', 4, 2, 1, 0, 1, ('node:question', 'node:trainer'))": {
+   "node:trainer": 17.657441917646082
+  },
+  "('map-screen', 5, 3, 2, 0, 2, ('node:battle', 'node:catch'))": {
+   "node:catch": 0.0
+  },
+  "('catch-screen', 5, 3, 2, 0, 2, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot1": 0.0
+  },
+  "('map-screen', 6, 3, 2, 0, 2, ('node:catch',))": {
+   "node:catch": 0.0
+  },
+  "('catch-screen', 6, 3, 2, 0, 2, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot1": 0.0
+  },
+  "('swap-screen', 6, 3, 2, 0, 2, ('swap-screen:slot0', 'swap-screen:slot1', 'swap-screen:slot2', 'swap-screen:slot3', 'swap-screen:slot4', 'swap-screen:slot5'))": {
+   "swap-screen:slot4": 0.0
+  },
+  "('map-screen', 6, 3, 2, 0, 2, ('node:battle', 'node:catch'))": {
+   "node:battle": 0.0
+  },
+  "('map-screen', 6, 0, 2, 1, 2, ('node:question', 'node:trainer'))": {
+   "node:question": 0.0
+  },
+  "('item-screen', 6, 0, 2, 1, 2, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot0": 0.0
+  },
+  "('item-equip-modal', 6, 0, 2, 1, 2, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:bag": 0.0
+  },
+  "('map-screen', 6, 0, 2, 1, 2, ('node:trade', 'node:trainer'))": {
+   "node:trainer": 0.0
+  },
+  "('map-screen', 3, 3, 0, 1, 0, ('node:move_tutor', 'node:trainer'))": {
+   "node:trainer": 12.052608756039975
+  },
+  "('map-screen', 3, 3, 0, 1, 0, ('node:catch', 'node:trade'))": {
+   "node:catch": 6.979713706668233
+  },
+  "('map-screen', 4, 3, 0, 1, 0, ('node:catch', 'node:question'))": {
+   "node:question": 20.901073493998897
+  },
+  "('map-screen', 4, 2, 1, 0, 1, ('node:battle',))": {
+   "node:battle": 4.460001186404056
+  },
+  "('map-screen', 4, 2, 1, 1, 1, ('node:question', 'node:trainer'))": {
+   "node:question": 0.14462744743351205
+  },
+  "('map-screen', 4, 3, 2, 0, 2, ('node:battle', 'node:catch'))": {
+   "node:catch": 2.2830378602830654
+  },
+  "('catch-screen', 4, 3, 2, 0, 2, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot0": 4.535673241457763
+  },
+  "('map-screen', 5, 3, 2, 0, 2, ('node:battle',))": {
+   "node:battle": 9.928789146172612
+  },
+  "('map-screen', 5, 2, 2, 0, 2, ('node:trade', 'node:trainer'))": {
+   "node:trainer": 8.784233454094307
+  },
+  "('map-screen', 5, 2, 2, 1, 2, ('node:catch', 'node:trainer'))": {
+   "node:trainer": 0.0
+  },
+  "('map-screen', 5, 0, 2, 1, 2, ('node:item', 'node:question'))": {
+   "node:item": 0.0
+  },
+  "('item-screen', 5, 0, 2, 1, 2, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot0": 0.0
+  },
+  "('item-equip-modal', 5, 0, 2, 1, 2, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:bag": 0.0
+  },
+  "('map-screen', 5, 0, 2, 1, 2, ('node:item',))": {
+   "node:item": 0.0
+  },
+  "('item-screen', 5, 0, 2, 2, 2, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot2": 0.0,
+   "item-screen:slot1": 0.0
+  },
+  "('item-equip-modal', 5, 0, 2, 2, 2, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:cancel": 0.0
+  },
+  "('map-screen', 1, 3, 0, 0, 0, ('node:battle',))": {
+   "node:battle": 9.693980318815148
+  },
+  "('map-screen', 1, 3, 0, 1, 0, ('node:question', 'node:trade'))": {
+   "node:question": 3.9705443395267546
+  },
+  "('map-screen', 1, 2, 0, 1, 0, ('node:question', 'node:trade'))": {
+   "node:trade": 0.0
+  },
+  "('map-screen', 1, 2, 0, 1, 0, ('node:question',))": {
+   "node:question": 0.0
+  },
+  "('item-screen', 1, 2, 0, 2, 0, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot2": 0.0,
+   "item-screen:slot1": 0.25745
+  },
+  "('map-screen', 1, 2, 0, 2, 0, ('node:battle', 'node:pokecenter'))": {
+   "node:pokecenter": 0.0
+  },
+  "('map-screen', 2, 3, 0, 0, 0, ('node:item', 'node:question'))": {
+   "node:item": 8.488223066335769
+  },
+  "('map-screen', 2, 0, 0, 1, 0, ('node:question', 'node:trainer'))": {
+   "node:question": 0.0
+  },
+  "('map-screen', 2, 0, 0, 0, 0, ('node:catch', 'node:item'))": {
+   "node:catch": 7.3059172380581385
+  },
+  "('map-screen', 3, 0, 0, 1, 0, ('node:item', 'node:question'))": {
+   "node:item": 6.451555070125676
+  },
+  "('item-equip-modal', 3, 0, 0, 1, 0, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:equip": 15.73632130111446
+  },
+  "('item-equip-modal', 4, 0, 0, 2, 0, ('btn:skip', 'item-equip-modal:slot0', 'item-equip-modal:slot1', 'item-equip-modal:slot2', 'item-equip-modal:slot3'))": {
+   "item-equip-modal:slot1": 0.0
+  },
+  "('map-screen', 2, 3, 0, 1, 0, ('node:battle', 'node:trade'))": {
+   "node:battle": 9.006245524663816
+  },
+  "('map-screen', 2, 2, 0, 1, 0, ('node:trade', 'node:trainer'))": {
+   "node:trainer": 6.770464582377435
+  },
+  "('map-screen', 2, 2, 0, 1, 0, ('node:battle', 'node:catch'))": {
+   "node:catch": 2.6809767606411223
+  },
+  "('catch-screen', 2, 2, 0, 2, 0, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot2": 2.097843721916898
+  },
+  "('item-screen', 3, 2, 0, 2, 0, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot0": 2.982750541169308,
+   "item-screen:slot2": 2.990539669333978
+  },
+  "('item-equip-modal', 3, 2, 0, 2, 0, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:cancel": 2.4788384064450777,
+   "btn:bag": 3.832182771505736
+  },
+  "('map-screen', 4, 2, 1, 0, 1, ('node:item', 'node:trade'))": {
+   "node:item": 0.14730780406634103
+  },
+  "('map-screen', 4, 2, 1, 1, 1, ('node:move_tutor', 'node:trainer'))": {
+   "node:move_tutor": 2.735196207767076
+  },
+  "('map-screen', 4, 2, 1, 1, 1, ('node:battle', 'node:trainer'))": {
+   "node:battle": -4.249526823515004
+  },
+  "('map-screen', 2, 2, 0, 0, 0, ('node:battle', 'node:catch'))": {
+   "node:battle": 6.52152647112352
+  },
+  "('shiny-screen', 3, 2, 0, 1, 0, ('btn:skip', 'shiny-screen:slot0'))": {
+   "btn:skip": 5.721274761624748
+  },
+  "('map-screen', 3, 2, 0, 1, 0, ('node:question', 'node:trade'))": {
+   "node:question": 13.843070808296153
+  },
+  "('map-screen', 3, 2, 0, 2, 0, ('node:battle', 'node:pokecenter'))": {
+   "node:pokecenter": 13.471924852542934
+  },
+  "('map-screen', 4, 3, 1, 0, 1, ('node:item', 'node:question'))": {
+   "node:item": 0.0
+  },
+  "('item-equip-modal', 4, 3, 1, 1, 1, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:bag": 0.0
+  },
+  "('item-equip-modal', 4, 3, 1, 1, 1, ('btn:skip', 'item-equip-modal:slot0', 'item-equip-modal:slot1', 'item-equip-modal:slot2', 'item-equip-modal:slot3'))": {
+   "item-equip-modal:slot1": 0.0
+  },
+  "('map-screen', 4, 3, 1, 1, 1, ('node:move_tutor', 'node:question'))": {
+   "node:move_tutor": 0.0
+  },
+  "('map-screen', 4, 3, 0, 1, 0, ('node:catch',))": {
+   "node:catch": 0.0
+  },
+  "('catch-screen', 5, 3, 0, 2, 0, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot1": 0.0
+  },
+  "('map-screen', 2, 3, 0, 0, 0, ('node:battle', 'node:question'))": {
+   "node:question": 11.41899606462264,
+   "node:battle": 8.151787240561937
+  },
+  "('map-screen', 2, 0, 0, 1, 0, ('node:battle', 'node:trade'))": {
+   "node:battle": 16.522824752907926
+  },
+  "('map-screen', 3, 2, 1, 0, 1, ('node:item', 'node:trainer'))": {
+   "node:item": 0.03788311084001886
+  },
+  "('item-screen', 3, 2, 1, 1, 1, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot0": 0.12919036202024983
+  },
+  "('map-screen', 3, 2, 1, 1, 1, ('node:catch', 'node:item'))": {
+   "node:catch": 0.18586980625392624
+  },
+  "('map-screen', 4, 2, 1, 1, 1, ('node:move_tutor',))": {
+   "node:move_tutor": 2.70830337213988
+  },
+  "('map-screen', 3, 3, 0, 1, 0, ('node:battle', 'node:trade'))": {
+   "node:battle": 13.019092721914673
+  },
+  "('map-screen', 2, 3, 0, 0, 0, ('node:trade', 'node:trainer'))": {
+   "node:trade": 6.439158334801679
+  },
+  "('map-screen', 2, 0, 0, 1, 0, ('node:battle', 'node:move_tutor'))": {
+   "node:battle": 11.640715410385155
+  },
+  "('item-screen', 2, 0, 0, 2, 0, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot1": 11.850356043251493
+  },
+  "('map-screen', 3, 3, 1, 0, 1, ('node:battle', 'node:item'))": {
+   "node:battle": 3.2566077995000002
+  },
+  "('map-screen', 3, 2, 1, 0, 1, ('node:battle', 'node:trainer'))": {
+   "node:battle": -4.249526823515004
+  },
+  "('map-screen', 3, 0, 1, 1, 1, ('node:battle', 'node:catch'))": {
+   "node:battle": -3.2566077995000002
+  },
+  "('map-screen', 3, 0, 1, 1, 1, ('node:catch', 'node:question'))": {
+   "node:question": 0.0
+  },
+  "('map-screen', 2, 2, 0, 1, 0, ('node:move_tutor', 'node:question'))": {
+   "node:question": 0.0
+  },
+  "('map-screen', 2, 3, 0, 1, 0, ('node:question', 'node:trade'))": {
+   "node:trade": 0.0
+  },
+  "('map-screen', 2, 0, 0, 0, 0, ('node:trade', 'node:trainer'))": {
+   "node:trainer": 24.72554962788059
+  },
+  "('map-screen', 2, 0, 0, 1, 0, ('node:trainer',))": {
+   "node:trainer": 22.246199096901424
+  },
+  "('map-screen', 4, 3, 1, 0, 1, ('node:trade', 'node:trainer'))": {
+   "node:trainer": 7.941088679053509
+  },
+  "('catch-screen', 4, 1, 1, 1, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot2": 0.0
+  },
+  "('map-screen', 5, 1, 1, 1, 1, ('node:catch', 'node:move_tutor'))": {
+   "node:move_tutor": 0.0
+  },
+  "('item-equip-modal', 5, 1, 1, 1, 1, ('btn:skip', 'item-equip-modal:slot0', 'item-equip-modal:slot1', 'item-equip-modal:slot2', 'item-equip-modal:slot3', 'item-equip-modal:slot4'))": {
+   "item-equip-modal:slot2": 0.0
+  },
+  "('map-screen', 2, 3, 0, 0, 0, ('node:catch', 'node:question'))": {
+   "node:catch": 7.115028965836437
+  },
+  "('map-screen', 6, 3, 1, 0, 1, ('node:battle', 'node:trainer'))": {
+   "node:trainer": 4.2778457932645
+  },
+  "('map-screen', 2, 3, 0, 1, 0, ('node:move_tutor',))": {
+   "node:move_tutor": 6.932318975903911
+  },
+  "('map-screen', 4, 3, 1, 0, 1, ('node:catch',))": {
+   "node:catch": 0.19585365982585065
+  },
+  "('map-screen', 2, 2, 0, 0, 0, ('node:trade', 'node:trainer'))": {
+   "node:trade": 2.163831303599061
+  },
+  "('map-screen', 3, 2, 0, 1, 0, ('node:item', 'node:trainer'))": {
+   "node:item": 0.08798549339034045,
+   "node:trainer": 3.6901256667330973
+  },
+  "('item-equip-modal', 3, 2, 0, 1, 0, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:cancel": 0.08253430372449752,
+   "btn:bag": 1.2156833864310488
+  },
+  "('map-screen', 3, 2, 0, 1, 0, ('node:question',))": {
+   "node:question": 2.386079968561765
+  },
+  "('map-screen', 3, 2, 0, 2, 0, ('node:catch', 'node:pokecenter'))": {
+   "node:pokecenter": 0.0,
+   "node:catch": 7.101809713084181
+  },
+  "('item-equip-modal', 3, 3, 0, 1, 0, ('btn:bag', 'btn:cancel', 'btn:equip', 'item-equip-modal:slot0'))": {
+   "btn:bag": 5.394932322030252
+  },
+  "('map-screen', 4, 0, 1, 1, 1, ('node:catch', 'node:trade'))": {
+   "node:trade": 0.0,
+   "node:catch": 0.0
+  },
+  "('map-screen', 2, 0, 0, 1, 0, ('node:catch', 'node:trainer'))": {
+   "node:trainer": 0.0
+  },
+  "('map-screen', 2, 3, 0, 1, 0, ('node:catch', 'node:trade'))": {
+   "node:trade": 10.278005678330375
+  },
+  "('catch-screen', 2, 3, 0, 2, 0, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot0": 12.530117815968058
+  },
+  "('map-screen', 3, 0, 1, 0, 1, ('node:trainer',))": {
+   "node:trainer": 7.47997351435993
+  },
+  "('map-screen', 3, 0, 1, 0, 1, ('node:catch', 'node:item'))": {
+   "node:catch": 2.341508082869238
+  },
+  "('map-screen', 5, 0, 1, 1, 1, ('node:catch', 'node:item'))": {
+   "node:item": 0.0
+  },
+  "('item-equip-modal', 5, 0, 1, 2, 1, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:cancel": 0.0,
+   "btn:equip": 0.0
+  },
+  "('map-screen', 2, 1, 0, 0, 0, ('node:catch', 'node:trainer'))": {
+   "node:catch": 1.444510073422125
+  },
+  "('map-screen', 3, 1, 0, 1, 0, ('node:item', 'node:trainer'))": {
+   "node:item": 6.458305096166735
+  },
+  "('map-screen', 3, 1, 0, 1, 0, ('node:battle', 'node:catch'))": {
+   "node:catch": 0.0
+  },
+  "('catch-screen', 3, 1, 0, 1, 0, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot1": 0.0
+  },
+  "('map-screen', 4, 1, 0, 1, 0, ('node:question',))": {
+   "node:question": 0.0
+  },
+  "('map-screen', 2, 3, 0, 2, 0, ('node:item', 'node:pokecenter'))": {
+   "node:item": 7.1428250146583965
+  },
+  "('map-screen', 2, 3, 0, 0, 0, ('node:question',))": {
+   "node:question": 0.687429089984569
+  },
+  "('shiny-screen', 2, 3, 0, 1, 0, ('btn:skip', 'shiny-screen:slot0'))": {
+   "shiny-screen:slot0": 3.5244313876108455
+  },
+  "('map-screen', 4, 3, 0, 1, 0, ('node:catch', 'node:move_tutor'))": {
+   "node:move_tutor": 0.7936144057849036
+  },
+  "('item-equip-modal', 4, 3, 0, 1, 0, ('btn:skip', 'item-equip-modal:slot0', 'item-equip-modal:slot1', 'item-equip-modal:slot2', 'item-equip-modal:slot3'))": {
+   "btn:skip": 2.905179979026376
+  },
+  "('map-screen', 1, 3, 0, 1, 0, ('node:item',))": {
+   "node:item": 0.0
+  },
+  "('item-screen', 1, 3, 0, 1, 0, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot0": 0.0,
+   "item-screen:slot1": 0.0,
+   "item-screen:slot2": 0.0
+  },
+  "('item-equip-modal', 1, 3, 0, 1, 0, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:cancel": 0.0,
+   "btn:bag": 0.0
+  },
+  "('map-screen', 1, 3, 0, 1, 0, ('node:battle', 'node:item'))": {
+   "node:item": 0.0
+  },
+  "('item-screen', 1, 3, 0, 2, 0, ('item-screen:slot0', 'item-screen:slot1', 'item-screen:slot2'))": {
+   "item-screen:slot2": 0.0
+  },
+  "('item-equip-modal', 1, 3, 0, 2, 0, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:equip": 0.0
+  },
+  "('map-screen', 3, 3, 0, 1, 0, ('node:battle', 'node:item'))": {
+   "node:battle": 1.2166835575392558
+  },
+  "('map-screen', 4, 3, 1, 0, 1, ('node:trainer',))": {
+   "node:trainer": 4.585802561875
+  },
+  "('map-screen', 4, 2, 1, 1, 1, ('node:battle', 'node:trade'))": {
+   "node:trade": 0.38347225
+  },
+  "('map-screen', 4, 2, 1, 1, 1, ('node:battle', 'node:item'))": {
+   "node:battle": 1.7195
+  },
+  "('map-screen', 4, 1, 1, 2, 1, ('node:catch', 'node:pokecenter'))": {
+   "node:catch": 0.0
+  },
+  "('catch-screen', 4, 1, 1, 2, 1, ('catch-screen:slot0', 'catch-screen:slot1', 'catch-screen:slot2'))": {
+   "catch-screen:slot2": 0.0
+  },
+  "('map-screen', 3, 3, 0, 1, 0, ('node:move_tutor',))": {
+   "node:move_tutor": 5.512644441745569
+  },
+  "('map-screen', 4, 3, 0, 1, 0, ('node:battle', 'node:catch'))": {
+   "node:battle": 7.332247158944601
+  },
+  "('map-screen', 4, 0, 1, 0, 1, ('node:battle', 'node:catch'))": {
+   "node:catch": 0.0
+  },
+  "('map-screen', 5, 0, 1, 1, 1, ('node:trade', 'node:trainer'))": {
+   "node:trade": 0.0
+  },
+  "('map-screen', 5, 0, 1, 2, 1, ('node:catch', 'node:pokecenter'))": {
+   "node:pokecenter": 0.0
+  },
+  "('map-screen', 1, 3, 0, 0, 0, ('node:trainer',))": {
+   "node:trainer": 1.5264749999999998
+  },
+  "('map-screen', 1, 2, 0, 1, 0, ('node:trade', 'node:trainer'))": {
+   "node:trainer": 0.95
+  },
+  "('map-screen', 1, 2, 0, 1, 0, ('node:item', 'node:trainer'))": {
+   "node:trainer": 0.5
+  },
+  "('map-screen', 1, 2, 0, 1, 0, ('node:battle', 'node:trainer'))": {
+   "node:battle": 0.959025
+  },
+  "('item-equip-modal', 1, 2, 0, 2, 0, ('btn:bag', 'btn:cancel', 'btn:equip'))": {
+   "btn:bag": 1.0
+  },
+  "('map-screen', 1, 3, 1, 0, 1, ('node:battle', 'node:catch'))": {
+   "node:battle": 1.6255125000000001
+  },
+  "('map-screen', 1, 3, 1, 0, 1, ('node:catch', 'node:trainer'))": {
+   "node:trainer": 1.9475
+  },
+  "('map-screen', 1, 3, 1, 0, 1, ('node:battle', 'node:trade'))": {
+   "node:battle": 0.95
+  },
+  "('map-screen', 1, 3, 1, 1, 1, ('node:catch', 'node:move_tutor'))": {
+   "node:move_tutor": 0.0
+  },
+  "('item-equip-modal', 1, 3, 1, 1, 1, ('btn:skip', 'item-equip-modal:slot0'))": {
+   "btn:skip": 0.0
+  },
+  "('map-screen', 1, 3, 1, 1, 1, ('node:move_tutor', 'node:trainer'))": {
+   "node:trainer": 0.0
+  },
+  "('map-screen', 4, 3, 0, 1, 0, ('node:question',))": {
+   "node:question": 0.0
+  },
+  "('shiny-screen', 4, 3, 0, 2, 0, ('btn:skip', 'shiny-screen:slot0'))": {
+   "shiny-screen:slot0": 0.0
+  },
+  "('map-screen', 1, 3, 0, 0, 0, ('node:battle', 'node:trade'))": {
+   "node:battle": 2.29709165273381
+  },
+  "('map-screen', 2, 3, 0, 1, 0, ('node:catch', 'node:move_tutor'))": {
+   "node:move_tutor": 0.9357280443352881
+  },
+  "('map-screen', 2, 3, 0, 1, 0, ('node:item',))": {
+   "node:item": 0.9617731738213365
+  }
+ }
+}

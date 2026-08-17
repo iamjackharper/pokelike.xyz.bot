@@ -12,12 +12,15 @@ import sys
 from pathlib import Path
 
 from ..assets.mirror import PHASES, build
+from ..bench import CATEGORIES, STANDARD_SEEDS, format_result, run_benchmark
+from ..leaderboard import build_index, format_table, write_entry
 from ..assets.server import AssetServer
 from ..core import render
 from ..core.game import Game, IllegalAction
 from ..stats import format_summary, record, recent, summary
 
 SITE_ROOT = Path(__file__).resolve().parents[3] / "site"
+LEADERBOARD = Path(__file__).resolve().parents[3] / "leaderboard"
 
 REPL_HELP = """
 commands:
@@ -200,6 +203,57 @@ def cmd_bot(args) -> int:
         server.stop()
 
 
+def cmd_bench(args) -> int:
+    """Runs the standard benchmark and writes a submittable result file."""
+    from ..bot import create
+
+    try:
+        bot = create(args.bot, seed=0)
+    except KeyError as e:
+        print(e.args[0], file=sys.stderr)
+        raise SystemExit(2) from e
+
+    seeds = STANDARD_SEEDS[: args.runs] if args.runs else STANDARD_SEEDS
+    server, game = _server_and_game(args)
+    try:
+        result = run_benchmark(
+            game, bot, bot_name=args.name or args.bot, site=SITE_ROOT, seeds=seeds,
+            author=args.author, category=args.category, description=args.description,
+        )
+    finally:
+        game.close()
+        server.stop()
+
+    print(format_result(result))
+
+    # The entry folder is built here rather than left to the submitter: the bot
+    # source, whatever it declared in artifacts(), and the result all get hashed
+    # together, so they can never drift apart.
+    entry = write_entry(LEADERBOARD, result, bot)
+    build_index(LEADERBOARD)
+
+    rel = entry.relative_to(Path.cwd()) if entry.is_relative_to(Path.cwd()) else entry
+    print(f"\n  entry written to {rel}/")
+    for f in sorted(entry.rglob("*")):
+        if f.is_file():
+            print(f"    {f.relative_to(entry)}")
+    print("\n  to submit (you do not need write access to the repo):")
+    print("    1. fork it on GitHub, if you have not already")
+    print(f"    2. git checkout -b {result['bot']}")
+    print(f"    3. git add {rel} src/pokelike/bot/")
+    print(f"    4. git commit -m 'Add {result['bot']}' && git push origin {result['bot']}")
+    print("    5. open the pull request GitHub offers you")
+    return 0
+
+
+def cmd_leaderboard(args) -> int:
+    """Rebuilds the index from the entries on disk and prints the table."""
+    index = build_index(LEADERBOARD)
+    print(format_table(index))
+    print(f"\n  {len(index['entries'])} entries in {LEADERBOARD}/entries/")
+    return 0
+
+
 def cmd_stats(args) -> int:
     print(format_summary(summary(), explain=args.explain))
     if args.recent:
@@ -268,6 +322,20 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--api-port", type=int, default=8423)
     s.add_argument("--seed", type=int, default=1, help="seed of the initial run")
     s.set_defaults(func=cmd_api)
+
+    s = sub.add_parser("bench", help="run the standard benchmark and produce a result file")
+    s.add_argument("--bot", default="random", help="which bot to benchmark")
+    s.add_argument("--name", default=None, help="name for the leaderboard (defaults to --bot)")
+    s.add_argument("--author", default="", help="your name or github handle")
+    s.add_argument("--category", default="other", choices=list(CATEGORIES),
+                   help="rules, rl, llm, human or other")
+    s.add_argument("--description", default="", help="one line on how it works")
+    s.add_argument("--runs", type=int, default=0,
+                   help="use only the first N standard seeds (a full run is 50)")
+    s.set_defaults(func=cmd_bench)
+
+    s = sub.add_parser("leaderboard", help="rebuild and print the leaderboard table")
+    s.set_defaults(func=cmd_leaderboard)
 
     s = sub.add_parser("stats", help="summary of the recorded runs")
     s.add_argument("-d", "--explain", action="store_true",

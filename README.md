@@ -4,8 +4,9 @@ Play [pokelike.xyz](https://pokelike.xyz/) — a Pokémon roguelike — from the
 command line, from Python, or over an HTTP API. No windows, no internet, and a
 score to compare players with.
 
-Built to let bots play it: two ship with it (a random one and one driven by an
-LLM) and the interface for writing your own is a single method.
+Built to let bots play it. Three ship with it (random, an LLM one, and a trained
+Dyna-Q policy), the interface for writing your own is a single method, and there
+is a benchmark and a leaderboard so bots can be compared honestly.
 
 ---
 
@@ -227,7 +228,7 @@ needed, so a bot that pulls in torch does not slow down the others.
 Two optional hooks for bots that need memory across turns: `on_start(seed)` and
 `on_end(state, score)`.
 
-### The two bots that ship with it
+### The bots that ship with it
 
 **`random`** picks uniformly among the legal actions. It is the baseline: dead in
 12–17 moves, no badges, no maps cleared, score around zero. Everyone has to beat
@@ -250,6 +251,11 @@ that layer forever, and without reading the edges the model cannot know that.
 If the model returns a bad index, times out, or never calls `play`, the bot falls
 back to a safe choice and the fallback is counted. **A run never dies because of
 the model.**
+
+**`dyna_q`** ([bot/dyna_q.py](src/pokelike/bot/dyna_q.py)) plays a policy trained
+by [training/dyna_q](training/dyna_q/). It doubles as the worked example of what
+a leaderboard submission looks like, which is why it carries its own copy of the
+state encoding instead of importing the training code.
 
 ---
 
@@ -313,6 +319,32 @@ only shows up with `--watch` or `--shots`.
 The only file that truly matters is the game bundle (`js/bundle.*.js`): without
 it the game does not start, and you find out immediately.
 
+## Submit a bot
+
+There is a [leaderboard](leaderboard/): anyone can submit a bot, of any kind.
+Hand-written rules, a prompt and an LLM, a trained RL policy, a search, a mix.
+
+```bash
+uv run pokelike bench --bot yourbot --name "your-bot" \
+    --author "your-handle" --category rules --description "how it works"
+```
+
+That plays a fixed list of 50 seeds and writes a result file recording the
+scores, the seeds, and the sha256 of the game bundle you played. Both matter:
+luck dominates a single run, and the upstream game gets updated, so without them
+a leaderboard silently compares different things.
+
+**You do not need write access.** Fork the repo, push your branch to your fork,
+and open a pull request with the result file, your bot's code, and its weights if
+it has any. [leaderboard/README.md](leaderboard/README.md) walks through the fork
+and PR steps command by command, explains the categories, and covers how LLM
+entries are handled (they are not independently reproducible, and are marked as
+such). [`bot/dyna_q.py`](src/pokelike/bot/dyna_q.py) is the worked example of a
+submitted bot.
+
+If the git side is a hassle, open an issue and paste your result file into it
+instead.
+
 ## Reinforcement Learning
 
 There is a [training/](training/) folder with the RL work, kept outside the
@@ -354,6 +386,7 @@ make them pass or fail spuriously.
 | `play` | interactive run in the terminal |
 | `bot` | runs a bot (`--bot`, `--runs`, `--seed`) |
 | `api` | HTTP JSON server |
+| `bench` | run the 50-seed benchmark and produce a submittable result |
 | `stats` | summary of recorded runs (`-d` explains the columns) |
 | `mirror --phase verify` | check the local copy is not missing anything |
 | `mirror` | rebuild the offline copy (after a game update) |

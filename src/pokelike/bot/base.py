@@ -47,3 +47,15 @@ class Bot(ABC):
 
     def on_end(self, state: dict[str, Any], score: dict[str, Any] | None) -> None:
         """Called once the run is over, with the final state and the score."""
+
+    def artifacts(self) -> list:
+        """What to archive alongside a leaderboard result.
+
+        Return a list of `pokelike.leaderboard.Artifact`: weights, prompts, the
+        model you called, the hyperparameters you trained with. A bot made of
+        plain rules has nothing to declare and can ignore this.
+
+        Whatever is returned here is copied into the submission folder and
+        hashed, so the result can never be separated from what produced it.
+        """
+        return []

@@ -1,0 +1,14 @@
+{
+ "algorithm": "tabular Dyna-Q (Sutton & Barto 8.2)",
+ "encoding_version": 1,
+ "hyperparameters": {
+  "alpha": 0.1,
+  "gamma": 0.95,
+  "epsilon": 0.22291808906285737,
+  "planning_steps": 30,
+  "optimistic": 0.0
+ },
+ "updates": 46159,
+ "states": 563,
+ "trainer": "training/dyna_q/train.py"
+}

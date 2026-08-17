@@ -1,0 +1,16 @@
+[
+ {
+  "name": "weights.json",
+  "kind": "weights-json",
+  "description": "Q-table, 563 states, encoding v1",
+  "bytes": 71804,
+  "sha256": "93e17f21a954674769621274118a66eaee310d91b2b70f75e5ee2ea3d173af94"
+ },
+ {
+  "name": "config.json",
+  "kind": "config",
+  "description": "how the policy was trained",
+  "bytes": 291,
+  "sha256": "493f2f52c870f69d7969c95f1dbe4c3c76f1311ca798f96204910f80a2313684"
+ }
+]

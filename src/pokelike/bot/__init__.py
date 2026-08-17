@@ -29,6 +29,7 @@ from .random_bot import RandomBot
 AVAILABLE: dict[str, tuple[str, str]] = {
     "random": ("random_bot", "RandomBot"),
     "llm": ("llm", "LLMBot"),
+    "dyna_q": ("dyna_q", "DynaQBot"),
 }
 
 

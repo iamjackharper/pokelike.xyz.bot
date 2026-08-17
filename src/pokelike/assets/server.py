@@ -97,7 +97,13 @@ class AssetServer:
                 self.send_header("Content-Length", str(len(data)))
                 self.send_header("Cache-Control", "no-store")
                 self.end_headers()
-                self.wfile.write(data)
+                try:
+                    self.wfile.write(data)
+                except (BrokenPipeError, ConnectionResetError):
+                    # The browser hung up mid-response. Normal when a page is
+                    # torn down between runs, and nothing we can do about it, so
+                    # do not spew a traceback into the middle of a training log.
+                    pass
 
         self._httpd = ThreadingHTTPServer(("127.0.0.1", self.port), Handler)
         self._thread = threading.Thread(target=self._httpd.serve_forever, daemon=True)

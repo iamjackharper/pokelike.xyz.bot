@@ -24,6 +24,9 @@ uv run pokelike bot --runs 5     # the random bot
 uv run pokelike stats -d         # summary, with the columns explained
 uv run pytest                    # full suite, ~3 minutes
 uv run pytest -m "not slow"      # fast tests only, no browser
+
+uv run python -m training.dyna_q.train --episodes 90   # train an RL policy
+uv run pokelike bench --bot random --runs 10           # the standard benchmark
 ```
 
 ## Architecture
@@ -39,13 +42,19 @@ src/pokelike/
 ├── bot/                 WHOEVER DECIDES THE MOVES
 │   ├── base.py            abstract Bot: only choose() is required
 │   ├── random_bot.py      the baseline
-│   └── llm.py             self-contained: prompts + tools + HTTP
+│   ├── llm.py             self-contained: prompts + tools + HTTP
+│   └── dyna_q.py          a trained policy; the worked example of a submission
 ├── assets/
 │   ├── mirror.py          builds site/ in five phases
 │   └── server.py          serves site/ from disk
 ├── stats/registry.py    SQLite in stats/runs.db
+├── bench.py             the standard 50-seed benchmark
 ├── cli/main.py          terminal interface
 └── api/server.py        HTTP interface
+training/                RL research, outside the package on purpose
+├── common/                encoding, reward, env adapter, shared by all algos
+└── dyna_q/                agent, train, evaluate, models/, runs/
+leaderboard/             submissions, their weights, and how to submit
 tests/                   golden fingerprints + unit tests
 tools/deobfuscate.py     makes the bundle readable (needs node)
 ```
@@ -152,6 +161,22 @@ to go faster, launch more processes, not more threads.
 
 The LLM bot is far slower (one or more HTTP calls per decision) and burns roughly
 30k tokens per run.
+
+## Submissions
+
+`leaderboard/` takes bots from anyone, via fork and pull request. Two rules that
+are not obvious and matter:
+
+- **A submission must be self-contained.** A trained policy freezes its state
+  encoding inside the bot file rather than importing `training/common/features.py`,
+  so improving the training code cannot silently change what past submissions
+  mean. `bot/dyna_q.py` is the worked example.
+- **The benchmark records the game bundle's sha256.** Scores from before and
+  after an upstream game update are not comparable, and without the hash a
+  leaderboard mixes them silently.
+
+LLM entries are accepted but flagged as not independently reproducible:
+providers change models behind a fixed name and sampling is stochastic.
 
 ## Secrets
 

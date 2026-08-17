@@ -47,8 +47,11 @@ def train(
     history: list[dict] = []
     started = time.monotonic()
 
+    from tqdm import tqdm
+
     with TrainingEnv(port=port) as env:
-        for ep in range(episodes):
+        bar = tqdm(range(episodes), desc="dyna-q", unit="ep")
+        for ep in bar:
             seed = seed0 if fixed_seed else seed0 + ep
             s, actions = env.reset(seed=seed)
 
@@ -81,16 +84,13 @@ def train(
             }
             history.append(row)
 
-            if ep % log_every == 0 or ep == episodes - 1:
-                window = history[-log_every:]
-                mean_r = sum(h["reward"] for h in window) / len(window)
-                mean_s = sum(h["steps"] for h in window) / len(window)
-                print(
-                    f"ep {ep:>4}  reward {row['reward']:>7}  "
-                    f"(last {len(window)}: mean {mean_r:>7.1f}, steps {mean_s:>4.1f})  "
-                    f"eps {row['epsilon']:.3f}  states {row['states']:>5}",
-                    flush=True,
-                )
+            window = history[-log_every:]
+            bar.set_postfix(
+                reward=row["reward"],
+                mean=round(sum(h["reward"] for h in window) / len(window), 1),
+                eps=round(agent.epsilon, 3),
+                states=row["states"],
+            )
 
     elapsed = time.monotonic() - started
     table = agent.save(MODELS / out)
