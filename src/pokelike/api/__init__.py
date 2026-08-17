@@ -1,0 +1,1 @@
+"""Interfaccia HTTP JSON."""
