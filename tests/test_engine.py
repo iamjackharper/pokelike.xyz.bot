@@ -97,3 +97,59 @@ def test_the_map_is_a_consistent_graph(game):
     legal = {a["id"] for a in obs["actions"] if a["kind"] == "node"}
     accessible = {n["id"] for n in m["nodes"] if n["accessible"] and not n["visited"]}
     assert legal == accessible
+
+
+@pytest.mark.slow
+def test_reordering_swaps_the_team_without_using_the_turn(game):
+    """Team order is a decision — slot 0 leads — but not a move.
+
+    So it must change the team and leave `steps` alone: if it consumed a turn,
+    a bot would be paying a move for something the game gives away, and the
+    step budget would stop meaning what it says.
+    """
+    obs = game.reset(seed=11)
+    while len(obs.get("team") or []) < 2 and obs.get("actions") and game.steps < 40:
+        obs = game.step(0)
+    if len(obs.get("team") or []) < 2:
+        pytest.skip("this run never got a second Pokemon")
+
+    assert obs["can_reorder"] is True
+    before = [p["name"] for p in obs["team"]]
+    steps_before = obs["steps"]
+
+    obs = game.reorder(0, 1)
+    after = [p["name"] for p in obs["team"]]
+    assert after[0] == before[1] and after[1] == before[0]
+    assert obs["steps"] == steps_before
+
+    # Swapping back is the identity: the mechanic is a swap, not a rotation.
+    obs = game.reorder(0, 1)
+    assert [p["name"] for p in obs["team"]] == before
+
+
+@pytest.mark.slow
+def test_a_swap_outside_the_team_is_refused(game):
+    obs = game.reset(seed=12)
+    while len(obs.get("team") or []) < 2 and obs.get("actions") and game.steps < 40:
+        obs = game.step(0)
+    if len(obs.get("team") or []) < 2:
+        pytest.skip("this run never got a second Pokemon")
+    for a, b in ((0, 0), (0, 99), (-1, 0)):
+        with pytest.raises(IllegalAction):
+            game.reorder(a, b)
+
+
+@pytest.mark.slow
+def test_the_tutorial_callouts_are_not_on_screen(game):
+    """We cause them and never dismiss them, so they must not be rendered.
+
+    `INIT_SCRIPT` clears localStorage for determinism, which makes the game greet
+    a first-time player on every run. A bot never clicks the callouts away, so
+    without this they stack up over the map and every screenshot.
+    """
+    game.reset(seed=13)
+    visible = game.session.page.evaluate(
+        "() => [...document.querySelectorAll('.tutorial-callout')]"
+        ".filter(e => e.offsetParent !== null).length"
+    )
+    assert visible == 0

@@ -48,6 +48,25 @@ class Bot(ABC):
     def on_end(self, state: dict[str, Any], score: dict[str, Any] | None) -> None:
         """Called once the run is over, with the final state and the score."""
 
+    def rearrange(self, state: dict[str, Any]) -> tuple[int, int] | None:
+        """Optional: swap two team slots before choosing, or None to leave it.
+
+        Slot 0 is the Pokemon that leads the next battle, so the order is a real
+        decision. It is kept apart from `choose` because it is a FREE action: it
+        does not consume the turn, and folding it into `state["actions"]` would
+        add fifteen swap pairs to a full team's option list at every map node,
+        burying the moves that actually advance the run.
+
+        Called once per turn, before `choose`, and only while
+        `state["can_reorder"]` is true. Return `(a, b)` to swap those slots.
+        The run loop applies it and re-reads the state, so the `state` passed to
+        `choose` already reflects the swap.
+
+        Ignoring this is exactly what every bot did before it existed, so a bot
+        that does not implement it plays as it always has.
+        """
+        return None
+
     def explain(self) -> str:
         """One line on why the last `choose` went the way it did.
 

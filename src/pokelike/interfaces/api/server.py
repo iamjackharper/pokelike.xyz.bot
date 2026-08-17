@@ -6,6 +6,7 @@ Endpoints:
     GET  /actions               just the legal actions
     POST /new     {"seed": 42}  start a run
     POST /action  {"index": 1}  take an action
+    POST /reorder {"a":0,"b":2} swap two team slots (free: does not use the turn)
     GET  /score                 score using the game's own formula
     GET  /screenshot            a PNG of the current screen
     GET  /schema                what the state contains, described from itself
@@ -80,8 +81,8 @@ def _handler(game: Game):
             if route == "/":
                 self._json({
                     "service": "pokelike",
-                    "endpoints": ["/state", "/actions", "/new", "/action", "/score",
-                                  "/screenshot", "/schema"],
+                    "endpoints": ["/state", "/actions", "/new", "/action",
+                                  "/reorder", "/score", "/screenshot", "/schema"],
                 })
             elif route == "/state":
                 self._json(self._with_view(game.state()))
@@ -104,7 +105,15 @@ def _handler(game: Game):
             route = self.path.split("?")[0].rstrip("/") or "/"
             body = self._body()
             if route == "/new":
-                self._json(self._with_view(game.reset(seed=int(body.get("seed", 1)))))
+                # A seed is client input, so a bad one must come back as 400.
+                # Letting it raise would answer 500 and, on a server that is
+                # single-threaded by necessity, take the run down with it.
+                try:
+                    obs = game.reset(seed=int(body.get("seed", 1)))
+                except (ValueError, TypeError) as e:
+                    self._json({"error": str(e)}, 400)
+                    return
+                self._json(self._with_view(obs))
             elif route == "/action":
                 if "index" not in body:
                     self._json({"error": "missing field 'index'"}, 400)
@@ -113,6 +122,23 @@ def _handler(game: Game):
                     obs = game.step(int(body["index"]))
                 except IllegalAction as e:
                     self._json({"error": str(e)}, 409)
+                    return
+                self._json(self._with_view(obs))
+            elif route == "/reorder":
+                # Slot 0 leads the next battle, so the order is a decision. It
+                # is its own endpoint rather than an entry in /actions because
+                # it does not consume the turn: after this, /actions is
+                # unchanged and the same move is still waiting to be made.
+                if "a" not in body or "b" not in body:
+                    self._json({"error": "missing fields 'a' and 'b'"}, 400)
+                    return
+                try:
+                    obs = game.reorder(int(body["a"]), int(body["b"]))
+                except IllegalAction as e:
+                    self._json({"error": str(e)}, 409)
+                    return
+                except (ValueError, TypeError) as e:
+                    self._json({"error": str(e)}, 400)
                     return
                 self._json(self._with_view(obs))
             else:

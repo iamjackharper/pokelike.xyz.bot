@@ -194,6 +194,48 @@
     return bits.length ? [...new Set(bits)].join(' — ').slice(0, 160) : null;
   };
 
+  // -------------------------------------------------------------------
+  // Team order.
+  //
+  // Slot 0 leads, so the order is a real decision, and until now no bot could
+  // make it: the game binds reordering to a hand-rolled pointer drag on the
+  // team bar, which lives outside any `.screen`, so `__pk_choices` never saw it.
+  //
+  // We do NOT simulate the drag. Underneath all the pointer handling the
+  // engine's drop does exactly one thing:
+  //     [team[a], team[b]] = [team[b], team[a]]; renderTeamBar(team)
+  // and the Elite Four prep screen, which has its own drag, mutates that SAME
+  // `state.team` array and then calls `window._elitePrepRefresh()`. So one
+  // primitive covers both, with no dependence on coordinates or on layout
+  // existing, which is what makes it safe headless.
+  window.__pk_can_reorder = () => {
+    const st = g('state');
+    return Boolean(st && Array.isArray(st.team) && st.team.length > 1);
+  };
+
+  window.__pk_reorder = (a, b) => {
+    const st = g('state');
+    if (!st || !Array.isArray(st.team)) return false;
+    const t = st.team;
+    if (!Number.isInteger(a) || !Number.isInteger(b)) return false;
+    if (a === b || a < 0 || b < 0 || a >= t.length || b >= t.length) return false;
+
+    [t[a], t[b]] = [t[b], t[a]];
+
+    // Repaint through whichever renderer owns the screen we are on. Both read
+    // the array we just mutated, so a missing one costs the picture, never the
+    // swap: the state is already correct either way.
+    try {
+      if (window.__pk_layer().id === 'elite-prep-screen'
+          && typeof window._elitePrepRefresh === 'function') {
+        window._elitePrepRefresh();
+      } else if (typeof renderTeamBar === 'function') {
+        renderTeamBar(t);
+      }
+    } catch (e) { /* cosmetic only */ }
+    return true;
+  };
+
   window.__pk_obs = () => {
     const st = g('state');
     const L = window.__pk_layer();
@@ -225,6 +267,10 @@
       // Counters accumulated by our runBattle hook (see __pk_attach_score).
       if (window.__pk_stats) o.stats = { ...window.__pk_stats };
     }
+    // Reordering is a FREE action: it does not consume the turn, so it is not
+    // one of `actions`. Advertised separately, or a bot would have to guess
+    // whether the verb applies right now.
+    o.can_reorder = window.__pk_can_reorder();
     o.actions = window.__pk_choices();
     return o;
   };

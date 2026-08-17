@@ -42,6 +42,59 @@ INIT_SCRIPT = """
 })();
 """
 
+# The game's onboarding callouts ("Click a Pokemon to swap positions in your
+# team"), hidden because we cause them and never dismiss them.
+#
+# `INIT_SCRIPT` clears localStorage so no saved state leaks between runs, which
+# means the game meets a first-time player on EVERY run and puts up the tutorial.
+# A human clicks it away; a bot never does, so the callouts pile up, one per team
+# slot, over the map and the battle screen alike.
+#
+# Purely cosmetic, and it has to be: they sit outside every `.screen`, so
+# `__pk_choices` never offered them, and actions are applied by dispatching an
+# event on the element rather than clicking a coordinate, so an overlay could
+# not have intercepted anything either. This buys clean screenshots, nothing
+# else. Applied on every run and not only under --watch, so that what a
+# screenshot shows is what a headless run did.
+HIDE_TUTORIAL_CSS = ".tutorial-callout { display: none !important; }"
+
+# The engine's PRNG is 32-bit: `INIT_SCRIPT` above does `(cfg.seed >>> 0) || 1`.
+# That is the real range of a run seed, and going outside it fails in three ways
+# that all look like something else:
+#
+#   1. SQLite integers stop at 2**63, so a bigger seed plays a whole run and then
+#      dies in `record()`, throwing away the run that was just played.
+#   2. Seeds that differ by a multiple of 2**32 are the SAME run. The registry
+#      would file them as different ones, which is a lie in the one database
+#      whose whole purpose is reproducibility.
+#   3. Above 2**53 Python and JavaScript stop agreeing on the truncation: JSON
+#      hands JS a double, so `4000325235235324235237 >>> 0` is 2825912320 while
+#      Python's `& 0xFFFFFFFF` is 2825981413. So truncating on the Python side
+#      would not even record the seed that actually ran.
+#
+# Point 3 is why this rejects instead of truncating: there is no truncation that
+# is correct on both sides.
+SEED_MAX = 2**32
+
+
+def normalise_seed(seed: int) -> int:
+    """The seed the engine will really use, or an error explaining why not.
+
+    `0` is folded to `1` because the engine's `|| 1` does exactly that, and a
+    seed recorded as 0 would name a run that was actually played with 1.
+    """
+    if isinstance(seed, bool) or not isinstance(seed, int):
+        raise ValueError(f"the seed must be a whole number, got {type(seed).__name__}")
+    if not 0 <= seed < SEED_MAX:
+        raise ValueError(
+            f"seed {seed} is outside the engine's range 0..{SEED_MAX - 1}. "
+            "The game's PRNG is 32-bit, so a seed above that is silently the same "
+            "run as seed % 2**32 and would be recorded under a name that does not "
+            "reproduce it."
+        )
+    return seed or 1
+
+
 # Screens that represent a real choice by the player.
 DECISION_SCREENS = [
     "map-screen", "catch-screen", "item-screen", "passive-screen", "swap-screen",
@@ -122,6 +175,7 @@ class Session:
             },
         )
         page.evaluate(BRIDGE.read_text(encoding="utf-8"))
+        page.add_style_tag(content=HIDE_TUTORIAL_CSS)
 
         if self.page is not None:
             self.page.context.close()

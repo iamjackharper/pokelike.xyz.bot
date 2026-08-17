@@ -99,6 +99,20 @@ Actions come in two kinds: map moves go through `onNodeClick(node)` (a direct
 call), other choices activate a DOM element because that is where the game binds
 its handler.
 
+**Team order is a third thing, and it is not an action.** Slot 0 leads the next
+battle, so the order is a real decision, but reordering does not consume the
+turn. It is exposed as its own verb — `Game.reorder(a, b)`, `Bot.rearrange()`,
+`POST /reorder`, `w a b` in the REPL — and advertised in the state as
+`can_reorder`. Folding it into `actions` would put fifteen swap pairs next to
+the moves at every map node and make the turn count mean something else.
+
+The engine binds it to a hand-rolled pointer drag on the team bar, which lives
+outside every `.screen`, which is why `__pk_choices` never saw it. We do not
+simulate the drag: under all of it the drop does exactly
+`[team[a], team[b]] = [team[b], team[a]]` and re-renders, and the Elite Four
+prep screen has its own drag that mutates the same `state.team`. So one
+primitive covers both, with no dependence on coordinates or layout.
+
 To explore the bundle: `python3 tools/deobfuscate.py site/js/bundle.*.js`. It
 works out the obfuscator's internal names by itself, since they change with every
 release.
@@ -129,6 +143,20 @@ All of these were hit for real. Worth rereading before changing anything:
 - **Non-usable items open an equip modal** which is not a `.screen`. Anything that
   only watches `.screen` elements gets stuck there forever.
 - **The map is SVG**: nodes have no `.click()`.
+- **Clearing localStorage makes the game re-run its tutorial every time.** We
+  clear it in `INIT_SCRIPT` so no saved state leaks between runs, and the price
+  is that the game greets a first-time player on every run. A human clicks the
+  callouts away; a bot never does, so they stack up, one per team slot, over the
+  map and the battle screen alike. `HIDE_TUTORIAL_CSS` in `browser.py` hides
+  them. Purely cosmetic — they sit outside every `.screen` so they were never
+  offered as actions, and actions are applied by dispatching an event on the
+  element rather than clicking a coordinate, so they never intercepted anything
+  either.
+- **Seeds are 32-bit.** `(cfg.seed >>> 0) || 1`, so seed 0 is seed 1 and seed
+  N is seed N + 2**32. `normalise_seed` rejects anything outside the range
+  rather than truncating, because above 2**53 Python's `& 0xFFFFFFFF` and JS's
+  `>>> 0` disagree: there is no truncation that records the seed that ran. It
+  used to surface as an `OverflowError` from SQLite *after* a full run.
 - **The bundle filename carries a content hash** and changes with every game
   release. If something breaks all at once, first thing: `pokelike mirror`.
 - **Not every failure should be recovered from.** The LLM bot falls back to a

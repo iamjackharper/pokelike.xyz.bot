@@ -208,6 +208,7 @@ calls, which is why this is a process that has to keep running.
 | `GET` | `/state` | full state + a ready-to-print `view` field |
 | `GET` | `/actions` | just the legal actions |
 | `POST` | `/action` `{"index":1}` | take it → new state (409 if illegal) |
+| `POST` | `/reorder` `{"a":0,"b":2}` | swap two team slots — free, does not use the turn |
 | `GET` | `/score` | score using the game's own formula |
 | `GET` | `/screenshot` | a PNG of the current screen |
 | `GET` | `/schema` | what the state contains, described from itself |
@@ -271,6 +272,26 @@ needed, so a bot that pulls in torch does not slow down the others.
 
 Two optional hooks for bots that need memory across turns: `on_start(seed)` and
 `on_end(state, score)`.
+
+#### Team order, the decision that is not a move
+
+Slot 0 is the Pokemon that enters the next battle, so the order of your team
+matters. Reordering is free: it does not consume the turn. That is why it is not
+one of `state["actions"]` — a full team would otherwise add fifteen swap pairs
+next to the real moves at every map node — and lives in its own hook instead:
+
+```python
+class MyBot(Bot):
+    def rearrange(self, state):
+        """Called before choose(), whenever state["can_reorder"] is true.
+        Return (a, b) to swap those two slots, or None to leave the team alone."""
+        team = state["team"]
+        healthiest = max(range(len(team)), key=lambda i: team[i]["hp"] / team[i]["max_hp"])
+        return (0, healthiest) if healthiest != 0 else None
+```
+
+Ignoring it is the default, so a bot without it plays exactly as before. From the
+terminal it is `w 0 2` while playing, and over HTTP it is `POST /reorder`.
 
 ### The bots that ship with it
 

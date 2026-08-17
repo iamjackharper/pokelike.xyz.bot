@@ -57,9 +57,13 @@ def team_view(team: list[dict] | None) -> str:
         bar = "#" * max(0, filled) + "." * max(0, 10 - filled)
         item = f"  [{p['item']}]" if p.get("item") else ""
         shiny = " *" if p.get("shiny") else ""
+        # Slot 0 is the Pokemon that enters the next battle. The numbers were
+        # already here but read as decoration; saying so makes the order legible
+        # as the decision it is.
+        lead = "  <- leads" if i == 0 and len(team) > 1 else ""
         rows.append(
             f"  {i}. {p['name']:<13}Lv{p['level']:>2}  {bar} {p['hp']:>3}/{p['max_hp']:<3}"
-            f"  {'/'.join(p.get('types') or [])}{item}{shiny}"
+            f"  {'/'.join(p.get('types') or [])}{item}{shiny}{lead}"
         )
     return "\n".join(rows)
 
@@ -137,8 +141,9 @@ def trace_line(t: dict[str, Any]) -> str:
     options = "  ".join(
         f"{'>' if i == t['chosen'] else ' '}{o}" for i, o in enumerate(t["options"])
     )
+    swap = f" [swap {t['swapped'][0]}<->{t['swapped'][1]}]" if t.get("swapped") else ""
     return (f"  {t['step']:>3} {t['screen']:<17} b{t.get('badges', 0)} "
-            f"m{t.get('map', 0)} | {options}")
+            f"m{t.get('map', 0)}{swap} | {options}")
 
 
 def trace_view(trace: list[dict[str, Any]], detail: int = 1) -> str:
@@ -162,6 +167,12 @@ def trace_view(trace: list[dict[str, Any]], detail: int = 1) -> str:
         head = (f"  {t['step']:>3} | {t['screen']:<18} "
                 f"map {t.get('map', '-')}  badges {t.get('badges', '-')}")
         out.append(head)
+        # A swap happened before the choice and does not consume the turn, so it
+        # is shown above the options rather than as one of them.
+        if t.get("swapped"):
+            a, b = t["swapped"]
+            out.append(f"      | swap slots {a} <-> {b}, {t.get('team', ['?'])[0]} now leads"
+                       if t.get("team") else f"      | swap slots {a} <-> {b}")
         if with_team and t.get("team"):
             out.append(f"      | team: {', '.join(t['team'])}")
         marked = [

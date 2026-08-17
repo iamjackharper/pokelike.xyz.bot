@@ -92,6 +92,26 @@ def play_run(
         if on_step:
             on_step(obs, game.steps)
 
+        # Free actions come first: reordering does not consume the turn, so the
+        # state handed to `choose` must already show the team as the bot wants
+        # it. A bot that does not implement the hook is unaffected.
+        swapped = None
+        if obs.get("can_reorder"):
+            try:
+                pick = bot.rearrange(obs)
+            except Exception:  # noqa: BLE001
+                pick = None
+            if pick is not None:
+                a, b = pick
+                try:
+                    obs = game.reorder(int(a), int(b))
+                    swapped = [int(a), int(b)]
+                except Exception:  # noqa: BLE001
+                    # An illegal swap is the bot's mistake, not the run's: the
+                    # turn still has a move to make, so play on and let the
+                    # trace show that nothing moved.
+                    swapped = None
+
         options = list(obs["actions"])
         chosen = bot.choose(obs)
 
@@ -108,6 +128,7 @@ def play_run(
             "options": [short_label(a) for a in options],
             "chosen": chosen,
             "chosen_label": short_label(options[chosen]) if 0 <= chosen < len(options) else "?",
+            "swapped": swapped,
             "why": (bot.explain() or "").strip(),
         })
         if on_decision:

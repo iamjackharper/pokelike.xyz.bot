@@ -32,6 +32,9 @@ FIELDS = {
     "map": "the whole board: nodes, edges, where you stand",
     "stats": "the engine's cumulative counters, updated after every battle",
     "actions": "THE LEGAL MOVES. choose() returns an index into this list",
+    "can_reorder": ("whether the team can be reordered right now. Slot 0 leads the "
+                    "next battle, so the order is a decision — but a FREE one, which "
+                    "is why it is not in `actions`: see Bot.rearrange / Game.reorder"),
     "stalled": "only present if the engine stopped responding (should never happen)",
 }
 

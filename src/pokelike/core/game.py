@@ -21,7 +21,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from .browser import Session
+from .browser import Session, normalise_seed
 
 
 class IllegalAction(RuntimeError):
@@ -69,11 +69,18 @@ class Game:
 
         Picking the trainer and the starter is NOT done here: those stay player
         decisions and show up as the first two turns.
+
+        The seed is checked BEFORE anything is played: an unusable one used to
+        surface only at the end, when the finished run was handed to the
+        registry, so the whole run was lost to a mistake known at step zero.
         """
+        seed = normalise_seed(seed)
         if self.session is None:
             self.open()
         assert self.session is not None
 
+        # The normalised value, not the one passed in: what gets recorded has to
+        # be the seed that will actually reproduce this run.
         self.seed = seed
         self.steps = 0
         self.last_alive = None
@@ -134,6 +141,31 @@ class Game:
         self.steps += 1
         self.session.page.wait_for_timeout(70)
         return self._settle()
+
+    # ------------------------------------------------------- free actions
+
+    def reorder(self, a: int, b: int) -> dict[str, Any]:
+        """Swaps two team slots and returns the new state.
+
+        Slot 0 leads, so this is a genuine decision and not decoration. It is
+        deliberately NOT one of `step`'s actions: reordering does not consume
+        the turn, and a team of six would otherwise add fifteen swap pairs to
+        the list at every single map node, drowning the actual moves.
+
+        `steps` does not advance, for the same reason.
+        """
+        assert self.session is not None and self.session.page is not None
+        team = (self._last or self.state()).get("team") or []
+        for name, i in (("a", a), ("b", b)):
+            if not 0 <= i < len(team):
+                raise IllegalAction(
+                    f"{name}={i} is not a team slot: there are {len(team)} Pokemon"
+                )
+        if a == b:
+            raise IllegalAction(f"a and b are both {a}: that swap does nothing")
+        if not self.session.page.evaluate("([x, y]) => window.__pk_reorder(x, y)", [a, b]):
+            raise IllegalAction(f"the engine refused the swap {a} <-> {b}")
+        return self.state()
 
     # ------------------------------------------------------------------ score
 

@@ -17,6 +17,7 @@ from ...leaderboard import build_index, format_table, write_entry
 from ...runner import play_run
 from ...assets.server import AssetServer
 from ...core import render
+from ...core.browser import SEED_MAX, normalise_seed
 from ...core.game import Game, IllegalAction
 from ...stats import format_summary, record, recent, summary
 
@@ -26,6 +27,7 @@ LEADERBOARD = Path(__file__).resolve().parents[4] / "leaderboard"
 REPL_HELP = """
 commands:
   <number>   take the action with that number
+  w a b      swap team slots a and b (slot 0 leads; free, does not use the turn)
   s          show the score
   j          show the raw state as JSON
   l          show the legend of map symbols
@@ -192,6 +194,16 @@ def cmd_play(args) -> int:
                 print()
                 print(render.LEGEND)
                 continue
+            if line.startswith("w"):
+                bits = line.split()
+                if len(bits) != 3 or not all(b.isdigit() for b in bits[1:]):
+                    print("usage: w <slot> <slot>, e.g. 'w 0 2'")
+                    continue
+                try:
+                    obs = game.reorder(int(bits[1]), int(bits[2]))
+                except IllegalAction as e:
+                    print(e)
+                continue
             if line in {"?", "h", "help"}:
                 print(REPL_HELP)
                 continue
@@ -217,6 +229,14 @@ def cmd_bot(args) -> int:
     except KeyError as e:
         print(e.args[0], file=sys.stderr)
         raise SystemExit(2) from e
+
+    # Runs walk the seed forward, so a start that is fine on its own can still
+    # run off the end part way through. Better to say so now than to stop after
+    # the third of ten runs.
+    if args.seed + args.runs > SEED_MAX:
+        print(f"seed {args.seed} plus {args.runs} runs goes past the engine's "
+              f"limit of {SEED_MAX - 1}: start lower.", file=sys.stderr)
+        raise SystemExit(2)
 
     server, game = _server_and_game(args)
     try:
@@ -365,6 +385,24 @@ def cmd_api(args) -> int:
 # ------------------------------------------------------------------ arguments
 
 
+def seed_arg(value: str) -> int:
+    """`--seed` as argparse sees it: refused here rather than after the run.
+
+    The check also lives in `Game.reset`, which is what protects the API and
+    anyone using the package as a library. Doing it here as well is what turns
+    a traceback into one line, before Chromium has even started.
+    """
+    try:
+        seed = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"'{value}' is not a whole number") from None
+    try:
+        normalise_seed(seed)
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(str(e)) from None
+    return seed
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         prog="pokelike",
@@ -383,14 +421,14 @@ def main(argv: list[str] | None = None) -> int:
     s.set_defaults(func=cmd_mirror)
 
     s = sub.add_parser("play", help="interactive run in the terminal")
-    s.add_argument("--seed", type=int, default=1, help="seed of the run")
+    s.add_argument("--seed", type=seed_arg, default=1, help="seed of the run")
     s.add_argument("--watch", action="store_true", help="open a real window and watch")
     s.add_argument("--shots", metavar="FOLDER", help="save an image of every screen")
     s.set_defaults(func=cmd_play)
 
     s = sub.add_parser("bot", help="run a bot")
     s.add_argument("--bot", default="random", help="which bot to use (see bot/AVAILABLE)")
-    s.add_argument("--seed", type=int, default=1)
+    s.add_argument("--seed", type=seed_arg, default=1)
     s.add_argument("--runs", type=int, default=3)
     s.add_argument("--max-steps", type=int, default=300)
     s.add_argument("--watch", action="store_true", help="open a real window and watch")
@@ -404,7 +442,7 @@ def main(argv: list[str] | None = None) -> int:
 
     s = sub.add_parser("api", help="start the HTTP API")
     s.add_argument("--api-port", type=int, default=8423)
-    s.add_argument("--seed", type=int, default=1, help="seed of the initial run")
+    s.add_argument("--seed", type=seed_arg, default=1, help="seed of the initial run")
     s.set_defaults(func=cmd_api)
 
     s = sub.add_parser("bench", help="run the standard benchmark and produce a result file")
