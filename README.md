@@ -4,9 +4,10 @@ Play [pokelike.xyz](https://pokelike.xyz/) — a Pokémon roguelike — from the
 command line, from Python, or over an HTTP API. No windows, no internet, and a
 score to compare players with.
 
-Built to let bots play it. Three ship with it (random, an LLM one, and a trained
-Dyna-Q policy), the interface for writing your own is a single method, and there
-is a benchmark and a leaderboard so bots can be compared honestly.
+Built to let bots play it. Four ship with it (random, an LLM one, and two trained
+policies: Dyna-Q and linear SARSA(λ)), the interface for writing your own is a
+single method, and there is a benchmark and a leaderboard so bots can be compared
+honestly.
 
 ---
 
@@ -85,8 +86,9 @@ Reading the map: it runs top to bottom, `[here]` is where you are, `<like this>`
 are the legal moves, `x'` is already done, the boss sits at the bottom.
 **Picking one node closes the others on that layer forever.**
 
-At the prompt: a **number** to act, `l` for the symbol legend, `s` for the score,
-`j` for the raw JSON state, `n` for a new run, `q` to quit.
+At the prompt: a **number** to act, `w a b` to swap two team slots, `l` for the
+symbol legend, `s` for the score, `j` for the raw JSON state, `n` for a new run,
+`q` to quit, `?` for the list.
 
 ## Let a bot play
 
@@ -171,16 +173,17 @@ core/game.py         class Game  ← THE LOGIC, one copy of it
    └─── bot/              whoever decides the moves
 ```
 
-`Game` has four methods, and everything else goes through them:
+`Game` has five methods, and everything else goes through them:
 
 ```python
 g.reset(seed=42)   # start
 g.state()          # team, map, legal actions
 g.step(1)          # take move 1 -> new state
+g.reorder(0, 2)    # swap two team slots; free, does not use the turn
 g.score()          # what the run is worth
 ```
 
-CLI, API and bots are three faces over those four methods. None of them holds any
+CLI, API and bots are three faces over those five methods. None of them holds any
 game logic.
 
 ### The two interfaces
@@ -263,6 +266,8 @@ Register it in `AVAILABLE` inside [bot/\_\_init\_\_.py](src/pokelike/bot/__init_
 AVAILABLE = {
     "random": ("random_bot", "RandomBot"),
     "llm":    ("llm", "LLMBot"),
+    "dyna_q": ("dyna_q", "DynaQBot"),
+    "sarsa":  ("sarsa", "SarsaBot"),
     "mine":   ("mine", "MyBot"),      # <-
 }
 ```
@@ -290,14 +295,17 @@ class MyBot(Bot):
         return (0, healthiest) if healthiest != 0 else None
 ```
 
-Ignoring it is the default, so a bot without it plays exactly as before. From the
-terminal it is `w 0 2` while playing, and over HTTP it is `POST /reorder`.
+Ignoring it is the default, so a bot without it plays exactly as before. From
+Python it is `Game.reorder(a, b)`, from the terminal `w 0 2` while playing, and
+over HTTP `POST /reorder`.
 
 ### The bots that ship with it
 
-**`random`** picks uniformly among the legal actions. It is the baseline: dead in
-12–17 moves, no badges, no maps cleared, score around zero. Everyone has to beat
-it.
+**`random`** picks uniformly among the legal actions. It is the baseline, and not
+a trivial one: over the 50 standard seeds it averages 0.68 badges with a best of
+3, dying in 17 moves for a mean score of −3.5. A map is short enough that flailing
+sometimes reaches a gym. Everyone has to beat it, and the first trained agent
+here did not.
 
 **`llm`** ([bot/llm.py](src/pokelike/bot/llm.py)) is self-contained: prompts,
 tools, agentic loop and the HTTP call with `urllib`. Four prompt strategies ship

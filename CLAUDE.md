@@ -43,7 +43,7 @@ src/pokelike/
 ├── core/                SHARED LOGIC — the only part that knows how to play
 │   ├── bridge.js          injected into the page: observes and acts
 │   ├── browser.py         Playwright headless, pinned seed, flattened animations
-│   ├── game.py            class Game: reset/state/step/score
+│   ├── game.py            class Game: reset/state/step/score/reorder
 │   └── render.py          ASCII map, team, actions
 ├── bot/                 WHOEVER DECIDES THE MOVES
 │   ├── base.py            abstract Bot: only choose() is required
@@ -71,7 +71,7 @@ tests/                   golden fingerprints + unit tests
 tools/deobfuscate.py     makes the bundle readable (needs node)
 ```
 
-`interfaces/` and `bot/` contain no game logic: they all go through `Game`'s four
+`interfaces/` and `bot/` contain no game logic: they all go through `Game`'s five
 methods. If you feel like putting a game rule in the CLI, it belongs in `core`.
 
 Decision logging lives in `runner.play_run` for the same reason: recorded once,

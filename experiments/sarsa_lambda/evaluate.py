@@ -34,6 +34,18 @@ MODELS = OUT / "models"
 RUNS = OUT / "runs"
 
 
+def _available(models: Path) -> str:
+    """What is actually on disk, for when the requested table is not.
+
+    Weights are gitignored, so on a fresh clone this directory is empty and the
+    honest answer is "train something first" rather than a bare traceback about
+    a path.
+    """
+    found = sorted(p.name for p in models.glob("*.json")) if models.is_dir() else []
+    return ("on disk: " + ", ".join(found)) if found else "nothing trained yet"
+
+
+
 def _outcome(game: Game, obs: dict, seed: int) -> dict:
     alive = game.last_alive or {}
     score = game.score() or {}
@@ -56,11 +68,17 @@ def play(game: Game, seed: int, pick, max_steps: int = 300) -> dict:
     return _outcome(game, obs, seed)
 
 
-def evaluate(table: str = "sarsa_v1.json", episodes: int = 25,
+def evaluate(table: str = "sarsa.json", episodes: int = 25,
              seed0: int = 40_000, port: int = 8800) -> dict:
     from tqdm import tqdm
 
-    agent = SarsaLambda.load(MODELS / table)
+    path = MODELS / table
+    if not path.is_file():
+        raise SystemExit(
+            f"no weights at {path}\n{_available(MODELS)}\n\n"
+            f"train some first:  uv run python -m experiments.sarsa_lambda.train"
+        )
+    agent = SarsaLambda.load(path)
     print(f"loaded {table}: {agent.summary()}")
     print("\nwhat it learned to care about:")
     for name, w in agent.top_weights(12):
@@ -128,7 +146,11 @@ def report(learned: list[dict], baseline: list[dict]) -> None:
 
 def main() -> int:
     p = argparse.ArgumentParser(description="Compare a trained SARSA policy with random.")
-    p.add_argument("--table", default="sarsa_v1.json")
+    # Defaults to what `train` writes, so the two commands chain. The
+    # leaderboard's own weights are sarsa_v1.json; train deliberately does not
+    # write to that name, or a training run would overwrite a submitted policy.
+    p.add_argument("--table", default="sarsa.json",
+                   help="file in output/models/ (default: what train writes)")
     p.add_argument("--episodes", type=int, default=25)
     p.add_argument("--seed0", type=int, default=40_000,
                    help="held out: keep away from the training range")

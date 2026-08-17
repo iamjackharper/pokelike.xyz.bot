@@ -26,6 +26,18 @@ HERE = Path(__file__).parent
 MODELS = HERE / "models"
 
 
+def _available(models: Path) -> str:
+    """What is actually on disk, for when the requested table is not.
+
+    Weights are gitignored, so on a fresh clone this directory is empty and the
+    honest answer is "train something first" rather than a bare traceback about
+    a path.
+    """
+    found = sorted(p.name for p in models.glob("*.json")) if models.is_dir() else []
+    return ("on disk: " + ", ".join(found)) if found else "nothing trained yet"
+
+
+
 def play_greedy(env: TrainingEnv, agent: DynaQ, seed: int) -> dict:
     s, actions = env.reset(seed=seed)
     total = 0.0
@@ -54,9 +66,15 @@ def play_random(env: TrainingEnv, seed: int) -> dict:
             "steps": env.steps, "ending": (env.observation or {}).get("screen")}
 
 
-def evaluate(table: str = "dyna_q_v1.json", episodes: int = 30,
+def evaluate(table: str = "dyna_q_v2.json", episodes: int = 30,
              seed0: int = 5000, port: int = 8601, reward: str = "progress") -> dict:
-    agent = DynaQ.load(MODELS / table)
+    path = MODELS / table
+    if not path.is_file():
+        raise SystemExit(
+            f"no table at {path}\n{_available(MODELS)}\n\n"
+            f"train one first:  uv run python -m experiments.dyna_q.train"
+        )
+    agent = DynaQ.load(path)
     print(f"loaded {table}: {agent.summary()}\n")
 
     from tqdm import tqdm
@@ -101,7 +119,11 @@ def evaluate(table: str = "dyna_q_v1.json", episodes: int = 30,
 
 def main() -> int:
     p = argparse.ArgumentParser(description="Compare a trained Dyna-Q agent with random.")
-    p.add_argument("--table", default="dyna_q_v1.json")
+    # dyna_q_v1.json is still here but no longer loadable: it was trained under
+    # encoding v1 and `env/encoding.py` is at v2, so the states would not mean
+    # the same thing. Kept, not deleted — it is the record of the first result.
+    p.add_argument("--table", default="dyna_q_v2.json",
+                   help="table in models/ (v1 tables no longer load: encoding is at v2)")
     p.add_argument("--episodes", type=int, default=30)
     p.add_argument("--seed0", type=int, default=5000,
                    help="held-out seeds: keep these away from the training range")

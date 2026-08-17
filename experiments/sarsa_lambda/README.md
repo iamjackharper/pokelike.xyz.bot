@@ -89,14 +89,17 @@ the representation, and that was the hypothesis.
 The learning curve says the same thing about sample cost:
 
 ```
-ep   0-24   0.75 badges     <- indistinguishable from random
-ep  25-49   1.04
-ep  50-74   1.42            <- most of it, in fifty episodes
-ep 275-299  1.31
+ep   0-24   0.84 badges     <- random gets 0.68
+ep  25-49   1.20
+ep  50-74   1.56            <- most of it, in fifty episodes
+ep  75-99   1.20
+ep 275-299  1.12
 ```
 
-It arrives in about 50 episodes, roughly 1000 transitions, and then flattens.
-Dyna-Q had 400 episodes and never left the floor.
+Badges per episode, in blocks of 25, from `output/runs/sarsa_v1_history.json`.
+It arrives in about 50 episodes, roughly 1000 transitions, and then not only
+flattens but drifts back down as epsilon anneals. Dyna-Q had 400 episodes and
+never left the floor.
 
 **Read the plateau as a limit of the features, not of the method.** The weights
 say where it comes from: the largest are `team_size`, `bias`, `map_index`,
@@ -164,6 +167,13 @@ uv run python -m experiments.sarsa_lambda.evaluate --episodes 25 --seed0 40000
 | `--lam` | trace decay λ | 0.9 |
 | `--epsilon` | initial exploration, annealed to 0.02 | 0.3 |
 | `--reward` | which reward (see `env/rewards.py`) | progress |
+| `--out` | *train*: file to write in `output/models/` | `sarsa.json` |
+| `--table` | *evaluate*: file to read from `output/models/` | `sarsa.json` |
+| `--groups` | *train*: feature groups to keep, comma separated | all |
+
+`--out` deliberately does not default to `sarsa_v1.json`: that is the file
+[`bot/sarsa.py`](../../src/pokelike/bot/sarsa.py) loads, so a training run
+writing there would silently replace the policy that is on the leaderboard.
 
 ## You can read what it learned
 
@@ -172,13 +182,20 @@ and they are named:
 
 ```
 what it leaned on:
-  mon_new_type                  5.538
-  mon_best_stats                5.074
-  leads_to_catch                3.657
+  team_size                  -129.276
+  bias                         93.125
+  map_index                   -79.623
+  ...
+  node:trainer*small_team      29.392
+  mon_new_type                 18.384
+  mon_best_stats               17.706
 ```
 
 That is a policy you can argue with, which a value table of 400 opaque cells is
-not.
+not — and arguing with this one is what produced the ablation above. The first
+three depend on the state and not the action, so they add the same number to
+every option and cancel in the argmax. Read literally, most of this policy's
+weight is not policy.
 
 ## Where to look if it stalls
 

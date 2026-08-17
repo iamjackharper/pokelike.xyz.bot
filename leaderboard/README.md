@@ -95,6 +95,12 @@ is the larger example — it carries all 81 of its feature definitions inline fo
 exactly that reason, and a test pins that frozen copy to the training code so the
 two cannot drift apart unnoticed.
 
+**The table is ordered by badges**, not by score: `build_index` sorts on
+`badges_mean` and only falls back to `score_mean` to break ties. The engine's
+score formula was written for the Battle Tower and two of its six terms never
+fire in Story mode, which leaves `5·KO − 10·faints` — a number that rewards
+fighting rather than getting further.
+
 ## How to submit
 
 **1. Fork.** Press *Fork* at the top right of the GitHub page. You now have your
@@ -124,6 +130,11 @@ uv run pokelike bench --bot yourbot \
 It plays the 50 standard seeds, builds your entry folder, and prints the exact
 git commands to finish. A full benchmark takes about 15 minutes for a fast bot;
 use `--runs 10` while developing, but submit the full 50.
+
+There is no dry run: `bench` always writes an entry folder and rebuilds the
+index, whatever `--runs` says. A 10-seed result is a real entry on your disk,
+recorded as 10 runs — so delete it before opening a pull request, or the
+comparison it lands next to is not one.
 
 **4. Commit, push, open the PR.** The command tells you what to `git add`. GitHub
 will offer to open the pull request from your new branch.
