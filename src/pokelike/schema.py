@@ -20,6 +20,8 @@ from typing import Any
 # the reference is printed.
 FIELDS = {
     "screen": "which screen you are on: map-screen, catch-screen, item-equip-modal, ...",
+    "prompt": "what the screen is ASKING. Read it: on the swap screen the same "
+              "list of your team means 'choose one to release', not 'choose a lead'",
     "layer": "'screen' or 'modal' — modals are choices too, not decoration",
     "steps": "how many decisions this run has taken",
     "seed": "the run's seed; the same seed replays the same run",

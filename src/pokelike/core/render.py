@@ -83,7 +83,12 @@ def screen(obs: dict[str, Any], with_legend: bool = False) -> str:
         f"step {obs.get('steps', 0)}   screen: {obs.get('screen')}   "
         f"map {run.get('map', '-')}   badges {run.get('badges', '-')}"
     )
-    parts = ["=" * 72, head, "=" * 72, "", "TEAM", team_view(obs.get("team"))]
+    parts = ["=" * 72, head, "=" * 72]
+    if obs.get("prompt"):
+        # What the screen is asking. Without it, "pick one of your team" is
+        # ambiguous between promoting and releasing.
+        parts += ["", f'  >> {obs["prompt"]}']
+    parts += ["", "TEAM", team_view(obs.get("team"))]
 
     bag = obs.get("bag") or []
     if bag:

@@ -133,10 +133,25 @@
     return null;
   };
 
+  // What the screen is asking. Without it a choice can be read backwards: the
+  // swap screen lists your team and its prompt is "Choose a Pokémon to
+  // release", but a bot seeing only the list may take it for "choose your
+  // lead" — and release its best Pokemon believing it promoted it. Observed
+  // happening to an LLM, which is what prompted exposing this.
+  const promptOf = (id) => {
+    const root = document.getElementById(id);
+    if (!root) return null;
+    const bits = [...root.querySelectorAll('h2, [id$="-prompt"], .screen-desc')]
+      .filter(shown)
+      .map((e) => (e.innerText || '').replace(/\s+/g, ' ').trim())
+      .filter(Boolean);
+    return bits.length ? [...new Set(bits)].join(' — ').slice(0, 160) : null;
+  };
+
   window.__pk_obs = () => {
     const st = g('state');
     const L = window.__pk_layer();
-    const o = { layer: L.kind, screen: L.id };
+    const o = { layer: L.kind, screen: L.id, prompt: promptOf(L.id) };
     if (st) {
       o.run = {
         run_seed: st.runSeed, map: st.currentMap, badges: st.badges,

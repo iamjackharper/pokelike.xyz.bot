@@ -23,6 +23,7 @@ TOP LEVEL
   done         True when the run is over
   layer        'screen' or 'modal' — modals are choices too, not decoration
   map          the whole board: nodes, edges, where you stand
+  prompt       what the screen is ASKING. Read it: on the swap screen the same list of your team means 'choose one to release', not 'choose a lead'
   run          run-wide facts: map index, badges, whether anyone has fainted
   screen       which screen you are on: map-screen, catch-screen, item-equip-modal, ...
   seed         the run's seed; the same seed replays the same run
@@ -55,7 +56,7 @@ state['actions']  —  THE ONLY THING YOU MUST UNDERSTAND
     trainer      1 Pokemon on map 0, 2 on maps 1-2, 3 from map 3 onwards
     item         pick one of three items
     pokecenter   restores HP
-    question     unknown until you enter it
+    question     unknown until you enter it (shown as `unknown` in logs)
     boss         the gym leader at the bottom of the map
     trade        trade a Pokemon
     move_tutor   teach a move
@@ -144,6 +145,7 @@ WHAT IS NOT IN HERE
 {
  "layer": "screen",
  "screen": "map-screen",
+ "prompt": null,
  "run": {
   "run_seed": 2028475091,
   "map": 0,
@@ -389,5 +391,5 @@ WHAT IS NOT IN HERE
    },
    {
     "id": "n7_0",
-    "kind": "battle",
+    
 ```
