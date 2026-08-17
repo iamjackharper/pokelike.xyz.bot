@@ -126,6 +126,10 @@ All of these were hit for real. Worth rereading before changing anything:
 - **The map is SVG**: nodes have no `.click()`.
 - **The bundle filename carries a content hash** and changes with every game
   release. If something breaks all at once, first thing: `pokelike mirror`.
+- **`playwright install` exits 0 even when the host is missing libraries.** It
+  only warns. Trusting the exit code made `setup` report success on a Raspberry
+  Pi while every later command died with a stack trace, so setup now launches
+  the browser to check. Never infer "it works" from an installer's exit code.
 - **The engine's score formula is a Battle Tower formula.** Two of its six terms
   are dead in Story mode: `mapsCleared` is incremented in exactly one place in
   the bundle, inside `bumpEndlessCounters()`, which only runs on the endless

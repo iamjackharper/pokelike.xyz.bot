@@ -54,6 +54,10 @@ def _server_and_game(args) -> tuple[AssetServer, Game]:
         game.open()
     except Exception as e:  # noqa: BLE001
         server.stop()
+        text = str(e)
+        if "missing dependencies" in text or "error while loading shared libraries" in text:
+            print("cannot start the browser." + MISSING_DEPS_HELP, file=sys.stderr)
+            raise SystemExit(3) from e
         if watch:
             print(
                 f"cannot open the window: {e}\n\n"
@@ -69,11 +73,48 @@ def _server_and_game(args) -> tuple[AssetServer, Game]:
 # -------------------------------------------------------------------- commands
 
 
+MISSING_DEPS_HELP = """
+The browser downloaded but cannot start: your Linux is missing the system
+libraries Chromium needs. This is common on Raspberry Pi, minimal server images
+and containers.
+
+Install them, then run `pokelike setup` again:
+
+    sudo apt-get install -y libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 \
+        libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 \
+        libasound2t64 libatspi2.0-0t64 libpango-1.0-0 libcairo2 libnss3
+
+On older Ubuntu or Debian, drop the `t64` suffixes. Or let Playwright do it:
+
+    sudo $(which python) -m playwright install-deps chromium
+
+Note the `sudo $(which python)`: plain `sudo playwright` usually fails because
+the virtualenv is not on root's PATH."""
+
+
+def browser_works() -> tuple[bool, str]:
+    """Actually launches the browser. Downloading it is not the same as running it.
+
+    The Playwright installer exits 0 even when it warns that the host is missing
+    libraries, so trusting the exit code makes `setup` claim success and every
+    later command fail with a stack trace. Better to find out here.
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+
+        with sync_playwright() as pw:
+            b = pw.chromium.launch(args=["--no-sandbox"])
+            b.close()
+        return True, ""
+    except Exception as e:  # noqa: BLE001
+        return False, str(e)
+
+
 def cmd_setup(args) -> int:
     """Gets everything ready: browser + offline copy. Run once."""
     import subprocess
 
-    print("[1/2] downloading the headless browser (~120 MB)")
+    print("[1/3] downloading the headless browser (~120 MB)")
     r = subprocess.run(
         [sys.executable, "-m", "playwright", "install", "chromium", "--only-shell"]
     )
@@ -81,11 +122,22 @@ def cmd_setup(args) -> int:
         print("browser installation failed", file=sys.stderr)
         return r.returncode
 
+    print("[2/3] checking it actually starts")
+    ok, why = browser_works()
+    if not ok:
+        print("\n  the browser does not start.\n", file=sys.stderr)
+        if "missing dependencies" in why or "error while loading shared libraries" in why:
+            print(MISSING_DEPS_HELP, file=sys.stderr)
+        else:
+            print(f"  {why[:600]}", file=sys.stderr)
+        return 3
+    print("      ok")
+
     if (SITE_ROOT / "index.html").is_file() and not args.force:
-        print(f"[2/2] offline copy already in {SITE_ROOT} — skipping")
+        print(f"[3/3] offline copy already in {SITE_ROOT} — skipping")
         print("      (use --force to rebuild it)")
     else:
-        print("[2/2] downloading the game for offline use (~130 MB, a few minutes)")
+        print("[3/3] downloading the game for offline use (~130 MB, a few minutes)")
         build(SITE_ROOT)
 
     print("\nReady. Try:  pokelike play")

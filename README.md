@@ -27,12 +27,26 @@ uv sync              # creates the environment and installs dependencies
 uv run pokelike setup
 ```
 
-`setup` does two things, once:
+`setup` does three things, once:
 
 1. downloads the headless browser (~120 MB)
-2. downloads the game into `site/` (~130 MB, a few minutes)
+2. checks it actually starts
+3. downloads the game into `site/` (~130 MB, a few minutes)
 
 After that **you never need the internet again**.
+
+> **On Linux you may need system libraries.** Chromium needs a handful of them,
+> and minimal images — Raspberry Pi, servers, containers — usually lack them.
+> `setup` tells you if that is your case and prints the exact command. It checks
+> by launching the browser rather than trusting the installer's exit code, which
+> is 0 even when it warns.
+>
+> ```bash
+> sudo $(which python) -m playwright install-deps chromium
+> ```
+>
+> Use `sudo $(which python)`, not plain `sudo playwright`: the virtualenv is not
+> on root's PATH.
 
 > No environment to activate: `uv run` handles it. If you prefer,
 > `source .venv/bin/activate` and then drop the `uv run` prefix.
