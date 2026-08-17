@@ -11,17 +11,17 @@ import json
 import sys
 from pathlib import Path
 
-from ..assets.mirror import PHASES, build
-from ..bench import CATEGORIES, STANDARD_SEEDS, format_result, run_benchmark
-from ..leaderboard import build_index, format_table, write_entry
-from ..runner import play_run
-from ..assets.server import AssetServer
-from ..core import render
-from ..core.game import Game, IllegalAction
-from ..stats import format_summary, record, recent, summary
+from ...assets.mirror import PHASES, build
+from ...bench import CATEGORIES, STANDARD_SEEDS, format_result, run_benchmark
+from ...leaderboard import build_index, format_table, write_entry
+from ...runner import play_run
+from ...assets.server import AssetServer
+from ...core import render
+from ...core.game import Game, IllegalAction
+from ...stats import format_summary, record, recent, summary
 
-SITE_ROOT = Path(__file__).resolve().parents[3] / "site"
-LEADERBOARD = Path(__file__).resolve().parents[3] / "leaderboard"
+SITE_ROOT = Path(__file__).resolve().parents[4] / "site"
+LEADERBOARD = Path(__file__).resolve().parents[4] / "leaderboard"
 
 REPL_HELP = """
 commands:
@@ -158,7 +158,7 @@ def cmd_play(args) -> int:
 
 def cmd_bot(args) -> int:
     """Runs a bot. The bot decides the moves; this only drives the loop."""
-    from ..bot import create
+    from ...bot import create
 
     try:
         bot = create(args.bot, seed=args.seed)
@@ -202,7 +202,7 @@ def cmd_bot(args) -> int:
 
 def cmd_bench(args) -> int:
     """Runs the standard benchmark and writes a submittable result file."""
-    from ..bot import create
+    from ...bot import create
 
     try:
         bot = create(args.bot, seed=0)
@@ -253,7 +253,7 @@ def cmd_leaderboard(args) -> int:
 
 def cmd_schema(args) -> int:
     """Prints what a bot receives, captured from a live run."""
-    from ..schema import as_markdown, capture, describe
+    from ...schema import as_markdown, capture, describe
 
     server, game = _server_and_game(args)
     try:
@@ -265,7 +265,7 @@ def cmd_schema(args) -> int:
     if args.json:
         print(json.dumps(obs, indent=1))
     elif args.markdown:
-        out = Path(__file__).resolve().parents[3] / "docs" / "STATE.md"
+        out = Path(__file__).resolve().parents[4] / "docs" / "STATE.md"
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(as_markdown(obs), encoding="utf-8")
         print(f"written to {out}")

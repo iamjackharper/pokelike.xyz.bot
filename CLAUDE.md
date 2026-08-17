@@ -50,8 +50,12 @@ src/pokelike/
 │   └── server.py          serves site/ from disk
 ├── stats/registry.py    SQLite in stats/runs.db
 ├── bench.py             the standard 50-seed benchmark
-├── cli/main.py          terminal interface
-└── api/server.py        HTTP interface
+├── runner.py            play_run(): the one loop that plays a run with a bot
+├── schema.py            what a bot receives, described from a live state
+├── leaderboard.py       submission folders, artifacts, index
+└── interfaces/          how something outside drives the game
+    ├── cli/main.py        a human, in a terminal
+    └── api/server.py      a program, over HTTP
 experiments/             attempts at a better bot, outside the package
 ├── common/                encoding, rewards, env adapter, shared by all of them
 ├── dyna_q/                tabular RL: agent, train, evaluate, models/, runs/
@@ -61,8 +65,13 @@ tests/                   golden fingerprints + unit tests
 tools/deobfuscate.py     makes the bundle readable (needs node)
 ```
 
-`cli`, `api` and `bot` contain no game logic: they all go through `Game`'s four
-methods. If you feel like putting a game rule in `cli`, it belongs in `core`.
+`interfaces/` and `bot/` contain no game logic: they all go through `Game`'s four
+methods. If you feel like putting a game rule in the CLI, it belongs in `core`.
+
+`bot/` is deliberately not under `interfaces/`. The interfaces are entry points —
+something outside drives the game through them. A bot is an extension point: you
+write one, and the interfaces run it. Filing the concrete bots (random, llm,
+dyna_q) under `interfaces/` would blur that.
 
 ## Talking to the game
 

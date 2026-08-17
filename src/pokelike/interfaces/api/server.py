@@ -7,6 +7,8 @@ Endpoints:
     POST /new     {"seed": 42}  start a run
     POST /action  {"index": 1}  take an action
     GET  /score                 score using the game's own formula
+    GET  /screenshot            a PNG of the current screen
+    GET  /schema                what the state contains, described from itself
 
 The browser stays alive between calls: that is why this needs a running process
 rather than a command that starts and dies each time.
@@ -17,8 +19,8 @@ from __future__ import annotations
 import json
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-from ..core import render
-from ..core.game import Game, IllegalAction
+from ...core import render
+from ...core.game import Game, IllegalAction
 
 
 def _handler(game: Game):
@@ -35,6 +37,27 @@ def _handler(game: Game):
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             self.wfile.write(body)
+
+        def _png(self, game) -> None:
+            import tempfile
+            from pathlib import Path as _P
+
+            with tempfile.TemporaryDirectory() as d:
+                shot = game.screenshot(_P(d) / "screen.png")
+                blob = shot.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", "image/png")
+            self.send_header("Content-Length", str(len(blob)))
+            self.end_headers()
+            self.wfile.write(blob)
+
+        def _text(self, body: str) -> None:
+            data = body.encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
 
         def _body(self) -> dict:
             n = int(self.headers.get("Content-Length") or 0)
@@ -57,7 +80,8 @@ def _handler(game: Game):
             if route == "/":
                 self._json({
                     "service": "pokelike",
-                    "endpoints": ["/state", "/actions", "/new", "/action", "/score"],
+                    "endpoints": ["/state", "/actions", "/new", "/action", "/score",
+                                  "/screenshot", "/schema"],
                 })
             elif route == "/state":
                 self._json(self._with_view(game.state()))
@@ -65,6 +89,14 @@ def _handler(game: Game):
                 self._json({"actions": game.actions()})
             elif route == "/score":
                 self._json(game.score() or {"error": "score not available"})
+            elif route == "/screenshot":
+                # A remote client is otherwise blind: it can read the state but
+                # never see the game. Rendered in memory, no window involved.
+                self._png(game)
+            elif route == "/schema":
+                from ...schema import describe
+
+                self._text(describe(game.state()))
             else:
                 self._json({"error": "unknown route"}, 404)
 

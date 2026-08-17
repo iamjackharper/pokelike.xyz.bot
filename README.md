@@ -147,9 +147,9 @@ core/bridge.js       reads the state, performs the choices
    │
 core/game.py         class Game  ← THE LOGIC, one copy of it
    │
-   ├─── cli/         the terminal
-   ├─── api/         HTTP JSON
-   └─── bot/         whoever decides the moves
+   ├─── interfaces/cli/   the terminal
+   ├─── interfaces/api/   HTTP JSON
+   └─── bot/              whoever decides the moves
 ```
 
 `Game` has four methods, and everything else goes through them:
@@ -190,6 +190,27 @@ calls, which is why this is a process that has to keep running.
 | `GET` | `/actions` | just the legal actions |
 | `POST` | `/action` `{"index":1}` | take it → new state (409 if illegal) |
 | `GET` | `/score` | score using the game's own formula |
+| `GET` | `/screenshot` | a PNG of the current screen |
+| `GET` | `/schema` | what the state contains, described from itself |
+
+### Who can do what
+
+The two interfaces are meant for different drivers, so they are not identical —
+but everything needed to *play* is in both.
+
+| | CLI | HTTP |
+|---|---|---|
+| start, read, act, score | yes | yes |
+| see the screen | `--shots`, `--watch` | `GET /screenshot` |
+| what the state contains | `pokelike schema` | `GET /schema` |
+| run a bot over many seeds | `pokelike bot` | — |
+| benchmark and submit | `pokelike bench` | — |
+| history and leaderboard | `pokelike stats`, `leaderboard` | — |
+| install and mirror | `pokelike setup`, `mirror` | — |
+
+The missing HTTP rows are batch and installation jobs, not ways of playing a
+run. Exposing them over an interface whose whole job is one live game would be
+scope, not symmetry.
 
 ---
 

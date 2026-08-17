@@ -64,14 +64,14 @@
    "catch-screen|3|el0:Bellsprout Lv. 4 GRASS POISON ATK 11 SPE",
    "map-screen|2|n5_0:item",
    "item-screen|3|el0:Choice Scarf +50% Speed",
-   "item-equip-modal|7|el0:EQUIP",
+   "item-equip-modal|7|el0:EQUIP — Bulbasaur Lv5 — empty — EQUIP",
    "map-screen|2|n1_0:catch",
    "catch-screen|3|el0:Tangela Lv. 8 GRASS SP.A 21 SPE 14 HP 28",
    "map-screen|2|n2_0:item",
    "item-screen|3|el0:Rare Candy Gives a Pokémon +3 levels USA",
    "map-screen|2|n3_0:item",
    "item-screen|3|el0:Choice Band +40% physical damage, -20% D",
-   "item-equip-modal|8|el0:SWAP",
+   "item-equip-modal|8|el0:SWAP — Bulbasaur Lv9 Choice Scarf SWAP",
    "map-screen|2|n5_0:battle"
   ]
  },
@@ -136,7 +136,7 @@
    "map-screen|2|n2_0:battle",
    "map-screen|2|n3_0:item",
    "item-screen|3|el0:Expert Belt +100% damage on super effect",
-   "item-equip-modal|4|el0:EQUIP",
+   "item-equip-modal|4|el0:EQUIP — Bulbasaur Lv6 — empty — EQUIP",
    "item-screen|3|el0:TM Upgrades a Pokémon's move tier by 1 U",
    "map-screen|2|n5_0:trainer",
    "map-screen|2|n1_0:catch",
@@ -151,9 +151,9 @@
    "catch-screen|3|el0:Haunter Lv. 15 GHOST POISON SP.A 39 SPE ",
    "map-screen|2|n3_0:question",
    "item-screen|3|el0:🤍 Silk Scarf +40% Normal move damage; at",
-   "item-equip-modal|7|el0:SWAP",
+   "item-equip-modal|7|el0:SWAP — Ivysaur Lv20 Expert Belt SWAP",
    "item-screen|3|el0:Choice Specs +30% special damage",
-   "item-equip-modal|7|el0:SWAP",
+   "item-equip-modal|7|el0:SWAP — Ivysaur Lv20 🤍 Silk Scarf SWAP",
    "map-screen|2|n5_0:trade",
    "catch-screen|3|el0:Ivysaur Lv. 21 GRASS POISON SP.A 38 SPE ",
    "map-screen|2|n1_0:catch",
@@ -211,11 +211,11 @@
    "item-screen|3|el0:Charcoal +40% Fire move damage; attempts",
    "item-equip-modal|4|el3:CANCEL",
    "item-screen|3|el2:Choice Band +40% physical damage, -20% D",
-   "item-equip-modal|4|el1:EQUIP",
+   "item-equip-modal|4|el1:EQUIP — Drowzee Lv6 — empty — EQUIP",
    "map-screen|2|n4_0:catch",
    "catch-screen|3|el2:Pidgey Lv. 4 NORMAL FLYING ATK 8 SPE 9 H",
    "map-screen|2|n5_0:move_tutor",
-   "item-equip-modal|4|el1:→ ZEN HEADBUTT"
+   "item-equip-modal|4|el1:→ ZEN HEADBUTT — Drowzee Lv6 • Confusion"
   ]
  },
  "7-cycling": {
@@ -256,7 +256,7 @@
    "map-screen|2|n3_1:battle",
    "map-screen|2|n4_0:item",
    "item-screen|3|el1:Rocky Helmet Attacker takes 12% of their",
-   "item-equip-modal|4|el0:EQUIP",
+   "item-equip-modal|4|el0:EQUIP — Charmander Lv6 — empty — EQUIP",
    "map-screen|2|n5_1:trainer"
   ]
  }

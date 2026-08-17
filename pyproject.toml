@@ -13,7 +13,7 @@ dependencies = ["playwright>=1.55", "tqdm>=4.66"]
 dev = ["pytest>=8.0"]
 
 [project.scripts]
-pokelike = "pokelike.cli.main:main"
+pokelike = "pokelike.interfaces.cli.main:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

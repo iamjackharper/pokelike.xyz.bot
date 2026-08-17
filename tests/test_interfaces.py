@@ -10,13 +10,13 @@ import urllib.request
 
 import pytest
 
-from pokelike.cli.main import main
+from pokelike.interfaces.cli.main import main
 
 
 def _cli(*argv) -> tuple[int, str]:
     """Runs the CLI in a subprocess and returns (exit code, output)."""
     r = subprocess.run(
-        [sys.executable, "-m", "pokelike.cli.main", *argv],
+        [sys.executable, "-m", "pokelike.interfaces.cli.main", *argv],
         capture_output=True, text=True, timeout=120,
     )
     return r.returncode, r.stdout + r.stderr
@@ -100,7 +100,7 @@ def _with_api(game, seed, steps, port=8553):
     """
     import threading
 
-    from pokelike.api.server import create_api
+    from pokelike.interfaces.api.server import create_api
 
     game.reset(seed=seed)
     httpd = create_api(game, port)

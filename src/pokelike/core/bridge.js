@@ -61,6 +61,24 @@
     return { L, els };
   };
 
+  // A button's own text is sometimes useless on its own. The equip modal shows
+  // five buttons all reading "EQUIP", one per team member, and which Pokemon
+  // each belongs to lives in the row around it. A bot reading only labels cannot
+  // tell them apart, so it has to guess — which is a silent, invisible handicap.
+  // Where a button sits in a row carrying the context, we label it with that.
+  const ROW_SELECTOR = '.equip-pokemon-row, .swap-choice, .poke-card';
+
+  const labelFor = (e) => {
+    const own = (e.innerText || '').replace(/\s+/g, ' ').trim();
+    const row = e.closest && e.closest(ROW_SELECTOR);
+    if (row && row !== e) {
+      const context = (row.innerText || '').replace(/\s+/g, ' ').trim();
+      // "Squirtle Lv5 — empty — EQUIP" says which button this is; "EQUIP" does not.
+      if (context && context !== own) return `${own} — ${context}`.slice(0, 160);
+    }
+    return own.slice(0, 160);
+  };
+
   window.__pk_choices = () => {
     const { L, nodes, els } = choiceElements();
     if (nodes) {
@@ -73,7 +91,7 @@
     }
     return (els || []).map((e, i) => ({
       kind: 'element', idx: i, layer: L.id, id: e.id || null,
-      label: (e.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 120),
+      label: labelFor(e),
     }));
   };
 
