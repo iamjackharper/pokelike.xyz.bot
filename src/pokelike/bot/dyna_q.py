@@ -28,9 +28,10 @@ from typing import Any
 
 from .base import Bot
 
-# Bump this whenever the encoding below changes. Tables carry the version they
-# were trained with.
-ENCODING_VERSION = 1
+# Every encoding this bot can speak. A table carries the version it was trained
+# with, and old submissions must keep working: that is the whole point of
+# freezing the encoding next to the weights, so both live here side by side.
+LATEST_ENCODING = 2
 
 REPO = Path(__file__).resolve().parents[3]
 
@@ -101,10 +102,9 @@ def action_key(a: dict[str, Any]) -> str:
     return f"{a.get('layer', 'x')}:slot{a.get('idx', 0)}"
 
 
-def state_key(state: dict[str, Any]) -> tuple:
+def _base_key(state: dict[str, Any]) -> tuple:
     run = state.get("run") or {}
     team = state.get("team") or []
-    offered = tuple(sorted({action_key(a) for a in state.get("actions") or []}))
     return (
         state.get("screen"),
         min(len(team), 6),
@@ -112,8 +112,26 @@ def state_key(state: dict[str, Any]) -> tuple:
         min(run.get("map") or 0, 8),
         depth_bucket(state),
         min(run.get("badges") or 0, 8),
-        offered,
     )
+
+
+def state_key_v1(state: dict[str, Any]) -> tuple:
+    """Version 1 also keyed on which actions were on offer.
+
+    It fragmented the table badly — 563 states holding 686 state-action pairs,
+    so barely more than one action per state — which is why version 2 dropped it.
+    Kept so tables trained under v1 still play.
+    """
+    offered = tuple(sorted({action_key(a) for a in state.get("actions") or []}))
+    return _base_key(state) + (offered,)
+
+
+def state_key_v2(state: dict[str, Any]) -> tuple:
+    """Version 2: the menu is left out, since Q is keyed by action anyway."""
+    return _base_key(state)
+
+
+ENCODINGS = {1: state_key_v1, 2: state_key_v2}
 
 
 # ------------------------------------------------------------------ the bot
@@ -133,12 +151,14 @@ class DynaQBot(Bot):
             )
         data = json.loads(path.read_text(encoding="utf-8"))
         version = data.get("encoding_version")
-        if version != ENCODING_VERSION:
+        if version not in ENCODINGS:
             raise ValueError(
-                f"the table was trained with encoding version {version}, this bot "
-                f"speaks version {ENCODING_VERSION}. The states no longer mean the "
-                f"same thing, so the policy would be nonsense: retrain."
+                f"the table was trained with encoding version {version}, which this "
+                f"bot does not speak (it knows {sorted(ENCODINGS)}). The states would "
+                f"not mean the same thing, so the policy would be nonsense: retrain."
             )
+        self.encoding_version = version
+        self.state_key = ENCODINGS[version]
 
         self.Q: dict[tuple, dict[str, float]] = {
             literal_eval(s): v for s, v in data["Q"].items()
@@ -155,6 +175,7 @@ class DynaQBot(Bot):
         """Goes into the run registry and the benchmark result."""
         return {
             "table": self.table_path.name,
+            "encoding_version": self.encoding_version,
             "states_known": len(self.Q),
             "decisions": self.decisions,
             "unseen_states": self.unseen,
@@ -174,7 +195,7 @@ class DynaQBot(Bot):
             Artifact(
                 name="weights.json",
                 kind="weights-json",
-                description=f"Q-table, {len(self.Q)} states, encoding v{ENCODING_VERSION}",
+                description=f"Q-table, {len(self.Q)} states, encoding v{self.encoding_version}",
                 path=self.table_path,
             ),
             Artifact(
@@ -183,7 +204,7 @@ class DynaQBot(Bot):
                 description="how the policy was trained",
                 data={
                     "algorithm": "tabular Dyna-Q (Sutton & Barto 8.2)",
-                    "encoding_version": ENCODING_VERSION,
+                    "encoding_version": self.encoding_version,
                     "hyperparameters": table.get("hyperparameters"),
                     "updates": table.get("updates"),
                     "states": len(self.Q),
@@ -195,7 +216,7 @@ class DynaQBot(Bot):
     def choose(self, state: dict[str, Any]) -> int:
         self.decisions += 1
         actions = state["actions"]
-        s = state_key(state)
+        s = self.state_key(state)
         values = self.Q.get(s)
 
         if not values:

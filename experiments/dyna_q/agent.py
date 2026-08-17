@@ -60,9 +60,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Any
 
-# Version tag for the state encoding. If features.py changes, a saved table is
-# no longer meaningful, and loading it silently would be worse than refusing.
-ENCODING_VERSION = 1
+from ..common.features import ENCODING_VERSION  # single source of truth
 
 
 class DynaQ:

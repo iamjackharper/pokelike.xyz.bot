@@ -96,16 +96,29 @@ def action_key(a: dict[str, Any]) -> str:
     return f"{a.get('layer', 'x')}:slot{a.get('idx', 0)}"
 
 
+# Bumped whenever `state_key` changes: a saved table is keyed by encoded states,
+# so an old table under a new encoding is meaningless rather than merely stale.
+ENCODING_VERSION = 2
+
+
 def state_key(state: dict[str, Any]) -> tuple:
     """The compressed state. Keep it small: every field multiplies the table.
 
-    The set of available actions is part of the key on purpose. Without it the
-    same cell would mix turns offering completely different options, and the
-    learned values would average over situations that are not comparable.
+    VERSION 2 dropped the tuple of offered actions, which version 1 included on
+    the theory that a cell should not mix turns offering different options. That
+    theory was wrong, and the numbers said so: 90 episodes produced 563 states
+    holding 686 state-action pairs, about 1.2 actions per state. The agent almost
+    never got to compare two moves in the same situation, which is the one thing
+    a Q-table is for.
+
+    Removing it collapses those 563 states to 244 and lets Q(s, "node:catch")
+    accumulate across every map turn that offered a catch, instead of splitting
+    the evidence across every distinct menu it appeared in. The menu is not lost:
+    Q is keyed by action, so a value only ever exists for actions that were
+    actually offered.
     """
     run = state.get("run") or {}
     team = state.get("team") or []
-    offered = tuple(sorted({action_key(a) for a in state.get("actions") or []}))
     return (
         state.get("screen"),
         min(len(team), 6),
@@ -113,7 +126,6 @@ def state_key(state: dict[str, Any]) -> tuple:
         min(run.get("map") or 0, 8),
         depth_bucket(state),
         min(run.get("badges") or 0, 8),
-        offered,
     )
 
 
