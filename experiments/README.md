@@ -17,8 +17,12 @@ experiments/
 │   ├── agent.py           the algorithm
 │   ├── train.py           training script
 │   ├── evaluate.py        trained vs random, on the same seeds
+│   ├── reward_study.py    same algorithm, three rewards, one metric
 │   ├── models/            saved tables (gitignored)
 │   └── runs/              histories (gitignored)
+├── sarsa_lambda/        linear function approximation (S&B 10 and 12.7)
+│   ├── features.py        x(s,a): what the tabular encoding threw away
+│   ├── agent.py train.py evaluate.py
 └── llm/                 prompt engineering, measured
     └── compare.py         strategies played head to head on identical seeds
 ```
@@ -122,6 +126,13 @@ heuristic, a search — copy the shape of `llm/` instead: a script that runs the
 variants head to head on identical seeds and reports the paired difference.
 
 Reasonable next steps, in rough order of effort:
+
+**What has been tried, and how it went.** Tabular Dyna-Q, given 400 episodes and
+encoding v2, lost to random on 20 held-out seeds: −3.8 mean score against 7.0,
+winning 6 of 20. Its own decision log explains it — on the starter screen it
+learns Q values of 6.3 / 6.2 / 6.3, three slots it has no way to tell apart. The
+limit is the representation, not the algorithm, which is what `sarsa_lambda/`
+exists to test.
 
 - **Dyna-Q+** (Sutton & Barto 8.3) — adds an exploration bonus for state-action
   pairs not tried in a while. Cheap to add on top of what is here.
