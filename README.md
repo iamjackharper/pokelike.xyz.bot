@@ -1,4 +1,4 @@
-# pokelike
+# pokelike.xyz.bot
 
 Gioca a [pokelike.xyz](https://pokelike.xyz/) — un roguelike Pokémon — da riga di
 comando, da Python o via API HTTP. Senza finestre, senza internet, e con un
@@ -20,8 +20,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 Poi:
 
 ```bash
-git clone <url-della-repo> pokelike
-cd pokelike
+git clone https://github.com/pierpierpy/pokelike.xyz.bot
+cd pokelike.xyz.bot
 uv sync            # crea l'ambiente e installa le dipendenze
 uv run pokelike setup
 ```

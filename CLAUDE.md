@@ -1,4 +1,4 @@
-# CLAUDE.md
+# CLAUDE.md — pokelike.xyz.bot
 
 Note per agenti che lavorano su questa repo. Il README è per chi la usa; questo è
 per chi ci mette le mani.

@@ -108,7 +108,7 @@ wheels = [
 ]
 
 [[package]]
-name = "pokelike"
+name = "pokelike-xyz-bot"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
