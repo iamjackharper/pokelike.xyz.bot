@@ -136,6 +136,10 @@ reproducible: anyone can re-run your exact result.
 **`llm`** — a prompt and a model. Ship the prompts and say which model in
 `description`. Never your API key.
 
+Check `fallbacks` in your result before submitting. A bot that fell back on every
+turn played the backup heuristic, not the model, and a bad token used to produce
+exactly that silently. Authentication failures now stop the run instead.
+
 **`human`** — you played it yourself with `pokelike play`. Genuinely interesting:
 nobody knows yet what a good human score looks like.
 

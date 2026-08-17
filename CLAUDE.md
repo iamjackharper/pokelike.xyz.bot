@@ -131,6 +131,12 @@ All of these were hit for real. Worth rereading before changing anything:
 - **The map is SVG**: nodes have no `.click()`.
 - **The bundle filename carries a content hash** and changes with every game
   release. If something breaks all at once, first thing: `pokelike mirror`.
+- **Not every failure should be recovered from.** The LLM bot falls back to a
+  safe choice when a call fails, which is right for a timeout and wrong for a
+  401: a bad token used to produce a whole run of fallbacks that looked like a
+  model playing badly, and `bench` would have filed it on the leaderboard as an
+  `llm` entry no model ever played. Auth and model-not-found now raise
+  `LLMConfigError` and stop the run.
 - **`playwright install` exits 0 even when the host is missing libraries.** It
   only warns. Trusting the exit code made `setup` report success on a Raspberry
   Pi while every later command died with a stack trace, so setup now launches

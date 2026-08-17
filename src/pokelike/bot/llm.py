@@ -158,7 +158,18 @@ TOOLS = [
 
 
 class LLMError(RuntimeError):
-    pass
+    """Something went wrong on one call. Recoverable: fall back and play on."""
+
+
+class LLMConfigError(LLMError):
+    """The setup is wrong and every call will fail the same way.
+
+    A bad token, a model name the endpoint does not serve, a URL that is not an
+    OpenAI-compatible API. Falling back on these would play a whole run on the
+    backup heuristic and report it as an LLM result — which, in a benchmark, puts
+    an entry on the leaderboard labelled `llm` that no model ever played.
+    So these stop the run instead.
+    """
 
 
 # ------------------------------------------------------------------------ bot
@@ -277,9 +288,13 @@ class LLMBot(Bot):
         n = len(state["actions"])
         try:
             index, why = self._agentic_round(state)
-        except Exception as e:  # noqa: BLE001 — no error may stop the run
+        except LLMConfigError:
+            # Not recoverable: every later call fails identically. Better to stop
+            # than to quietly hand the run to the backup heuristic.
+            raise
+        except Exception as e:  # noqa: BLE001 — a transient failure must not end the run
             self.fallbacks += 1
-            self._last_why = f"(fell back: {type(e).__name__})"
+            self._last_why = f"(fell back: {str(e)[:80]})"
             if self.verbose:
                 print(f"   [llm] fallback: {type(e).__name__}: {e}")
             return self._fallback(state)
@@ -416,7 +431,20 @@ class LLMBot(Bot):
             with urllib.request.urlopen(req, timeout=180) as r:
                 answer = json.loads(r.read())
         except urllib.error.HTTPError as e:
-            raise LLMError(f"HTTP {e.code}: {e.read()[:200]!r}") from e
+            body = e.read()[:300].decode("utf-8", "replace")
+            if e.code in (401, 403):
+                raise LLMConfigError(
+                    f"HTTP {e.code} from {self.endpoint}: the endpoint rejected the "
+                    f"token.\n  Check FW_TOKEN — a placeholder left in place looks "
+                    f"exactly like this.\n  {body}"
+                ) from e
+            if e.code == 404:
+                raise LLMConfigError(
+                    f"HTTP 404 from {self.endpoint}/v1/chat/completions.\n"
+                    f"  Either the endpoint is not an OpenAI-compatible API, or it "
+                    f"does not serve MODEL_ID={self.model!r}.\n  {body}"
+                ) from e
+            raise LLMError(f"HTTP {e.code}: {body}") from e
         except Exception as e:  # network, timeout, malformed JSON
             raise LLMError(f"{type(e).__name__}: {e}") from e
 
