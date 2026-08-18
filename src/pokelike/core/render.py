@@ -48,17 +48,22 @@ def map_view(m: dict[str, Any] | None) -> str:
     return "\n".join(rows)
 
 
-# Drawn with box-drawing characters rather than +-|, and with the node glyphs
-# below rather than letters. No library: the engine already gives every node a
-# `layer` and a `col`, so there is no layout to compute — which is the only thing
-# a graph library would have done. What was missing was the drawing.
-GLYPH = {
-    "start": "◉", "battle": "⚔", "trainer": "♟", "catch": "◍", "item": "◆",
-    "pokecenter": "✚", "question": "?", "trade": "⇄", "move_tutor": "♪",
-    "boss": "★", "shiny": "✦", "pokemart": "$", "mutation": "%",
-    "evil_team": "☠", "silver": "◇", "legendary": "♛",
-}
-
+# EVERYTHING STRUCTURAL HERE IS ASCII, AND THAT IS NOT LAZINESS.
+#
+# The pretty characters — ▶ ◀ · ╱ ╲ │ ─ ╭ ╰ — are all East Asian AMBIGUOUS
+# width. Not one column, not two: whatever the terminal decided, and the process
+# drawing them cannot find out. Mixed with two-column emoji they drifted a
+# little further out of line on every row, which looked like a bug in the layout
+# and was a property of the alphabet.
+#
+# So the grid is drawn with / \ | - + > < ( ) . — every one of them narrow by
+# definition — and the only wide things are the emoji, which are unambiguously
+# two columns. Alignment then follows from the character set instead of from a
+# guess about the terminal.
+#
+# No library either: the engine gives every node a `layer` and a `col`, so there
+# was no layout to compute, which is the only thing a graph library would have
+# done. What was missing was the drawing.
 # Every one of these is TWO columns wide, checked with east_asian_width. A mixed
 # set is the worst case: `⚔` is one column while the rest are two, so the box
 # edges and the edge lines drift apart by a character per node.
@@ -116,7 +121,7 @@ def graph_view(m: dict[str, Any] | None, colour: bool = True,
     # An emoji is two terminal columns, so its cells and its spacing are wider.
     # The grid below is in DISPLAY columns, and a glyph simply occupies two of
     # them, which keeps the frame and the edges lined up.
-    glyphs, gw, pitch = (EMOJI, 2, 6) if emoji else (GLYPH, 1, 4)
+    glyphs, gw, pitch = (EMOJI, 2, 6) if emoji else (ICONS, 1, 4)
 
     # Each layer is CENTRED, not left-aligned. The game's map is a diamond — the
     # layers widen and close again — and pinning every layer to column zero
@@ -145,14 +150,14 @@ def graph_view(m: dict[str, Any] | None, colour: bool = True,
         for n in by_layer[layer]:
             g = glyphs.get(n["kind"], "·")
             if n["id"] == m.get("current"):
-                cell, kind = f"▶{g}◀", "here"
+                cell, kind = f">{g}<", "here"
             elif n.get("accessible") and not n.get("visited"):
                 cell, kind = f"({g})", "open"
             elif n.get("visited"):
                 # Marked in the TEXT, not only in the colour: a log piped to a
                 # file has no colour, and the path already walked is most of
                 # what makes the picture worth looking at.
-                cell, kind = f"·{g}·", "done"
+                cell, kind = f".{g}.", "done"
             else:
                 cell, kind = f" {g} ", "far"
             i = at[n["id"]] - 1
@@ -174,7 +179,11 @@ def graph_view(m: dict[str, Any] | None, colour: bool = True,
             if a["layer"] != layer or b["layer"] != layer + 1:
                 continue
             ca, cb = at[a["id"]], at[b["id"]]
-            gap[(ca + cb) // 2] = "│" if cb == ca else ("╲" if cb > ca else "╱")
+            # Halfway between the two glyph CENTRES, not between where they
+            # start. A two-column emoji is centred half a column right of its
+            # own position, so ignoring `gw` puts every connector half a
+            # character to the left of where the eye expects it.
+            gap[(ca + cb + gw - 1) // 2] = "|" if cb == ca else ("\\" if cb > ca else "/")
             drew = True
         if drew:
             rows.append(("".join(gap), [(0, span, "edge")]))
@@ -197,13 +206,13 @@ def graph_view(m: dict[str, Any] | None, colour: bool = True,
                 last = i + n
             out.append(padded[last:])
             padded = "".join(out)
-        return f"  {paint('│', 'frame')}{padded}"
+        return f"  {paint('|', 'frame')}{padded}"
 
-    top = paint("╭" + "─" * inner, "frame")
-    bot = paint("╰" + "─" * inner, "frame")
+    top = paint("+" + "-" * inner, "frame")
+    bot = paint("+" + "-" * inner, "frame")
     legend = "  " + "  ".join([
-        paint("▶here◀", "here"), paint("(can go)", "open"),
-        paint("·walked·", "done"), paint(" unseen ", "far"),
+        paint(">here<", "here"), paint("(can go)", "open"),
+        paint(".walked.", "done"), paint(" unseen ", "far"),
     ])
     return "\n".join([f"  {top}", *[framed(t, mk) for t, mk in rows], f"  {bot}", legend])
 
