@@ -61,7 +61,10 @@ src/pokelike/
 ├── leaderboard.py       submission folders, artifacts, index
 └── interfaces/          how something outside drives the game
     ├── cli/main.py        a human, in a terminal
-    └── api/server.py      a program, over HTTP
+    ├── api/server.py      a program, over HTTP
+    └── python/            a script, a notebook or the REPL
+        ├── driver.py        session(), open_game(), play(), compare()
+        └── example.ipynb    the cell-by-cell walkthrough
 experiments/             attempts at a better bot, outside the package
 ├── env/                   the game as an RL problem: environment, rewards, encoding
 ├── dyna_q/                tabular RL on that MDP: agent, train, evaluate
@@ -144,6 +147,13 @@ All of these were hit for real. Worth rereading before changing anything:
 - **The sync API is bound to its creating thread**, so `api/server.py` is
   single-threaded by necessity: `serve_forever()` must run on the thread that owns
   the game, or you get `greenlet.error: Cannot switch to a different thread`.
+- **Playwright's sync API refuses to start inside a running asyncio loop**, which
+  is exactly what Jupyter keeps open — it checks `loop.is_running()` and raises
+  `It looks like you are using Playwright Sync API inside the asyncio loop`, so
+  `nest_asyncio` does not help. `interfaces/python/driver.py` does not fight the
+  loop, it leaves it: when one is running, the game is built and driven on a
+  plain thread that has none. Every call is marshalled to that one thread,
+  because of the constraint above.
 - **`maxTeamSize` is a high-water mark, not a limit.** The real limit is 6.
 - **Non-usable items open an equip modal** which is not a `.screen`. Anything that
   only watches `.screen` elements gets stuck there forever.

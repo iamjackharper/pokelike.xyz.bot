@@ -48,6 +48,7 @@ def train(
     quiet: bool = False,
     checkpoint_every: int = 10,
     resume: bool = False,
+    alpha_norm: float | None = None,
 ) -> dict:
     from tqdm import tqdm
 
@@ -55,7 +56,7 @@ def train(
     fs = FeatureSet(groups)
     ckpt = MODELS / (Path(out).stem + ".checkpoint.json")
     agent = SarsaLambda(alpha=alpha, gamma=gamma, lam=lam, epsilon=epsilon, seed=seed0,
-                        featureset=fs)
+                        featureset=fs, alpha_norm=alpha_norm)
     history: list[dict] = []
     first_episode = 0
     if resume and ckpt.is_file():
@@ -212,6 +213,10 @@ def main() -> int:
     p.add_argument("--quiet", action="store_true", help="no progress bar (parallel runs)")
     p.add_argument("--checkpoint-every", type=int, default=10,
                    help="save progress every N episodes (0 disables)")
+    p.add_argument("--alpha-norm", type=float, default=None,
+                   help="divide the step by this constant instead of by the number "
+                        "of active features. Required to compare feature sets: see "
+                        "the note in agent.py")
     p.add_argument("--resume", action="store_true",
                    help="continue from the checkpoint instead of starting over")
     a = p.parse_args()
@@ -223,6 +228,7 @@ def main() -> int:
             gamma=a.gamma, lam=a.lam, epsilon=a.epsilon, port=a.port, out=a.out,
             groups=a.groups.split(",") if a.groups else None, quiet=a.quiet,
             checkpoint_every=a.checkpoint_every, resume=a.resume,
+            alpha_norm=a.alpha_norm,
         )
     print(f"log: {path}")
     return 0

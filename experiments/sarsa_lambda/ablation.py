@@ -39,12 +39,21 @@ MODELS = HERE / "output" / "models"
 # never collides with a game someone is playing in another terminal.
 PORT0 = 8900
 
+# Every variant divides the step size by THIS, instead of by however many of its
+# own features happen to be active. Measured on the game: the full set activates
+# 9.0 features per (s, a), action-only 3.0, minimal 1.2. Left to itself, dropping
+# a group would raise the effective learning rate up to 7.5x, so each run would
+# differ in two ways at once and the comparison would answer neither. The first
+# ablation diverged in exactly that order.
+ALPHA_NORM = 9.0
+
 
 def _train_cmd(v, episodes: int, reward: str, port: int, seed0: int) -> list[str]:
     cmd = [
         sys.executable, "-m", "experiments.sarsa_lambda.train",
         "--episodes", str(episodes), "--reward", reward, "--seed0", str(seed0),
         "--port", str(port), "--out", f"ablation_{v.name}.json",
+        "--alpha-norm", str(ALPHA_NORM),
     ]
     if v.groups is not None:
         cmd += ["--groups", ",".join(v.groups)]

@@ -1,6 +1,6 @@
 # 🏆 POKELIKE.XYZ BOT COMPETITION IS [OPEN]!!!
 
->
+
 > Write something that plays [pokelike.xyz](https://pokelike.xyz/) better than
 > mine, and put it on the [leaderboard](leaderboard/). Anyone can enter, no
 > permission needed: fork, add your bot, open a pull request.
@@ -251,21 +251,51 @@ g.score()          # what the run is worth
 CLI, API and bots are three faces over those five methods. None of them holds any
 game logic.
 
-### The two interfaces
+### The three interfaces
 
-**Python**
+**Python** — the server and the browser are started for you.
 
 ```python
-from pokelike import Game
-from pokelike.assets import AssetServer
+from pokelike import session
 
-with AssetServer("site") as s, Game(url=s.url) as g:
-    obs = g.reset(seed=42)
+with session() as game:
+    obs = game.reset(seed=42)
     while not obs["done"]:
         print(obs["actions"])   # [{'kind':'node','id':'n1_0','node':'catch'}, ...]
-        obs = g.step(0)
-    print(g.score())
+        obs = game.step(0)
+    print(game.score())
 ```
+
+Whole runs and comparisons, without writing the loop:
+
+```python
+from pokelike import play, compare
+
+result = play(MyBot(), seed=42)                 # one run, with its decision trace
+print(compare({"mine": MyBot()}, seeds=range(20))["table"])
+```
+
+`compare` plays every bot on the **same** seeds and pairs them. Runs vary
+enormously by luck here, so two separate averages mostly measure who drew the
+nicer maps.
+
+**In a notebook**, `with` cannot span cells — and starting a run in one cell,
+taking a move in the next and reading the state in the one after is the point of
+using one. So there is a game that outlives the cell that opened it:
+
+```python
+from pokelike import open_game
+
+game = open_game()            # cell 1
+obs = game.reset(seed=42)     # cell 2
+obs = game.step(0)            # cell 3
+game.close()                  # last cell
+```
+
+[`interfaces/python/example.ipynb`](src/pokelike/interfaces/python/example.ipynb)
+is the full walkthrough, cell by cell: open a game, read the state raw and
+rendered, take a move, draw the map, reorder the team, read the score, hand the
+rest to a bot, compare two bots.
 
 **HTTP** — `uv run pokelike api` (port 8423). The browser stays alive between
 calls, which is why this is a process that has to keep running.
@@ -283,22 +313,25 @@ calls, which is why this is a process that has to keep running.
 
 ### Who can do what
 
-The two interfaces are meant for different drivers, so they are not identical —
-but everything needed to *play* is in both.
+The interfaces are meant for different drivers, so they are not identical —
+but everything needed to *play* is in all three.
 
-| | CLI | HTTP |
-|---|---|---|
-| start, read, act, score | yes | yes |
-| see the screen | `--shots`, `--watch` | `GET /screenshot` |
-| what the state contains | `pokelike schema` | `GET /schema` |
-| run a bot over many seeds | `pokelike bot` | — |
-| benchmark and submit | `pokelike bench` | — |
-| history and leaderboard | `pokelike stats`, `leaderboard` | — |
-| install and mirror | `pokelike setup`, `mirror` | — |
+| | CLI | HTTP | Python |
+|---|---|---|---|
+| start, read, act, score | yes | yes | yes |
+| swap the team order | `w a b` | `POST /reorder` | `game.reorder(a, b)` |
+| see the screen | `--shots`, `--watch` | `GET /screenshot` | `game.screenshot(path)` |
+| draw the map | `-g` | — | `render.graph_view` |
+| what the state contains | `pokelike schema` | `GET /schema` | `pokelike.schema.describe` |
+| run a bot over many seeds | `pokelike bot` | — | `evaluate`, `compare` |
+| benchmark and submit | `pokelike bench` | — | `bench.run_benchmark` |
+| history and leaderboard | `pokelike stats`, `leaderboard` | — | `stats`, `leaderboard` |
+| install and mirror | `pokelike setup`, `mirror` | — | `assets.mirror.build` |
 
 The missing HTTP rows are batch and installation jobs, not ways of playing a
 run. Exposing them over an interface whose whole job is one live game would be
-scope, not symmetry.
+scope, not symmetry. Python has them all because it is the language everything
+is written in: there is nothing to expose, only something to import.
 
 ---
 
