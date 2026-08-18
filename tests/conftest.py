@@ -25,9 +25,22 @@ SITE = ROOT / "site"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-# Ports well away from the defaults, so a test run never collides with a game
-# the developer is playing in another terminal.
-ASSET_PORT = 8551
+def free_port() -> int:
+    """A port the OS says is free, asked for at the moment it is needed.
+
+    It used to be the constant 8551, which collides with itself: two test runs
+    at once, or one left over from a killed run still holding the socket, and
+    every browser-backed test errors with `Address already in use` — which reads
+    exactly like a real failure and is not one.
+    """
+    import socket
+
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
+ASSET_PORT = free_port()
 
 
 def pytest_collection_modifyitems(config, items):

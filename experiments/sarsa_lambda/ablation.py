@@ -25,6 +25,8 @@ import sys
 import time
 from pathlib import Path
 
+from experiments.env.logs import log_dir
+
 from .agent import SarsaLambda
 from .features import BY_NAME, VARIANTS, describe
 
@@ -54,8 +56,7 @@ def train_all(variants, episodes: int, reward: str, workers: int, seed0: int) ->
     queue = list(variants)
     running: list[tuple] = []
     done: dict[str, int] = {}
-    logs = RESULTS / "logs"
-    logs.mkdir(parents=True, exist_ok=True)
+    logs = log_dir(HERE)   # train.py writes into it; created here so it exists
     started = time.monotonic()
 
     print(f"training {len(queue)} variants, {workers} at a time, "
@@ -68,21 +69,22 @@ def train_all(variants, episodes: int, reward: str, workers: int, seed0: int) ->
             v = queue.pop(0)
             slot = free.pop(0)
             slot_of[v.name] = slot
-            log = (logs / f"{v.name}.log").open("w", encoding="utf-8")
+            # No redirection here: train.py tees its own output into logs/
+            # already, and a second copy through this pipe would only give two
+            # files that can disagree.
             p = subprocess.Popen(
                 _train_cmd(v, episodes, reward, PORT0 + slot, seed0),
-                cwd=ROOT, stdout=log, stderr=subprocess.STDOUT,
+                cwd=ROOT, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT,
             )
-            running.append((v, p, log))
+            running.append((v, p))
             print(f"  started {v.name:<16} ({v.n} features) on port {PORT0 + slot}")
 
         time.sleep(5)
         for entry in list(running):
-            v, p, log = entry
+            v, p = entry
             if p.poll() is None:
                 continue
             running.remove(entry)
-            log.close()
             free.append(slot_of[v.name])
             done[v.name] = p.returncode
             mins = (time.monotonic() - started) / 60

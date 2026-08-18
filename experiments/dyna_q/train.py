@@ -19,6 +19,7 @@ import json
 import time
 from pathlib import Path
 
+from experiments.env.logs import tee
 from experiments.env.environment import TrainingEnv
 
 from .agent import DynaQ

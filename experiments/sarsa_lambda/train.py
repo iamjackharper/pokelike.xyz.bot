@@ -17,6 +17,7 @@ import statistics
 import time
 from pathlib import Path
 
+from experiments.env.logs import tee
 from experiments.env.rewards import get as get_reward
 from pokelike.assets import AssetServer
 from pokelike.core.game import Game
@@ -174,9 +175,15 @@ def main() -> int:
                         "See features.GROUPS — this is what an ablation varies.")
     p.add_argument("--quiet", action="store_true", help="no progress bar (parallel runs)")
     a = p.parse_args()
-    train(episodes=a.episodes, seed0=a.seed0, reward=a.reward, alpha=a.alpha,
-          gamma=a.gamma, lam=a.lam, epsilon=a.epsilon, port=a.port, out=a.out,
-          groups=a.groups.split(",") if a.groups else None, quiet=a.quiet)
+    # Written to experiments/sarsa_lambda/logs/ by the run itself, so the log of
+    # a training run is never the thing that was not kept.
+    with tee(HERE, a.out.replace(".json", "")) as path:
+        train(
+            episodes=a.episodes, seed0=a.seed0, reward=a.reward, alpha=a.alpha,
+            gamma=a.gamma, lam=a.lam, epsilon=a.epsilon, port=a.port, out=a.out,
+            groups=a.groups.split(",") if a.groups else None, quiet=a.quiet,
+        )
+    print(f"log: {path}")
     return 0
 
 
