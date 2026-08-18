@@ -326,11 +326,15 @@ class LLMBot(Bot):
             raise
         except Exception:  # noqa: BLE001 — handled again, and counted, in choose
             return None
-        self._pending = (state.get("steps"), index, why)
         team = state.get("team") or []
         if lead is None or not 0 < lead < len(team):
+            self._pending = (state.get("steps"), index, why)
             return None
-        self._last_why = f"lead: {team[lead]['name']}"
+        # Carried into the turn's explanation rather than set here: `choose`
+        # overwrites `_last_why` with the move reason, so a lead decision set
+        # here was performed and then never shown.
+        why = f"lead {team[lead]['name']} | {why}"
+        self._pending = (state.get("steps"), index, why)
         return (0, lead)
 
     def choose(self, state: dict[str, Any]) -> int:
