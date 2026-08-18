@@ -96,6 +96,12 @@ rendering, the HTTP call and what happens when it fails all live in
 different loops are two harnesses being compared, and the model is the smaller
 half of that difference.
 
+If the prompt is not where your idea lives, you can go further without leaving
+the harness: `EXTRA_TOOLS` and `run_tool` give the model something the shared
+tools do not offer, and overriding `_call` puts a different model behind it —
+a local one, or anything that is not an HTTP endpoint at all. Both are recorded
+in your result, so your row says what it actually was.
+
 What it writes already plays, which matters more than it sounds: measure it
 before you change a line, and when the number moves later you know it moved
 because of you.

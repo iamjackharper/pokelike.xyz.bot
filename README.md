@@ -506,6 +506,13 @@ read-only tools, and closes with `play(index)`:
 `what_lies_ahead` is the one that matters: the choice closes the other nodes on
 that layer forever, and without reading the edges the model cannot know that.
 
+**You can give it tools of your own**, or replace these outright — declare them
+in `EXTRA_TOOLS` and answer them in `run_tool`. Only `play` is required, since
+it is how a turn ends. What a bot cannot do is hide that it did it: the tool
+names go into its result and the standings mark a bot whose set differs from
+the shared one, because it is answering a different question and comparing it
+with the rest as though it were the same one is the mistake.
+
 If the model returns a bad index, times out, or never calls `play`, the bot falls
 back to a safe choice and the fallback is counted. **A run never dies because of
 one flaky request.** But every fallback is a turn the model did not decide,

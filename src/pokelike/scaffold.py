@@ -11,6 +11,19 @@ from pathlib import Path
 
 from .bot.catalogue import BOTS, available, slugify
 
+
+def fill(template: str, **fields: str) -> str:
+    """Substitutes `{name}`-style placeholders without `str.format`.
+
+    `format` would treat every brace in a template as a field, and a template for
+    an LLM bot is full of JSON: the tool schemas are literal `{...}`. Using it
+    here meant that adding a commented-out tool example to the template broke
+    `new-bot` with a KeyError about a JSON key. Plain replacement cannot.
+    """
+    for key, value in fields.items():
+        template = template.replace("{" + key + "}", value)
+    return template
+
 TEMPLATE = '''"""{title}
 
     uv run pokelike bot --bot {name} --runs 5 -d
@@ -132,6 +145,25 @@ Think briefly, then call `play`. Always call `play`."""
     # MAX_ROUNDS = 4        # tool rounds before the turn is given up on
     # MEMORY = 6            # past turns shown back to the model
     # TOKEN_BUDGET = 0      # per-run ceiling; 0 means none. ~30k is one run
+
+    # If the prompt is not where your idea lives, give the model a tool the
+    # shared four do not offer. `play` must survive -- it is how a turn ends.
+    # Your result records that your tools differ, so the row is read as the
+    # different question it is rather than compared as if it were the same one.
+    #
+    # EXTRA_TOOLS = [{
+    #     "type": "function",
+    #     "function": {
+    #         "name": "bag",
+    #         "description": "What you are carrying.",
+    #         "parameters": {"type": "object", "properties": {}},
+    #     },
+    # }]
+    #
+    # def run_tool(self, name, args, state):
+    #     if name == "bag":
+    #         return ", ".join(state.get("bag") or []) or "(empty)"
+    #     return super().run_tool(name, args, state)
 '''
 
 README = '''# {name}
@@ -175,10 +207,10 @@ def new_bot(name: str, root: Path | None = None, llm: bool = False) -> Path:
     template = LLM_TEMPLATE if llm else TEMPLATE
     kind = "a prompt to try." if llm else "a starting point."
     (d / "bot.py").write_text(
-        template.format(name=slug, cls=cls, title=f"{slug}: {kind}"),
+        fill(template, name=slug, cls=cls, title=f"{slug}: {kind}"),
         encoding="utf-8",
     )
-    (d / "README.md").write_text(README.format(name=slug), encoding="utf-8")
+    (d / "README.md").write_text(fill(README, name=slug), encoding="utf-8")
     # Git does not track an empty directory, and a bot with no artifacts is
     # normal — a rules bot needs none — so leave something to keep the shape.
     (d / "artifacts" / ".gitkeep").write_text("", encoding="utf-8")

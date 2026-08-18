@@ -191,6 +191,7 @@ def build_index(root: Path | None = None) -> dict[str, Any]:
             "model": notes.get("model"),
             "harness": notes.get("harness"),
             "fallback_rate": notes.get("fallback_rate"),
+            "stock_tools": notes.get("stock_tools"),
             "fingerprint": (e.get("fingerprint") or "")[:12],
             "stale": e.get("stale", False),
             "unverified": e.get("unverified", False),
@@ -240,12 +241,15 @@ def as_markdown(index: dict[str, Any]) -> str:
     llm = [r for r in rows if r.get("model")]
     if llm:
         out += ["", "**Models.**", "",
-                "| bot | model | harness | fallback rate |", "|---|---|--:|--:|"]
+                "| bot | model | harness | tools | fallback rate |",
+                "|---|---|--:|---|--:|"]
         for r in llm:
             rate = r.get("fallback_rate")
             flag = " ⚠︎" if rate is not None and rate > 0.1 else ""
+            stock = r.get("stock_tools")
+            tools = "shared" if stock else ("own ⚠︎" if stock is False else "-")
             out.append(f"| {r.get('bot')} | `{r.get('model')}` | {r.get('harness', '-')} "
-                       f"| {rate if rate is not None else '-'}{flag} |")
+                       f"| {tools} | {rate if rate is not None else '-'}{flag} |")
         out += ["",
                 "An LLM result is **not reproducible**: providers change models behind a "
                 "fixed name and sampling is stochastic. `fallback rate` is the share of "
@@ -253,7 +257,10 @@ def as_markdown(index: dict[str, Any]) -> str:
                 "heuristic — **⚠︎ above 0.1 means the row is measuring us more than the "
                 "model**. `harness` is the version of the shared loop in "
                 "`pokelike/bot/llm.py`; rows measured under different numbers were not "
-                "asked the same question."]
+                "asked the same question. `tools` says whether the model was "
+                "offered the shared four or a set of the bot's own — **own ⚠︎ is "
+                "not a fault**, it is a different question, and comparing it "
+                "with the rest as though it were the same one is."]
     out += [
         "",
         "Ranked by **badges**, the game's own progress counter. `badges~` is the mean "

@@ -85,6 +85,26 @@ def test_the_sarsa_bot_freezes_exactly_the_features_it_was_trained_on():
     assert sys.modules[frozen].feature_names() == trained_on()
 
 
+def test_new_bot_writes_something_that_loads(tmp_path):
+    """Both templates, because they break differently.
+
+    The LLM one is full of JSON — tool schemas are literal braces — and the
+    scaffold used `str.format`, so adding a commented-out tool example to the
+    template made `new-bot` die with a KeyError about a JSON key. A template is
+    only text until someone runs it.
+    """
+    from pokelike.bot.catalogue import load_class
+    from pokelike.bot.llm import LLMBot
+    from pokelike.scaffold import new_bot
+
+    plain = load_class(new_bot("probe-plain", tmp_path) / "bot.py")
+    assert plain(seed=0).choose({"actions": [{}, {}], "team": []}) in (0, 1)
+
+    llm = load_class(new_bot("probe-llm", tmp_path, llm=True) / "bot.py")
+    assert issubclass(llm, LLMBot) and llm.PROMPT
+    assert "play" in [t["function"]["name"] for t in llm.tools(llm)]
+
+
 def test_the_two_sarsas_are_two_different_policies():
     """v1 and v2 exist side by side to be compared, so they must differ.
 
@@ -143,6 +163,50 @@ def test_an_llm_bot_refuses_to_build_without_credentials(monkeypatch):
     with pytest.raises(LLMConfigError) as e:
         Probe()
     assert "MODEL_ID" in str(e.value)
+
+
+def test_a_bot_may_add_its_own_tools_but_not_remove_play(monkeypatch):
+    """Tools are overridable, because a prompt is not the only thing worth trying.
+
+    `play` is the exception, checked once at construction rather than discovered
+    fifty runs in: it is how a turn ends, so without it every turn exhausts its
+    rounds and falls back — a whole benchmark of our backup heuristic, filed
+    under the model's name, with nothing that looks wrong until you read
+    `fallback_rate`.
+    """
+    from pokelike.bot.llm import LLMBot, LLMConfigError
+
+    for var, val in (("FW_ENDPOINT", "https://x.invalid"),
+                     ("FW_TOKEN", "t"), ("MODEL_ID", "m")):
+        monkeypatch.setenv(var, val)
+
+    class Extra(LLMBot):
+        PROMPT = "x"
+        EXTRA_TOOLS = [{"type": "function",
+                        "function": {"name": "bag", "parameters": {}}}]
+
+        def run_tool(self, name, args, state):
+            return "a potion" if name == "bag" else super().run_tool(name, args, state)
+
+    bot = Extra()
+    assert "bag" in bot.tool_names() and "play" in bot.tool_names()
+    assert bot.run_tool("bag", {}, {}) == "a potion"
+    assert "empty team" in bot.run_tool("team_details", {}, {"team": []})
+    # An invented tool is answered, not raised: the model should be told and
+    # allowed to carry on, not have the turn thrown away and played by fallback.
+    assert "unknown tool" in bot.run_tool("invented", {}, {})
+    # And the difference is recorded, so the row is not read as comparable.
+    assert bot.notes()["stock_tools"] is False
+
+    class NoPlay(LLMBot):
+        PROMPT = "x"
+
+        def tools(self):
+            return []
+
+    with pytest.raises(LLMConfigError) as e:
+        NoPlay()
+    assert "play" in str(e.value)
 
 
 def test_a_name_matching_two_bots_is_an_error_not_a_guess():
