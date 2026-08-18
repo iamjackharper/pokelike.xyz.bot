@@ -52,7 +52,10 @@
   // Matched by SHAPE rather than by id, so the next one is caught too: a visible
   // element sitting directly under <body>, painted over the page. The named
   // exclusions are the decorative layers that are not interactive.
-  const OVERLAY_SKIP = /weather|maint|typechart|^sl-/;
+  // `tutorial` is ours: browser.py hides that layer outright, and a hidden
+  // element cannot be a decision. Listed anyway so the two never depend on each
+  // other's ordering again.
+  const OVERLAY_SKIP = /weather|maint|typechart|tutorial|^sl-/;
 
   const overlays = () => [...document.body.children].filter((e) => {
     const id = e.id || '';

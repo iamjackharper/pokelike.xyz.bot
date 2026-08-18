@@ -56,7 +56,17 @@ INIT_SCRIPT = """
 # not have intercepted anything either. This buys clean screenshots, nothing
 # else. Applied on every run and not only under --watch, so that what a
 # screenshot shows is what a headless run did.
-HIDE_TUTORIAL_CSS = ".tutorial-callout { display: none !important; }"
+#
+# It hides the LAYER as well as the callouts, and that is not tidiness. Hiding
+# only `.tutorial-callout` left `#tutorial-overlay` in place — invisible, but
+# still a body-level `position: fixed; inset: 0` element. The overlay detector
+# added to `bridge.js` afterwards duly found it, could not dismiss it because
+# everything inside was `display: none`, and span until `_settle` gave up 90
+# seconds later. Every step of every run. Two changes that were each correct
+# alone and deadlocked together.
+HIDE_TUTORIAL_CSS = (
+    "#tutorial-overlay, .tutorial-callout { display: none !important; }"
+)
 
 # The engine's PRNG is 32-bit: `INIT_SCRIPT` above does `(cfg.seed >>> 0) || 1`.
 # That is the real range of a run seed, and going outside it fails in three ways
