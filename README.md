@@ -9,10 +9,10 @@ policies: Dyna-Q and linear SARSA(λ)), the interface for writing your own is a
 single method, and there is a benchmark and a leaderboard so bots can be compared
 honestly.
 
-https://github.com/pierpierpy/pokelike.xyz.bot/assets/llm_playthrough.mp4
+![An LLM playing a run](img/llm_playthrough.gif)
 
-*An LLM playing a run: it reads the state, calls a couple of read-only tools and
-commits to a move each turn.*
+*An LLM playing a run, sped up. Each turn it reads the state, may call a
+read-only tool, and commits to one move with a reason.*
 
 ---
 

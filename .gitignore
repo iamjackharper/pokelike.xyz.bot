@@ -19,4 +19,6 @@ experiments/*/logs/
 
 # too big for git (GitHub caps files at 100 MB): upload it to a release or
 # drag it into an issue to get a CDN link, and reference that from the README
+# source recordings: the GIF beside them is what ships (gitignore has no
+# trailing comments, so this one goes on its own line)
 img/*.mp4
