@@ -151,13 +151,17 @@ It arrives in about 50 episodes, roughly 1000 transitions, and then not only
 flattens but drifts back down as epsilon anneals. Dyna-Q had 400 episodes and
 never left the floor.
 
-**Read the plateau as a limit of the features, not of the method.** The weights
-say where it comes from: the largest are `team_size`, `bias`, `map_index`,
-`badges`, all of which are state-only. They shift every action in a state by the
-same amount and therefore cancel in the argmax — they fit the level of the
-return, not the choice. The features that actually decide anything are further
-down: `node:trainer*small_team`, `mon_new_type`, `mon_best_stats`. That is the
-next thing worth working on, and it is not a hyperparameter.
+**The weights invite a conclusion that turns out to be wrong**, and it is worth
+leaving the reasoning here because the ablation below is what corrected it. The
+largest weights are `team_size`, `bias`, `map_index`, `badges` — all state-only.
+They shift every action in a state by the same amount, so they cancel in the
+argmax and cannot change a single choice. The obvious reading is that most of the
+policy is not policy, and that cutting them would help.
+
+It does not. Cutting them costs 0.24 badges. They carry the *level* of the
+return, and the bootstrapped target is built out of that, so removing them makes
+every backup noisier. Being unable to change a decision directly is not the same
+as being useless.
 
 ## Layout
 
@@ -204,37 +208,67 @@ A variant that drops features and does **not** get worse is the interesting
 result, not a disappointing one: it means those features were never doing the
 work their weights suggested.
 
-### The first ablation, and why it does not answer the question
+### The ablation
 
-Run against feature set **v1**, the 81 features, before team order, items and the
-move tutor existed. The counts below are of that set.
+Five feature sets, 300 episodes each, then greedy on 25 seeds training never
+touched. Every variant divides the step size by the same constant, so the only
+thing that differs between them is which features they carry.
 
 ```
-variant           feats   badges~   score~   vs random     t     max |w|
-full                 81      1.52     67.6   15W-10D-0L  4.18        129
-no-interactions      45      1.28     54.0   12W-11D-2L  2.87        138
-minimal              23      1.04    -16.0   12W-10D-3L  2.62   3.81e+32
-action-only          65      0.88    -29.6    8W-15D-2L  2.01   2.35e+09
-random                       0.64      3.2
+variant           feats   badges~  badges+   score~   vs random      t     max |w|
+full                100      1.60        7     81.6   14W-11D-0L   3.43        105
+action-only          84      1.36        8     58.2   13W-10D-2L   2.42         74
+minimal              23      1.24        4     56.0    13W-9D-3L   3.00         85
+no-v2                81      1.20        3     66.2   14W-10D-1L   4.30        111
+no-interactions      64      1.12        3     46.8   11W-13D-1L   3.12        118
+random                       0.64        2      3.2
 ```
 
-Read the last column before the others. **The two worst variants are the two
-that diverged numerically.** Their scores measure what a broken linear model
-does, not what those features are worth.
+**The whole set wins, and it does not lose a single seed.** Everything beats
+random with t above 2, so the method works; what the table is about is which
+features earn their place.
 
-The cause is in this repo, not in the game: α is normalised **per active
-feature** (`alpha / len(x)`). Dropping groups leaves fewer active features per
-(s, a), so the effective step per feature grows — and the divergence order
-follows the active-feature count exactly. So each variant changed two things at
-once, the features and the learning rate, and an ablation that varies two things
-answers nothing.
+**My prediction was wrong, and this is the run that says so.** `action-only`
+drops `context` and `screen` — the groups that depend on the state and not on the
+action — on the reasoning that they add the same number to every option and
+therefore cancel in the argmax. That reasoning is correct about the argmax and
+wrong about the agent: dropping them costs 0.24 badges. They cannot change a
+choice directly, but they carry the *level* of the return, and the bootstrapped
+target is built out of that. Take them away and every backup is noisier.
 
-It is the first suspect named in "where to look if it stalls", below, and it
-still got missed. The rerun holds the effective step fixed across variants.
+It is written down in `features/variants.py` as the falsifier, before the run:
+*"If this LOSES, my reading of the weights is wrong and the state-only features
+are helping the bootstrapped target more than they cost."* It lost.
 
-One thing did come out clean: `full` reproduced the original run **bit for bit**
-across the features/ repackaging, the `FeatureSet` refactor and the move to
-`output/`. The restructure moved nothing.
+**Feature count and performance are not the same axis.** `minimal`, with 23
+features, beats `no-v2` with 81 and `no-interactions` with 64. So the 36 node ×
+situation crosses are not merely unhelpful in some combinations, they are
+crowding out the few features that discriminate. The three groups `minimal`
+keeps — what the node is, what is on the Pokemon card, what lies one step
+ahead — are apparently most of the signal.
+
+**And the v2 groups do help here**, by 0.40 badges: `full` 1.60 against `no-v2`
+1.20. That sits awkwardly next to the head-to-head on the 50 standard seeds,
+where the same comparison gave +0.06 with t = 0.62. Different seeds, different
+answer, and 25 runs against 50 is not enough to settle it either way. What can be
+said is that team order, items and the move tutor are not dead weight, and that a
+single benchmark of 50 runs cannot resolve a difference this size.
+
+### Why the first attempt at this was thrown away
+
+The first ablation put `minimal` and `action-only` last, and it was measuring
+something else. Their weights had diverged, to 10³² and 10⁹.
+
+The step size was normalised **per active feature** — `alpha / len(x)` — and the
+number of active features is a property of the feature set. Measured on this
+game: the full set activates 9.0 per (s, a), `action-only` 3.0, `minimal` 1.2. So
+dropping a group silently multiplied the effective learning rate by up to 7.5,
+and the divergence order followed that column exactly.
+
+Two things varied per run and the comparison answered neither. Every variant now
+divides by a shared constant, `ALPHA_NORM = 9.0` in `ablation.py`, and the whole
+table sits between 74 and 118. **If you ablate a feature set, hold the effective
+step fixed.**
 
 ## Running it
 
