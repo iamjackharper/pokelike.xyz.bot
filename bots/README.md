@@ -123,6 +123,13 @@ leaving `5·KO − 10·faints`, which rewards fighting rather than getting furth
 Score is still reported, because a bot that scores badly while earning badges is
 telling you something about how it earns them.
 
+**What 50 seeds can resolve.** Badges vary run to run with a standard deviation
+around 0.7, so the mean over 50 seeds carries a standard error near 0.1 badges.
+Two bots whose means differ by less than roughly **0.3 badges** are not
+distinguishable by this benchmark: the gap between the top two rows is that
+kind of gap. Beating the leader means beating it by a visible margin, not by a
+decimal.
+
 **The game bundle's hash is recorded.** The game is updated upstream from time to
 time, and results from before and after an update are not comparable. Without
 recording it, a table mixes them silently.
