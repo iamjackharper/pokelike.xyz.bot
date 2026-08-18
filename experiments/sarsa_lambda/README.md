@@ -293,9 +293,12 @@ uv run python -m experiments.sarsa_lambda.evaluate --episodes 25 --seed0 40000
 | `--table` | *evaluate*: file to read from `output/models/` | `sarsa.json` |
 | `--groups` | *train*: feature groups to keep, comma separated | all |
 
-`--out` deliberately does not default to `sarsa_v1.json`: that is the file
-[`bots/sarsa/`](../../bots/sarsa/) loads, so a training run
-writing there would silently replace the policy that is on the leaderboard.
+`--out` deliberately does not default to a name a submitted bot reads. Both
+[`bots/sarsa-v1/`](../../bots/sarsa-v1/) and
+[`bots/sarsa-v2/`](../../bots/sarsa-v2/) load `artifacts/weights.json` from
+inside their own folder and nowhere else, so a training run cannot silently
+replace a policy that is on the leaderboard. Promoting a candidate is a copy you
+make on purpose, followed by a benchmark.
 
 ## You can read what it learned
 

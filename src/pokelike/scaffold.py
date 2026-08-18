@@ -79,6 +79,61 @@ class {cls}(Bot):
     #                                       the result when you benchmark
 '''
 
+LLM_TEMPLATE = '''"""{title}
+
+    export FW_ENDPOINT="https://..."   # base URL, no /v1
+    export FW_TOKEN="..."
+    export MODEL_ID="..."              # unless you pin MODEL below
+    uv run pokelike bot --bot {name} --runs 3 -d
+    uv run pokelike bench --bot {name} --dry-run
+
+THE PROMPT IS THE SUBMISSION
+Everything around it lives in `pokelike.bot.llm`: the tools, the agentic loop,
+how the state is rendered, one HTTP call per turn, and what happens when a call
+fails. That harness is shared by every LLM bot ON PURPOSE -- two bots with
+different loops are two harnesses being compared, and the model is the smaller
+half of the difference.
+
+So the only thing you have to write is `PROMPT`. `GAME_RULES` is the factual
+half, read out of the game bundle rather than guessed; keep it and add your
+strategy, or drop it and write your own if you think the facts are the problem.
+
+CREDENTIALS NEVER GO IN THIS FILE
+Endpoint and token come from the environment, always. The MODEL ID is not a
+secret and you may pin it: doing so puts it inside the fingerprint, so a
+leaderboard row means one specific model and swapping the model shows up as a
+changed bot. Leave it None and the bot plays whatever $MODEL_ID names.
+
+WHAT TO WATCH IN THE RESULT
+`fallback_rate`. Every fallback is a turn the model did not decide, played by the
+backup heuristic under your bot's name. A high rate is a broken run, not a bad
+model, and reading it as a score is the easiest mistake to make here.
+"""
+
+from pokelike.bot.llm import GAME_RULES, LLMBot
+
+
+class {cls}(LLMBot):
+    name = "{name}"
+
+    PROMPT = GAME_RULES + """
+PLAY LIKE THIS
+- Say something here that a model would not have done on its own. That is the
+  whole experiment: `bots/llm-baseline/` is the same harness with no strategy,
+  so anything you add is measured against it.
+
+Think briefly, then call `play`. Always call `play`."""
+
+    # Every one of these is optional; these are the defaults.
+    #
+    # MODEL = None          # pin an id here, or leave $MODEL_ID to name it
+    # TEMPERATURE = 0.6
+    # MAX_TOKENS = 1500
+    # MAX_ROUNDS = 4        # tool rounds before the turn is given up on
+    # MEMORY = 6            # past turns shown back to the model
+    # TOKEN_BUDGET = 0      # per-run ceiling; 0 means none. ~30k is one run
+'''
+
 README = '''# {name}
 
 _One line on what this bot does and how it decides._
@@ -96,8 +151,13 @@ uv run pokelike bench --bot {name} --dry-run
 '''
 
 
-def new_bot(name: str, root: Path | None = None) -> Path:
-    """Creates `bots/<name>/`, or explains why it cannot."""
+def new_bot(name: str, root: Path | None = None, llm: bool = False) -> Path:
+    """Creates `bots/<name>/`, or explains why it cannot.
+
+    With `llm=True` the bot starts from the shared LLM harness instead of an
+    empty `choose`, because an LLM bot that reimplements the loop is not
+    comparable with the others and the loop is the part nobody wants to write.
+    """
     slug = slugify(name)
     base = Path(root) if root else BOTS
     d = base / slug
@@ -112,8 +172,10 @@ def new_bot(name: str, root: Path | None = None) -> Path:
 
     cls = "".join(part.capitalize() for part in slug.split("-")) + "Bot"
     (d / "artifacts").mkdir(parents=True)
+    template = LLM_TEMPLATE if llm else TEMPLATE
+    kind = "a prompt to try." if llm else "a starting point."
     (d / "bot.py").write_text(
-        TEMPLATE.format(name=slug, cls=cls, title=f"{slug}: a starting point."),
+        template.format(name=slug, cls=cls, title=f"{slug}: {kind}"),
         encoding="utf-8",
     )
     (d / "README.md").write_text(README.format(name=slug), encoding="utf-8")

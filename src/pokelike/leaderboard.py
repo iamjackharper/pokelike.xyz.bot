@@ -157,7 +157,14 @@ def load_results(root: Path | None = None) -> list[dict[str, Any]]:
         r["bot"] = f.parent.name
         # Recomputed every time it is read, so a row cannot claim a score for
         # code that has since been edited without saying so.
-        r["stale"] = r.get("fingerprint") not in (None, fingerprint(f.parent))
+        #
+        # A result with NO fingerprint is not clean, it is unchecked -- it
+        # predates the mechanism, or was hand-written. Reported separately rather
+        # than folded into either bucket: calling it stale would be a claim we
+        # cannot support, and calling it fine would be the silence the
+        # fingerprint exists to prevent.
+        r["unverified"] = not r.get("fingerprint")
+        r["stale"] = bool(r.get("fingerprint")) and r["fingerprint"] != fingerprint(f.parent)
         out.append(r)
     return out
 
@@ -168,6 +175,7 @@ def build_index(root: Path | None = None) -> dict[str, Any]:
     rows = []
     for e in load_results(base):
         s = e.get("summary") or {}
+        notes = e.get("notes") or {}
         rows.append({
             "bot": e.get("bot"), "author": e.get("author"),
             "category": e.get("category"), "description": e.get("description"),
@@ -176,8 +184,16 @@ def build_index(root: Path | None = None) -> dict[str, Any]:
             "badges_best": s.get("badges_best"), "maps_mean": s.get("maps_mean"),
             "completed": s.get("completed"), "runs": s.get("runs"),
             "game": (e.get("game") or {}).get("sha256"),
+            # LLM rows only. `model` says what actually answered -- a bot that
+            # takes $MODEL_ID plays a different model for whoever ran it, so the
+            # row is meaningless without it. `harness` and `fallback_rate` are
+            # the two ways such a row can be true and still misleading.
+            "model": notes.get("model"),
+            "harness": notes.get("harness"),
+            "fallback_rate": notes.get("fallback_rate"),
             "fingerprint": (e.get("fingerprint") or "")[:12],
             "stale": e.get("stale", False),
+            "unverified": e.get("unverified", False),
             "artifacts": len(e.get("artifacts") or []),
         })
     # Ranked by badges, not score. The engine's score formula was written for the
@@ -209,20 +225,43 @@ def as_markdown(index: dict[str, Any]) -> str:
     ]
     for i, r in enumerate(rows, 1):
         n = lambda k, d="-": r[k] if r.get(k) is not None else d  # noqa: E731
-        mark = " ⚠︎" if r.get("stale") else ""
+        mark = " ⚠︎" if r.get("stale") else (" ?" if r.get("unverified") else "")
         out.append(
             f"| {i} | **[{r.get('bot')}]({r.get('bot')}/)** | {r.get('author') or '-'} "
             f"| {r.get('category') or '-'} | {n('runs', 0)} "
             f"| **{n('badges_mean')}** | {n('badges_best')} "
             f"| {n('score_mean')} | {n('score_best')} | `{r.get('fingerprint') or '-'}`{mark} |"
         )
+
+    # An LLM row is true and still misleading unless three things are visible:
+    # which model answered, which harness asked it, and how many turns it did
+    # not actually decide. A fallback is our heuristic playing under the model's
+    # name, so a row full of them measures us.
+    llm = [r for r in rows if r.get("model")]
+    if llm:
+        out += ["", "**Models.**", "",
+                "| bot | model | harness | fallback rate |", "|---|---|--:|--:|"]
+        for r in llm:
+            rate = r.get("fallback_rate")
+            flag = " ⚠︎" if rate is not None and rate > 0.1 else ""
+            out.append(f"| {r.get('bot')} | `{r.get('model')}` | {r.get('harness', '-')} "
+                       f"| {rate if rate is not None else '-'}{flag} |")
+        out += ["",
+                "An LLM result is **not reproducible**: providers change models behind a "
+                "fixed name and sampling is stochastic. `fallback rate` is the share of "
+                "turns the model did not decide, played instead by the harness's backup "
+                "heuristic — **⚠︎ above 0.1 means the row is measuring us more than the "
+                "model**. `harness` is the version of the shared loop in "
+                "`pokelike/bot/llm.py`; rows measured under different numbers were not "
+                "asked the same question."]
     out += [
         "",
         "Ranked by **badges**, the game's own progress counter. `badges~` is the mean "
         "over the standard 50 seeds, `badges+` the best single run. `code` is a "
         "fingerprint over the bot and its artifacts; **⚠︎ means the files changed "
         "since the score was measured**, so the row no longer describes what is on "
-        "disk. Re-run the benchmark to clear it.",
+        "disk, and **? means the result carries no fingerprint at all** and cannot "
+        "be checked either way. Re-running the benchmark clears both.",
         "",
     ]
     return "\n".join(out)
@@ -257,6 +296,7 @@ def format_table(index: dict[str, Any]) -> str:
             f"{(r['bot'] or '')[:19]:<20}{(r['category'] or ''):>10}{r['runs'] or 0:>6}"
             f"{v('badges_mean'):>8}{v('badges_best'):>8}{v('score_mean'):>9}"
             f"{v('score_stdev'):>8}{v('score_best'):>7}{v('completed'):>6}"
-            + ("  <- code changed since this was measured" if r.get("stale") else "")
+            + ("  <- code changed since this was measured" if r.get("stale")
+               else "  <- no fingerprint: cannot be checked" if r.get("unverified") else "")
         )
     return "\n".join(out)

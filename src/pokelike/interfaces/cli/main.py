@@ -298,7 +298,7 @@ def cmd_new_bot(args) -> int:
     from ...scaffold import new_bot
 
     try:
-        d = new_bot(args.name, BOTS)
+        d = new_bot(args.name, BOTS, llm=args.llm)
     except FileExistsError as e:
         print(e, file=sys.stderr)
         raise SystemExit(2) from e
@@ -306,10 +306,19 @@ def cmd_new_bot(args) -> int:
     rel = d.relative_to(Path.cwd()) if d.is_relative_to(Path.cwd()) else d
     slug = d.name
     print(f"created {rel}/\n")
-    print("  bot.py        a bot that already plays. Replace what it does.")
+    if args.llm:
+        print("  bot.py        a prompt on the shared LLM harness. Rewrite PROMPT.")
+    else:
+        print("  bot.py        a bot that already plays. Replace what it does.")
     print("  artifacts/    weights, prompts, tables — whatever yours needs")
     print("  README.md     one line on how it decides\n")
-    print("Try it, then measure it before you change anything:\n")
+    if args.llm:
+        print("Point it at a model, then measure it:\n")
+        print('  export FW_ENDPOINT="https://..."   # base URL, no /v1')
+        print('  export FW_TOKEN="..."')
+        print('  export MODEL_ID="..."')
+    else:
+        print("Try it, then measure it before you change anything:\n")
     print(f"  uv run pokelike bot --bot {slug} --runs 5 -d")
     print(f"  uv run pokelike bench --bot {slug} --dry-run\n")
     print("The whole path from here to a pull request is in GUIDE.md.")
@@ -514,6 +523,8 @@ def main(argv: list[str] | None = None) -> int:
 
     s = sub.add_parser("new-bot", help="create a new bot folder under bots/")
     s.add_argument("name", help="what to call it, e.g. my-bot")
+    s.add_argument("--llm", action="store_true",
+                   help="start from the shared LLM harness: you write only the prompt")
     s.set_defaults(func=cmd_new_bot)
 
     s = sub.add_parser("bench", help="run the standard benchmark and produce a result file")

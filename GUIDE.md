@@ -16,6 +16,7 @@ that are easy to get wrong are marked.
 **Then**
 [The optional hooks](#the-optional-hooks) ·
 [The rule that is not obvious](#the-rule-that-is-not-obvious) ·
+[Two people, one name](#two-people-one-name) ·
 [Where to experiment](#where-to-experiment) ·
 [What counts as a bot](#what-counts-as-a-bot)
 
@@ -56,7 +57,7 @@ It is worth watching the one at the top of the table play before you write
 anything:
 
 ```bash
-uv run pokelike bot --bot sarsa --seed 40003 --runs 1 -g -dd
+uv run pokelike bot --bot sarsa-v2 --seed 40003 --runs 1 -g -dd
 ```
 
 `-g` draws the map beside each decision, `-dd` prints the value it gave every
@@ -78,6 +79,22 @@ bots/mine/
 ```
 
 Nothing to register anywhere. `--bot mine` finds it because the folder is there.
+A prefix works too as long as it is unique — `--bot mi` is fine until someone
+adds `mine-v2`, at which point it becomes an error naming both rather than a
+guess.
+
+**If your bot is a prompt around a language model**, add `--llm` and you start
+from the shared harness instead of an empty `choose`:
+
+```bash
+uv run pokelike new-bot my-prompt --llm
+```
+
+You then write nothing but the prompt. The tools, the agentic loop, the state
+rendering, the HTTP call and what happens when it fails all live in
+`pokelike.bot.llm` and are shared by every LLM bot **on purpose**: two bots with
+different loops are two harnesses being compared, and the model is the smaller
+half of that difference.
 
 What it writes already plays, which matters more than it sounds: measure it
 before you change a line, and when the number moves later you know it moved
@@ -205,8 +222,22 @@ none of your setup. A folder that only works on the machine that made it is not
 a submission, it is a screenshot.
 
 [`bots/dyna-q/`](bots/dyna-q/) is the small worked example — an encoding frozen
-beside its weights. [`bots/sarsa/`](bots/sarsa/) is the large one, 100 feature
-definitions carried inline for exactly this reason.
+beside its weights. [`bots/sarsa-v2/`](bots/sarsa-v2/) is the large one, 100
+feature definitions carried inline for exactly this reason.
+
+**The one exception is `pokelike.bot.llm`**, the harness the `llm-*` bots share.
+It is shared knowingly, so editing it *does* reach every LLM bot ever measured —
+which is why it carries a `HARNESS` number that is written into every result, and
+why a row measured under an older one is flagged instead of being ranked as
+though it had been asked the same question.
+
+### Two people, one name
+
+`bots/` is flat, so two submissions cannot share a folder name. Git will say so
+on your pull request and one of you renames — a plain conflict, visible, nothing
+auto-resolved. The `--author` you pass to `bench` is what tells people apart in
+the standings. The fingerprint is not a name and is deliberately not used as one:
+it comes from the content, so it would change every time you retrained.
 
 ---
 

@@ -1,16 +1,26 @@
 """A trained SARSA(lambda) policy with linear function approximation, playing greedily.
 
-    pokelike bot --bot sarsa --runs 5
-    pokelike bench --bot sarsa --category rl --name my-sarsa
+    pokelike bot --bot sarsa-v2 --runs 5
+    pokelike bench --bot sarsa-v2 --category rl
 
     q̂(s, a, w) = wᵀ x(s, a)
 
 Trained by `experiments/sarsa_lambda/`. Sutton & Barto, 2nd edition: chapter 10
 for the semi-gradient control update, section 12.7 for the SARSA(lambda) form.
 
+WHICH ONE THIS IS
+-----------------
+The SECOND feature set: 100 features, encoding v2, adding type-matchup and
+team-shape terms to `sarsa-v1`'s 81. It scored 1.36 badges over the fifty
+standard seeds against v1's 1.30 -- ahead, but by less than the noise on fifty
+runs, which is worth saying plainly rather than rounding up into a story.
+
+The ablation in `experiments/sarsa_lambda/` says the same thing from the other
+side: every variant beats random, and no variant beats another.
+
 WHY THE FEATURE CODE IS COPIED IN HERE
 --------------------------------------
-Same reason as `dyna_q.py`, and it matters more here. A weight vector means
+Same reason as `bots/dyna-q/bot.py`, and it matters more here. A weight vector means
 nothing without the exact function that produced the vectors it multiplies:
 `w[43]` is a number, and only `feature_names()` says it is `mon_new_type`. If
 this file imported `experiments/sarsa_lambda/features/`, then inserting one
@@ -226,7 +236,7 @@ def feature_names(groups: list[str] | None = None) -> list[str]:
 
     Explicit names are most of the point of a linear model: a trained weight
     vector can be read and argued with. With no argument this is the full set,
-    which must stay byte-identical to what shipped — `bot/sarsa.py` freezes a
+    which must stay byte-identical to what shipped — `bots/sarsa-v2/bot.py` freezes a
     copy of it, and a test holds the two side by side.
     """
     for g in (groups or []):
@@ -506,7 +516,7 @@ def _tutor_features(put, state: dict[str, Any], action: dict[str, Any],
 
 
 class SarsaBot(Bot):
-    name = "sarsa"
+    name = "sarsa-v2"
 
     def __init__(self, seed: int = 0, weights: str | Path | None = None) -> None:
         path = Path(weights) if weights else find_weights()

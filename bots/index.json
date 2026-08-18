@@ -1,7 +1,7 @@
 {
  "entries": [
   {
-   "bot": "sarsa",
+   "bot": "sarsa-v2",
    "author": "pierpierpy",
    "category": "rl",
    "description": "Semi-gradient SARSA(lambda), 100 linear features incl. team order, items and the move tutor (S&B 10, 12.7), 300 episodes",
@@ -14,8 +14,34 @@
    "completed": 0,
    "runs": 50,
    "game": "eceae50bbda9e32b",
+   "model": null,
+   "harness": null,
+   "fallback_rate": null,
    "fingerprint": "d85f18fb544f",
+   "stale": true,
+   "unverified": false,
+   "artifacts": 2
+  },
+  {
+   "bot": "sarsa-v1",
+   "author": "pierpierpy",
+   "category": "rl",
+   "description": "Semi-gradient SARSA(lambda) with 81 hand-built linear features (S&B 10, 12.7), 300 episodes",
+   "score_mean": 59.3,
+   "score_stdev": 49.3,
+   "score_best": 195,
+   "badges_mean": 1.3,
+   "badges_best": 4,
+   "maps_mean": 0,
+   "completed": 0,
+   "runs": 50,
+   "game": "eceae50bbda9e32b",
+   "model": null,
+   "harness": null,
+   "fallback_rate": null,
+   "fingerprint": "",
    "stale": false,
+   "unverified": true,
    "artifacts": 2
   },
   {
@@ -32,8 +58,12 @@
    "completed": 0,
    "runs": 50,
    "game": "eceae50bbda9e32b",
+   "model": null,
+   "harness": null,
+   "fallback_rate": null,
    "fingerprint": "6aeb11457d3c",
    "stale": false,
+   "unverified": false,
    "artifacts": 2
   },
   {
@@ -50,8 +80,12 @@
    "completed": 0,
    "runs": 50,
    "game": "eceae50bbda9e32b",
+   "model": null,
+   "harness": null,
+   "fallback_rate": null,
    "fingerprint": "15bb569eddef",
    "stale": false,
+   "unverified": false,
    "artifacts": 0
   }
  ]

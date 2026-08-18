@@ -187,7 +187,7 @@ def feature_names(groups: list[str] | None = None) -> list[str]:
 
     Explicit names are most of the point of a linear model: a trained weight
     vector can be read and argued with. With no argument this is the full set,
-    which must stay byte-identical to what shipped — `bot/sarsa.py` freezes a
+    which must stay byte-identical to what shipped — `bots/sarsa-v2/bot.py` freezes a
     copy of it, and a test holds the two side by side.
     """
     for g in (groups or []):
