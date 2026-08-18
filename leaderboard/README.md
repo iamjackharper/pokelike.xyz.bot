@@ -147,6 +147,9 @@ what makes it a fair yardstick for anything that thinks about the order. Rerun
 
 ## How to submit
 
+New here? [GUIDE.md](../GUIDE.md) walks the whole thing end to end, from clone to
+pull request. What follows is the submission half on its own.
+
 **1. Fork.** Press *Fork* at the top right of the GitHub page. You now have your
 own copy you can push to freely.
 

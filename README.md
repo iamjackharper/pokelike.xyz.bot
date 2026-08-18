@@ -17,9 +17,12 @@
 > that was played, because scores from before and after a game update are not
 > comparable.
 >
-> **Where to start.** [Writing a bot](#writing-a-bot) is one method,
-> `choose(state) -> int`. [How to submit](leaderboard/#how-to-submit) is five
-> steps. Current standings are in [leaderboard/README.md](leaderboard/).
+> **Where to start: [GUIDE.md](GUIDE.md)** — seven steps from a clone to a pull
+> request, nothing skipped. The short version is that a bot is one method,
+> `choose(state) -> int`, and the rest is measuring it honestly.
+>
+> Current standings, and the command to play the leader without training
+> anything, are in [leaderboard/README.md](leaderboard/).
 >
 > The bar to beat right now is **1.36 badges**. Random gets 0.68, so it is lower
 > than it sounds.
