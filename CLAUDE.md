@@ -48,6 +48,10 @@ uv run pytest -m "not slow"      # fast tests only, no browser
 
 uv run pokelike bench --bot random             # the standard benchmark, 50 seeds
 uv run pokelike bench --bot random --dry-run   # ... without writing an entry
+uv run pokelike leaderboard                    # rebuild the standings from disk
+
+uv run pokelike new-bot mine                   # a bot folder that already plays
+uv run pokelike new-bot mine --llm             # ... starting from the LLM harness
 
 uv run python -m experiments.example.train --episodes 20            # the shape of one
 uv run python -m experiments.sarsa_lambda.train --episodes 300      # the real thing
@@ -64,12 +68,15 @@ src/pokelike/
 │   ├── browser.py         Playwright headless, pinned seed, flattened animations
 │   ├── game.py            class Game: reset/state/step/score/reorder
 │   └── render.py          ASCII map, team, actions
-├── bot/                 WHOEVER DECIDES THE MOVES
+├── bot/                 WHAT RUNS A BOT — not the bots themselves
 │   ├── base.py            abstract Bot: only choose() is required
-│   ├── random_bot.py      the baseline
-│   ├── llm.py             self-contained: prompts + tools + HTTP
-│   ├── dyna_q.py          a trained policy; the worked example of a submission
-│   └── sarsa.py           linear SARSA(λ); currently top of the leaderboard
+│   ├── catalogue.py       finds and loads a bot from its folder in bots/
+│   ├── llm.py             the harness every llm-* bot shares: tools, agentic
+│   │                      loop, HTTP, fallback policy. Shared so that a
+│   │                      benchmark of models holds the harness still
+│   └── random_bot.py      the baseline. Here rather than only in bots/random/
+│                          because compare() defaults to it, so it has to work
+│                          in a checkout with no bots/ at all
 ├── assets/
 │   ├── mirror.py          builds site/ in five phases
 │   └── server.py          serves site/ from disk
@@ -77,7 +84,8 @@ src/pokelike/
 ├── bench.py             the standard 50-seed benchmark
 ├── runner.py            play_run(): the one loop that plays a run with a bot
 ├── schema.py            what a bot receives, described from a live state
-├── leaderboard.py       submission folders, artifacts, index
+├── scaffold.py          new-bot: writes a bot folder that already plays
+├── leaderboard.py       reads bots/*/result.json, ranks, fingerprints
 └── interfaces/          how something outside drives the game
     ├── cli/main.py        a human, in a terminal
     ├── api/server.py      a program, over HTTP
@@ -96,13 +104,49 @@ experiments/             research. OURS are tracked as worked examples; anything
 
 Every experiment has the same shape: README, agent, train, evaluate, output/,
 logs/. Keep it that way when adding one.
-leaderboard/             submissions, their weights, and how to submit
+bots/                    THE BOTS. One folder each: bot.py, artifacts/,
+│                        result.json. Nothing registers them — the folder being
+│                        there is what makes `--bot <name>` work
+├── random/                the baseline, as a folder like everything else
+├── dyna-q/                tabular RL. LOST to random, and kept for that
+├── sarsa-v1/ sarsa-v2/    81 and 100 features. Both kept: the difference
+│                          between them is what either result is evidence about
+└── llm-baseline/ llm-survivor/ llm-explorer/ llm-analyst/
+                           one shared harness, four prompts. ~30 lines each
 tests/                   golden fingerprints + unit tests
 tools/deobfuscate.py     makes the bundle readable (needs node)
 ```
 
 Nothing in `src/` may import from `experiments/`: it is a scratch area, mostly
 untracked, and the package cannot depend on files that are not in the clone.
+
+**A bot is a folder, not a module.** `bots/<name>/bot.py` is loaded by path, so
+it uses absolute imports (`from pokelike.bot.base import Bot`) and carries what
+it needs in `artifacts/` beside it. It was relative imports that made the old
+archived submissions unrunnable: we claimed they were self-contained and they
+could not be executed from where they sat.
+
+`result.json` lives in the same folder and holds a sha256 over `bot.py` and every
+artifact. `pokelike leaderboard` recomputes it on read and marks a row stale when
+they no longer match, so a score cannot describe code that has since changed. A
+result with **no** fingerprint is reported as unchecked (`?`) rather than folded
+into either bucket: calling it stale would be a claim we cannot support, calling
+it clean would be the silence the fingerprint exists to prevent.
+
+**Only three things are structural, and `bot/llm.py` is the awkward one.** The
+test is whether something is built *on* or *competes*: `Bot` and `LLMBot` are
+built on, `RandomBot` is the yardstick, everything else goes in `bots/`. But
+`llm.py` being shared means editing it reaches every LLM bot ever measured —
+exactly what self-containment exists to prevent, only from the other side. It is
+shared anyway, because two bots with different loops are two harnesses being
+compared and the model is the smaller half of that difference. `HARNESS` is what
+keeps it honest: written into every result, flagged when it no longer matches.
+**Bump it whenever a change there could move a decision.**
+
+**Bot names resolve by exact match, then unique prefix.** An ambiguous prefix is
+an error naming the candidates, never a guess — `--bot sarsa` with both versions
+on disk would otherwise benchmark one of them and produce a wholly plausible
+number about the wrong bot.
 
 `interfaces/` and `bot/` contain no game logic: they all go through `Game`'s five
 methods. If you feel like putting a game rule in the CLI, it belongs in `core`.
@@ -228,6 +272,11 @@ All of these were hit for real. Worth rereading before changing anything:
   model playing badly, and `bench` would have filed it on the leaderboard as an
   `llm` entry no model ever played. Auth and model-not-found now raise
   `LLMConfigError` and stop the run.
+- **A recoverable fallback is still not a decision the model made.** The other
+  half of the same problem: timeouts *should* fall back, and every one of those
+  turns is our backup heuristic playing under the model's name. So the harness
+  counts them and `fallback_rate` is reported next to the score, flagged above
+  0.1. A row that looks like a mediocre model is often a broken run.
 - **`playwright install` exits 0 even when the host is missing libraries.** It
   only warns. Trusting the exit code made `setup` report success on a Raspberry
   Pi while every later command died with a stack trace, so setup now launches
@@ -288,13 +337,20 @@ The LLM bot is far slower (one or more HTTP calls per decision) and burns roughl
 
 ## Submissions
 
-`leaderboard/` takes bots from anyone, via fork and pull request. Two rules that
+`bots/` takes bots from anyone, via fork and pull request. Two rules that
 are not obvious and matter:
 
 - **A submission must be self-contained.** A trained policy freezes its state
   encoding inside the bot file rather than importing `experiments/env/encoding.py`,
   so improving the training code cannot silently change what past submissions
-  mean. `bot/dyna_q.py` is the worked example.
+  mean. `bots/dyna-q/bot.py` is the worked example. The one deliberate exception
+  is `pokelike.bot.llm`, above.
+
+- **Name collisions are left to git.** `bots/` is flat, so two submissions cannot
+  share a folder name and the conflict surfaces on the pull request. The
+  fingerprint is deliberately NOT used as a name: it is derived from the content,
+  so it would change on every retrain and take every link with it. `--author` is
+  what distinguishes people in the standings.
 - **Only a complete benchmark writes an entry.** `--runs N` and `--dry-run` both
   print the result and file nothing: a score over N seeds is not comparable to
   one over 50, so it is not a submission. It used to write one regardless, which

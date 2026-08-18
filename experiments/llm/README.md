@@ -7,7 +7,7 @@
 ---
 
 ```bash
-uv run python -m experiments.llm.compare --strategies survivor,explorer --seeds 5
+uv run python -m experiments.llm.compare --bots llm-survivor,llm-explorer --seeds 5
 ```
 
 The one experiment here that is not learning anything. An LLM bot's behaviour is
@@ -15,15 +15,20 @@ decided by its prompt, so "which prompt is better" is an empirical question with
 the same shape as any other: play both on **identical seeds** and compare them
 paired.
 
-Four strategies ship in [`bot/llm.py`](../../src/pokelike/bot/llm.py), selectable
-with `POKELIKE_LLM_STRATEGY`:
+Four prompts ship as four bots, each a folder of about thirty lines sitting on
+the one harness in `pokelike.bot.llm`:
 
-| strategy | what it is told to weigh |
+| bot | what it is told to weigh |
 |---|---|
-| `baseline` | nothing in particular |
-| `survivor` | staying alive; heal before it is urgent |
-| `explorer` | reaching further, taking the risk |
-| `analyst` | read the tools first, commit last |
+| [`llm-baseline`](../../bots/llm-baseline/) | nothing in particular. The control |
+| [`llm-survivor`](../../bots/llm-survivor/) | staying alive; heal before it is urgent |
+| [`llm-explorer`](../../bots/llm-explorer/) | reaching further, taking the risk |
+| [`llm-analyst`](../../bots/llm-analyst/) | read the tools first, commit last |
+
+This compares **the actual bots**, loaded from `bots/` — not a copy of their
+prompts. A prompt that wins here is the same file that gets benchmarked, so it
+cannot drift between the two. Add your own with `pokelike new-bot mine --llm` and
+it joins the default set automatically.
 
 ## Why paired, again
 

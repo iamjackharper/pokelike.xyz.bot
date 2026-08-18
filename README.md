@@ -2,7 +2,7 @@
 
 
 > Write something that plays [pokelike.xyz](https://pokelike.xyz/) better than
-> mine, and put it on the [leaderboard](leaderboard/). Anyone can enter, no
+> mine, and put it in [bots/](bots/). Anyone can enter, no
 > permission needed: fork, add your bot, open a pull request.
 >
 > **What counts as a bot is deliberately wide open.** A prompt around an LLM. A
@@ -22,9 +22,9 @@
 > `choose(state) -> int`, and the rest is measuring it honestly.
 >
 > Current standings, and the command to play the leader without training
-> anything, are in [leaderboard/README.md](leaderboard/).
+> anything, are in [bots/README.md](bots/).
 >
-> The bar to beat right now is **1.36 badges**. Random gets 0.68, so it is lower
+> The bar to beat right now is **1.36 badges**. Random gets 0.56, so it is lower
 > than it sounds.
 
 # pokelike.xyz.bot
@@ -84,8 +84,8 @@ the others.
 
 | | for | read it when |
 |---|---|---|
-| **[GUIDE.md](GUIDE.md)** | entering the contest | you want to write a bot and submit one. Seven steps, clone to pull request |
-| **[leaderboard/](leaderboard/)** | the standings | you want to see who is winning, play the leader without training anything, or read the submission rules in full |
+| **[GUIDE.md](GUIDE.md)** | entering the contest | you want to write a bot and submit one. Six steps, clone to pull request |
+| **[bots/](bots/)** | every bot, and the standings | you want to see who is winning, play the leader without training anything, or read the rules in full |
 | **[experiments/](experiments/)** | making a bot better | you are past a first bot and want to train, sweep or compare — and to see what was already tried, including what failed |
 | **[example.ipynb](src/pokelike/interfaces/python/example.ipynb)** | driving it yourself | you would rather poke at the game in a notebook than read about it |
 | **[CLAUDE.md](CLAUDE.md)** | changing this repo | you are editing the package itself. Internals, and the pitfalls that were hit for real |
@@ -366,9 +366,23 @@ that no longer exists. `uv run pokelike schema` prints the same thing from the
 game as it is right now.
 
 
+**A bot is a folder**, and one command creates it:
+
+```bash
+uv run pokelike new-bot mine
+```
+
+```
+bots/mine/
+├── bot.py        one class inheriting from Bot
+├── artifacts/    weights, prompts, tables — whatever yours needs
+└── README.md     one line on how it decides
+```
+
 ```python
-# src/pokelike/bot/mine.py
-from .base import Bot
+# bots/mine/bot.py
+from pokelike.bot.base import Bot
+
 
 class MyBot(Bot):
     name = "mine"
@@ -381,23 +395,38 @@ class MyBot(Bot):
         return 0
 ```
 
-Register it in `AVAILABLE` inside [bot/\_\_init\_\_.py](src/pokelike/bot/__init__.py):
+Then `uv run pokelike bot --bot mine`. **Nothing is registered anywhere**: the
+folder being there is what makes the name work, so someone can hand you a bot by
+handing you a directory. A bot is loaded only when asked for, so one that pulls
+in torch does not slow down anyone else.
 
-```python
-AVAILABLE = {
-    "random": ("random_bot", "RandomBot"),
-    "llm":    ("llm", "LLMBot"),
-    "dyna_q": ("dyna_q", "DynaQBot"),
-    "sarsa":  ("sarsa", "SarsaBot"),
-    "mine":   ("mine", "MyBot"),      # <-
-}
+What `new-bot` writes already plays, which matters more than it sounds: you can
+measure it before changing a line, and know later that the number moved because
+of you.
+
+**If your bot is a prompt**, start from the shared harness instead — you write
+nothing but the prompt, and your result is comparable with the other `llm-*`
+bots because the loop asking the model is the same one:
+
+```bash
+uv run pokelike new-bot my-prompt --llm
 ```
 
-then use it: `uv run pokelike bot --bot mine`. Modules are imported only when
-needed, so a bot that pulls in torch does not slow down the others.
+**Two bots may not share a name.** `bots/` is flat and the folder name is the
+bot, so if someone has already submitted `planner`, git will say so on your pull
+request and one of you renames. The `--author` recorded with your result is what
+tells the standings apart, not the folder. The hash in `result.json` is a
+different thing: it fingerprints your code and artifacts, so a bot edited after
+being measured is flagged rather than quietly keeping a score it no longer earns.
 
-Two optional hooks for bots that need memory across turns: `on_start(seed)` and
-`on_end(state, score)`.
+**The folder has to stand on its own.** Everything `bot.py` needs is either in
+this package or in `artifacts/` beside it — never an import from `experiments/`,
+never an import of another bot. A trained policy is meaningless under a different
+encoding, and a bot is meant to be handed to someone who has none of your setup.
+
+Optional hooks, all safe to ignore: `on_start(seed)` and `on_end(state, score)`
+for a bot with memory, `explain()` for a line in the log, `artifacts()` for
+weights to record beside your result.
 
 #### Team order, the decision that is not a move
 
@@ -445,21 +474,33 @@ items into one answerable question: does this boost a type I actually field.
 ### The bots that ship with it
 
 **`random`** picks uniformly among the legal actions. It is the baseline, and not
-a trivial one: over the 50 standard seeds it averages 0.68 badges with a best of
-3, dying in 17 moves for a mean score of −3.5. A map is short enough that flailing
+a trivial one: over the 50 standard seeds it averages 0.56 badges with a best of
+2, dying in 16 moves for a mean score of −9.5. A map is short enough that flailing
 sometimes reaches a gym. Everyone has to beat it, and the first trained agent
 here did not.
 
-**`llm`** ([bot/llm.py](src/pokelike/bot/llm.py)) is self-contained: prompts,
-tools, agentic loop and the HTTP call with `urllib`. Four prompt strategies ship
-with it, selectable with `POKELIKE_LLM_STRATEGY`. Each turn the model gets the
-situation and the numbered actions, may call read-only tools, and closes with
-`play(index)`:
+**The four `llm-*` bots** are one shared harness with four different prompts.
+The harness — the tools, the agentic loop, the state rendering, one HTTP call per
+turn — lives in [src/pokelike/bot/llm.py](src/pokelike/bot/llm.py), and it is
+shared **on purpose**: two bots with different loops are two harnesses being
+compared, and the model is the smaller half of that difference. So each bot is
+about thirty lines, and the prompt is the whole submission:
+
+| bot | the bet it makes |
+|---|---|
+| [`llm-baseline`](bots/llm-baseline/) | the control: the rules, and nothing else |
+| [`llm-survivor`](bots/llm-survivor/) | faints end runs; buy more run |
+| [`llm-explorer`](bots/llm-explorer/) | badges only come from going further |
+| [`llm-analyst`](bots/llm-analyst/) | says nothing about playing, only about looking first |
+
+Each turn the model gets the situation and the numbered actions, may call
+read-only tools, and closes with `play(index)`:
 
 | tool | what it gives |
 |---|---|
 | `team_details` | HP, levels, types, held items |
 | `what_lies_ahead` | where each action leads on the next layer |
+| `set_lead(index)` | who enters the next battle first. Free: it does not use the turn |
 | `play(index, why)` | performs it and ends the turn |
 
 `what_lies_ahead` is the one that matters: the choice closes the other nodes on
@@ -467,14 +508,23 @@ that layer forever, and without reading the edges the model cannot know that.
 
 If the model returns a bad index, times out, or never calls `play`, the bot falls
 back to a safe choice and the fallback is counted. **A run never dies because of
-one flaky request.**
+one flaky request.** But every fallback is a turn the model did not decide,
+played by our heuristic under the model's name, so `fallback_rate` is reported
+next to the score and a row above 0.1 is flagged: it is measuring us more than
+the model.
 
 Authentication failures are the exception and stop the run instead. A 401 will
 fail identically forever, and falling back on it would play the whole run on the
 backup heuristic while reporting it as an LLM result — which through `bench`
-would put an entry on the leaderboard labelled `llm` that no model ever played.
+would put an entry on the leaderboard that no model ever played.
 
-**`dyna_q`** ([bot/dyna_q.py](src/pokelike/bot/dyna_q.py)) plays a policy trained
+Your own prompt is one command away, and you write nothing but the prompt:
+
+```bash
+uv run pokelike new-bot my-prompt --llm
+```
+
+**`dyna-q`** ([bots/dyna-q/](bots/dyna-q/)) plays a policy trained
 by tabular RL. It doubles as the worked example of what
 a leaderboard submission looks like, which is why it carries its own copy of the
 state encoding instead of importing the training code.
@@ -485,17 +535,24 @@ quietly retried: −3.8 mean score against random's 7.0 on held-out seeds, winni
 screen it learned Q values of 6.3 / 6.2 / 6.3, three slots its encoding cannot
 tell apart.
 
-**`sarsa`** ([bot/sarsa.py](src/pokelike/bot/sarsa.py)) is the answer to that, and
-currently leads the leaderboard: 1.3 badges and 59.3 mean score over the 50
-standard seeds, against random's 0.68 and −3.5. Same algorithm family, same
-budget; what changed is that 100 hand-built linear features let it see what is on
-the card, what an item does, what the move tutor is offering, and who should
-lead. Sutton & Barto chapter 10 for the update, 12.7 for the traces:
+**`sarsa-v1`** and **`sarsa-v2`** ([bots/sarsa-v1/](bots/sarsa-v1/),
+[bots/sarsa-v2/](bots/sarsa-v2/)) are the answer to that, and lead the
+leaderboard: 1.30 and 1.36 badges over the 50 standard seeds, against random's
+0.56. Same algorithm family as `dyna-q`, same budget; what changed is that
+hand-built linear features let the agent see what is on the card, what an item
+does, what the move tutor is offering, and who should lead. Sutton & Barto
+chapter 10 for the update, 12.7 for the traces:
 
     q̂(s, a, w) = wᵀ x(s, a)
 
 Because the model is linear you can read the policy instead of only running it:
 training prints the weights it leaned on hardest, by name.
+
+Both are kept. v2 has 100 features to v1's 81 and is ahead by 0.06 badges, which
+is **less than the noise on fifty runs** — worth saying plainly rather than
+rounding up into a story. A leaderboard that overwrites its own history cannot
+tell you whether the next idea helped, so `--bot sarsa` names neither: it is an
+error listing both.
 
 ---
 
@@ -537,7 +594,7 @@ model, call count, tokens spent and how many fallbacks it made.
 
 ## Submit a bot
 
-There is a [leaderboard](leaderboard/): anyone can submit a bot, of any kind.
+There is a [leaderboard](bots/): anyone can submit a bot, of any kind.
 Hand-written rules, a prompt and an LLM, a trained RL policy, a search, a mix.
 
 ```bash
@@ -552,10 +609,10 @@ a leaderboard silently compares different things.
 
 **You do not need write access.** Fork the repo, push your branch to your fork,
 and open a pull request with the result file, your bot's code, and its weights if
-it has any. [leaderboard/README.md](leaderboard/README.md) walks through the fork
+it has any. [bots/README.md](bots/README.md) walks through the fork
 and PR steps command by command, explains the categories, and covers how LLM
 entries are handled (they are not independently reproducible, and are marked as
-such). [`bot/dyna_q.py`](src/pokelike/bot/dyna_q.py) is the worked example of a
+such). [`bots/dyna-q/`](bots/dyna-q/) is the worked example of a
 submitted bot.
 
 If the git side is a hassle, open an issue and paste your result file into it
@@ -610,8 +667,11 @@ make them pass or fail spuriously.
 | `setup` | browser + offline copy. Run once |
 | `play` | interactive run in the terminal |
 | `bot` | runs a bot (`--bot`, `--runs`, `--seed`) |
+| `new-bot` | creates `bots/<name>/`, ready to play (`--llm` for a prompt bot) |
+| `bench` | run the 50-seed benchmark and record the result (`--dry-run` to record nothing) |
+| `leaderboard` | rebuild the standings from what is measured on disk |
+| `schema` | what a bot receives, printed from a live game |
 | `api` | HTTP JSON server |
-| `bench` | run the 50-seed benchmark and produce a submittable result |
 | `stats` | summary of recorded runs (`-d` explains the columns) |
 | `mirror --phase verify` | check the local copy is not missing anything |
 | `mirror` | rebuild the offline copy (after a game update) |

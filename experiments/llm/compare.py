@@ -1,11 +1,17 @@
 """Which prompt actually plays better?
 
-    uv run python -m experiments.llm.compare --seeds 5 --strategies survivor,explorer
+    uv run python -m experiments.llm.compare --seeds 5 --bots llm-survivor,llm-explorer
 
 Prompt engineering invites confident storytelling, so this measures instead.
-Every strategy plays THE SAME SEEDS, and the comparison is paired: the question
-is not "what did survivor score" but "on this identical run, did survivor do
-better than explorer".
+Every prompt plays THE SAME SEEDS, and the comparison is paired: the question is
+not "what did survivor score" but "on this identical run, did survivor do better
+than explorer".
+
+It compares the ACTUAL BOTS in `bots/`, loaded from disk, so what is measured
+here is what a submission would be — and so a prompt cannot win the comparison
+and then be quietly different by the time it is benchmarked. They all sit on the
+one harness in `pokelike.bot.llm`, which is what makes the difference between
+them a difference between prompts.
 
 The metric is badges, because that is the game's own progression counter in Story
 mode. The engine's score formula was written for the Battle Tower and two of its
@@ -28,7 +34,9 @@ import time
 from pathlib import Path
 
 from pokelike.assets import AssetServer
-from pokelike.bot.llm import STRATEGIES, LLMBot
+from pokelike.bot import create
+from pokelike.bot.catalogue import available as bots_on_disk
+from pokelike.bot.llm import LLMBot
 from pokelike.core.game import Game
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -56,11 +64,20 @@ def play_one(game: Game, bot: LLMBot, seed: int, max_steps: int = 400) -> dict:
 
 
 def compare(strategies: list[str], seeds: list[int], port: int = 8610) -> dict:
-    for s in strategies:
-        if s not in STRATEGIES:
-            raise SystemExit(f"unknown strategy '{s}' — available: {', '.join(STRATEGIES)}")
-
     from tqdm import tqdm
+
+    # Built up front: an LLM bot refuses to construct without credentials, and
+    # finding that out after twenty minutes of the first prompt playing is a
+    # waste of a comparison.
+    made = {}
+    for s in strategies:
+        try:
+            bot = create(s)
+        except KeyError as e:
+            raise SystemExit(str(e.args[0])) from e
+        if not isinstance(bot, LLMBot):
+            raise SystemExit(f"'{s}' is not an LLM bot, so there is no prompt to compare")
+        made[s] = bot
 
     results: dict[str, list[dict]] = {s: [] for s in strategies}
     server = AssetServer(ROOT / "site", port=port)
@@ -71,8 +88,7 @@ def compare(strategies: list[str], seeds: list[int], port: int = 8610) -> dict:
     try:
         total = len(strategies) * len(seeds)
         bar = tqdm(total=total, desc="prompt comparison", unit="run")
-        for strategy in strategies:
-            bot = LLMBot(strategy=strategy)
+        for strategy, bot in made.items():
             for seed in seeds:
                 row = play_one(game, bot, seed)
                 results[strategy].append(row)
@@ -91,6 +107,7 @@ def compare(strategies: list[str], seeds: list[int], port: int = 8610) -> dict:
     out = RUNS / "prompt_comparison.json"
     out.write_text(json.dumps({
         "model": os.environ.get("MODEL_ID", ""),
+        "harness": LLMBot.HARNESS,
         "seeds": seeds,
         "elapsed_minutes": round(elapsed / 60, 1),
         "results": results,
@@ -112,14 +129,14 @@ def report(results: dict[str, list[dict]], seeds: list[int], elapsed: float) -> 
         print(row)
 
     print("\n" + "=" * 74)
-    head = (f"{'strategy':<12}{'badges~':>9}{'badges+':>9}{'score~':>9}"
+    head = (f"{'bot':<15}{'badges~':>9}{'badges+':>9}{'score~':>9}"
             f"{'steps~':>9}{'faints~':>9}{'tokens/run':>12}{'fallbacks':>11}")
     print(head)
     print("-" * len(head))
     for s, rows in results.items():
         m = statistics.mean
         print(
-            f"{s:<12}{m([r['badges'] for r in rows]):>9.2f}"
+            f"{s:<15}{m([r['badges'] for r in rows]):>9.2f}"
             f"{max(r['badges'] for r in rows):>9}"
             f"{m([r['score'] or 0 for r in rows]):>9.1f}"
             f"{m([r['steps'] for r in rows]):>9.1f}"
@@ -138,16 +155,17 @@ def report(results: dict[str, list[dict]], seeds: list[int], elapsed: float) -> 
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="Compare LLM prompt strategies on the same seeds.")
-    p.add_argument("--strategies", default=",".join(STRATEGIES),
-                   help="comma separated (default: all of them)")
-    p.add_argument("--seeds", type=int, default=5, help="how many seeds each strategy plays")
+    p = argparse.ArgumentParser(description="Compare LLM prompt bots on the same seeds.")
+    p.add_argument("--bots", "--strategies", dest="bots",
+                   default=",".join(n for n in bots_on_disk() if n.startswith("llm-")),
+                   help="comma separated bot names (default: every llm-* bot in bots/)")
+    p.add_argument("--seeds", type=int, default=5, help="how many seeds each bot plays")
     p.add_argument("--seed0", type=int, default=20_000)
     p.add_argument("--port", type=int, default=8610)
     a = p.parse_args()
 
     compare(
-        strategies=[s.strip() for s in a.strategies.split(",") if s.strip()],
+        strategies=[s.strip() for s in a.bots.split(",") if s.strip()],
         seeds=list(range(a.seed0, a.seed0 + a.seeds)),
         port=a.port,
     )

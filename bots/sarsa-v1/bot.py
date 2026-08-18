@@ -1,16 +1,27 @@
 """A trained SARSA(lambda) policy with linear function approximation, playing greedily.
 
-    pokelike bot --bot sarsa --runs 5
-    pokelike bench --bot sarsa --category rl --name my-sarsa
+    pokelike bot --bot sarsa-v1 --runs 5
+    pokelike bench --bot sarsa-v1 --category rl
 
     q̂(s, a, w) = wᵀ x(s, a)
 
 Trained by `experiments/sarsa_lambda/`. Sutton & Barto, 2nd edition: chapter 10
 for the semi-gradient control update, section 12.7 for the SARSA(lambda) form.
 
+WHICH ONE THIS IS
+-----------------
+The FIRST feature set: 81 features, encoding v1. It scored 1.30 badges over the
+fifty standard seeds and was the first policy to beat random with a margin worth
+believing (15W-10D-0L, t = 4.18 paired over 25 seeds).
+
+It is kept as its own bot rather than replaced by `sarsa-v2` because a
+leaderboard that overwrites its own history cannot tell you whether the next idea
+helped. The two are variants of one idea and the difference between them is the
+only thing either result is evidence about.
+
 WHY THE FEATURE CODE IS COPIED IN HERE
 --------------------------------------
-Same reason as `dyna_q.py`, and it matters more here. A weight vector means
+Same reason as `bots/dyna-q/bot.py`, and it matters more here. A weight vector means
 nothing without the exact function that produced the vectors it multiplies:
 `w[43]` is a number, and only `feature_names()` says it is `mon_new_type`. If
 this file imported `experiments/sarsa_lambda/features.py`, then inserting one
@@ -36,42 +47,28 @@ import re
 from pathlib import Path
 from typing import Any
 
-from .base import Bot
+from pokelike.bot.base import Bot
 
 # Bumped whenever the feature vector changes meaning: a new feature, a removed
 # one, a different order, a different scale. Weights carry the version they were
 # trained under, and refusing to load a mismatch is the whole safeguard.
 FEATURES_VERSION = 1
 
-REPO = Path(__file__).resolve().parents[3]
-
-# Where to look for the weights, in order:
-#   1. the POKELIKE_SARSA_WEIGHTS environment variable
-#   2. whatever the training script last produced locally
-#   3. the weights archived with a submitted entry
-# Point 3 is what lets anyone reproduce a leaderboard result from a fresh clone,
-# without training anything first.
-WEIGHT_CANDIDATES = (
-    REPO / "experiments" / "sarsa_lambda" / "models" / "sarsa_v1.json",
-)
-SUBMITTED = REPO / "leaderboard" / "entries"
+# The weights this bot plays live NEXT TO IT, in artifacts/, and nowhere else.
+# An earlier version searched experiments/ first and then globbed every archived
+# entry for a weights.json, which meant the bot could load a file trained for a
+# different feature set and only find out at load time -- or, worse, silently
+# play a policy that was never the one measured.
+#
+# POKELIKE_SARSA_WEIGHTS still overrides, which is how a candidate gets measured
+# before it is promoted into a folder.
+HERE = Path(__file__).resolve().parent
+WEIGHTS = HERE / "artifacts" / "weights.json"
 
 
 def find_weights() -> Path | None:
     override = os.environ.get("POKELIKE_SARSA_WEIGHTS")
-    if override:
-        return Path(override)
-    local = next((p for p in WEIGHT_CANDIDATES if p.is_file()), None)
-    if local:
-        return local
-    archived = sorted(SUBMITTED.glob("*/artifacts/weights.json"))
-    for path in reversed(archived):
-        try:
-            if json.loads(path.read_text(encoding="utf-8")).get("weights"):
-                return path
-        except (json.JSONDecodeError, OSError):
-            continue
-    return None
+    return Path(override) if override else WEIGHTS
 
 
 # ------------------------------------------------- the frozen feature set, v1
@@ -265,7 +262,7 @@ def features(state: dict[str, Any], action: dict[str, Any]) -> dict[int, float]:
 
 
 class SarsaBot(Bot):
-    name = "sarsa"
+    name = "sarsa-v1"
 
     def __init__(self, seed: int = 0, weights: str | Path | None = None) -> None:
         path = Path(weights) if weights else find_weights()

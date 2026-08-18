@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import pathlib
+
 import pytest
 
 from pokelike.assets.mirror import _valid_content
-from pokelike.bot import AVAILABLE, create
+from pokelike.bot import available, create
 from pokelike.bot.base import Bot
 from pokelike.core import render
 from pokelike.stats import format_summary, record, recent, summary
@@ -35,13 +37,34 @@ def test_recognises_valid_files(data, suffix, expected):
 # ------------------------------------------------------------------ bot
 
 
-def test_registered_bots_can_be_built():
-    assert "random" in AVAILABLE
+def test_every_bot_on_disk_defines_exactly_one_bot():
+    """Each folder under `bots/` must load and define one Bot subclass.
+
+    A bot is loaded from a directory rather than imported from a registry, so
+    nothing checks it until something tries to play it. This is that check: a
+    folder that will not load is a bot nobody can run, including its author.
+
+    It stops at the CLASS on purpose. Building one is allowed to need things a
+    test does not have — the LLM bot refuses to construct without credentials,
+    which is deliberate and right.
+    """
+    from pokelike.bot.catalogue import BOTS, available as on_disk, load_class
+
+    names = on_disk()
+    assert names, "bots/ has no bots in it"
+    for name in names:
+        cls = load_class(BOTS / name / "bot.py")
+        assert issubclass(cls, Bot), f"{name} does not inherit from Bot"
+
+
+def test_the_baseline_is_always_available():
+    """`random` must build with no bots/ folder at all: `compare()` defaults to it."""
+    assert "random" in available()
     assert isinstance(create("random", seed=1), Bot)
 
 
 def test_the_sarsa_bot_freezes_exactly_the_features_it_was_trained_on():
-    """The copy in `bot/sarsa.py` must stay identical to the training code.
+    """The copy in `bots/sarsa-v2/bot.py` must stay identical to the training code.
 
     Weights are a plain list of numbers: index 43 only means `mon_new_type`
     because `feature_names()` says so. Insert one feature on the training side
@@ -54,9 +77,87 @@ def test_the_sarsa_bot_freezes_exactly_the_features_it_was_trained_on():
     """
     from experiments.sarsa_lambda.features import feature_names as trained_on
 
-    from pokelike.bot.sarsa import feature_names as frozen
+    from pokelike.bot.catalogue import load_class
 
-    assert frozen() == trained_on()
+    frozen = load_class(pathlib.Path("bots/sarsa-v2/bot.py")).__module__
+    import sys
+
+    assert sys.modules[frozen].feature_names() == trained_on()
+
+
+def test_the_two_sarsas_are_two_different_policies():
+    """v1 and v2 exist side by side to be compared, so they must differ.
+
+    The failure this catches is copying a folder to make a variant and forgetting
+    to change the weights: two rows on the leaderboard, one policy, and a
+    difference in their scores that is pure noise being read as progress.
+    """
+    import json
+
+    v1, v2 = (json.loads(pathlib.Path(f"bots/sarsa-{v}/artifacts/weights.json")
+                         .read_text(encoding="utf-8")) for v in ("v1", "v2"))
+    assert v1["encoding_version"] != v2["encoding_version"]
+    assert len(v1["weights"]) != len(v2["weights"])
+
+
+def test_every_llm_bot_uses_the_shared_harness_and_its_own_prompt():
+    """The whole point of the split: same loop, different prompts.
+
+    A benchmark of models compares models only if the harness is held still. An
+    LLM bot that reimplements the loop, or two that ship the same prompt, are
+    measuring something other than what the standings claim.
+    """
+    from pokelike.bot.catalogue import BOTS, available as on_disk, load_class
+    from pokelike.bot.llm import HARNESS, LLMBot
+
+    prompts = {}
+    for name in [n for n in on_disk() if n.startswith("llm-")]:
+        cls = load_class(BOTS / name / "bot.py")
+        assert issubclass(cls, LLMBot), f"{name} does not build on the shared harness"
+        assert cls.HARNESS == HARNESS, f"{name} pins an old harness version"
+        assert cls.PROMPT and cls.PROMPT not in prompts, (
+            f"{name} has the same prompt as {prompts.get(cls.PROMPT)}")
+        prompts[cls.PROMPT] = name
+    assert len(prompts) >= 2, "there is nothing to compare"
+
+
+def test_an_llm_bot_refuses_to_build_without_credentials(monkeypatch):
+    """Never a silent default: a bot that cannot reach a model must say so.
+
+    Falling back here would play a whole run on the backup heuristic and file it
+    as an LLM result — a leaderboard row no model ever played.
+    """
+    from pokelike.bot.llm import LLMBot, LLMConfigError
+
+    class Probe(LLMBot):
+        PROMPT = "x"
+
+    for var in ("FW_ENDPOINT", "FW_TOKEN", "MODEL_ID"):
+        monkeypatch.delenv(var, raising=False)
+    with pytest.raises(LLMConfigError) as e:
+        Probe()
+    assert "FW_ENDPOINT" in str(e.value)
+
+    monkeypatch.setenv("FW_ENDPOINT", "https://example.invalid")
+    monkeypatch.setenv("FW_TOKEN", "t")
+    with pytest.raises(LLMConfigError) as e:
+        Probe()
+    assert "MODEL_ID" in str(e.value)
+
+
+def test_a_name_matching_two_bots_is_an_error_not_a_guess():
+    """`--bot sarsa` with sarsa-v1 and sarsa-v2 on disk must refuse to choose.
+
+    Variants of one idea share a name, so picking one silently produces a result
+    that looks entirely plausible and is about the wrong bot.
+    """
+    from pokelike.bot import resolve
+
+    assert resolve("sarsa-v1") == "sarsa-v1"
+    assert resolve("rand") == "random", "a unique prefix should still work"
+    with pytest.raises(KeyError) as e:
+        resolve("sarsa")
+    assert "sarsa-v1" in e.value.args[0] and "sarsa-v2" in e.value.args[0]
 
 
 def test_unknown_bot_gives_a_useful_error():

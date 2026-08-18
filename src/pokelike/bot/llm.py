@@ -1,20 +1,41 @@
-"""A bot driven by an LLM, with an agentic loop and tools.
+"""The harness every LLM bot shares.
 
-Everything it needs lives in this one file: configuration, prompts, tools, HTTP
-call. No extra dependencies — it talks to an OpenAI-compatible endpoint using
-`urllib` from the standard library.
+An LLM bot is a prompt and a model. Everything around them — how the state
+becomes text, which tools exist, how many rounds of thinking are allowed, what
+happens when a call fails — is machinery, and it lives here rather than in each
+bot, for one reason: **a benchmark of models has to hold the harness still.**
+Two bots with different loops are not two models being compared, they are two
+harnesses, and the model is the smaller half of the difference.
 
-Configuration comes from environment variables only (never keys in code):
+So a bot built on this is short:
 
-    export FW_ENDPOINT="https://..."
+    from pokelike.bot.llm import LLMBot, GAME_RULES
+
+    class SurvivorBot(LLMBot):
+        name = "llm-survivor"
+        PROMPT = GAME_RULES + "Heal before it is urgent. Always call play()."
+
+Credentials never appear in a bot file. They come from the environment, always:
+
+    export FW_ENDPOINT="https://..."     # base URL; /v1/chat/completions is added
     export FW_TOKEN="..."
-    export MODEL_ID="..."            # optional
-    pokelike bot --bot llm --runs 3
+    export MODEL_ID="..."                # unless the bot pins MODEL itself
+    uv run pokelike bot --bot llm-survivor --runs 3
 
-How a turn works: the model gets the situation as text and the numbered list of
-actions. It may call read-only tools to dig deeper, and closes by calling
-`play(index)`. If it does not within `max_rounds`, or anything goes wrong, we
-fall back to a safe choice: **a run must never die because of the model**.
+**This file is shared, which is the thing to be careful about.** The whole point
+of a bot being self-contained is that improving our code cannot silently change
+what a past measurement meant. Code in here is the exception: it is shared on
+purpose, so editing it *does* reach every LLM bot ever measured. `HARNESS` is
+how that stays honest — it is written into every result, and a result recorded
+under an older harness is flagged in the standings instead of quietly being
+compared against results from a newer one. **Bump it whenever a change here
+could move a decision.**
+
+Why `urllib` and not a client library: the package has two dependencies, and an
+LLM bot should not add a third. One wire format, OpenAI-compatible, which nearly
+every provider speaks — including Anthropic, through its compatibility endpoint.
+A multi-provider abstraction would be more code to maintain and one more place
+for two models to be asked subtly different questions.
 """
 
 from __future__ import annotations
@@ -25,27 +46,33 @@ import urllib.error
 import urllib.request
 from typing import Any
 
-from ..core import render
-from .base import Bot
+from pokelike.bot.base import Bot
+from pokelike.core import render
 
-# -------------------------------------------------------------------- prompts
+# How a decision is made here. Written into every result; a row measured under a
+# different number is marked as such rather than ranked as if it were the same.
 #
-# Prompts are swappable so they can be compared rather than argued about:
+#   1  agentic loop with team_details / what_lies_ahead / set_lead / play,
+#      situation rendered by core.render.screen, prose index as a last resort
+HARNESS = 1
+
+
+# ---------------------------------------------------------------- what is true
 #
-#     POKELIKE_LLM_STRATEGY=survivor pokelike bot --bot llm --runs 5
+# The rules are shared, the strategy is not. The split matters: everything below
+# is a FACT about the game, several of them read out of the bundle rather than
+# guessed, and a benchmark where each bot restates the facts measures who copied
+# them correctly instead of who plays better.
 #
-# What every prompt must get right, because it is easy to get wrong:
+# The two that are easy to get wrong, and were:
 #
 #   * BADGES ARE THE GOAL. The engine's score formula was written for the Battle
-#     Tower and two of its terms never fire in Story mode, so telling the model
-#     to chase "maps cleared" points it at something that is always zero. An
-#     earlier version of this prompt did exactly that.
+#     Tower and two of its six terms never fire in Story mode, so a prompt that
+#     chases "maps cleared" points the model at something that is always zero.
+#     An earlier version of this prompt did exactly that.
 #   * Choosing a node CLOSES the others on that layer, forever.
-#   * Trainers scale: 1 Pokemon on map 0, 2 on maps 1-2, 3 from map 3 onwards.
-#     Read out of the bundle, not guessed.
-#   * Battles resolve themselves. The model never picks a move.
 
-RULES = """You are playing Pokelike, a Pokemon roguelike.
+GAME_RULES = """You are playing Pokelike, a Pokemon roguelike.
 
 YOUR GOAL: earn as many gym badges as you can before your team is wiped out.
 Badges measure how far you got. A run ends when every Pokemon has fainted.
@@ -73,50 +100,13 @@ Losing Pokemon. Every faint is permanent for that run, and once the team is empt
 it is over, no matter how well you were doing.
 """
 
-STRATEGIES = {
-    # The plain one: the rules, and let the model work it out.
-    "baseline": RULES + """
-Think briefly, then call `play` with your chosen index. Always call `play`.""",
+CLOSING = "\nThink briefly, then call `play` with your chosen index. Always call `play`."
 
-    # Bias towards not dying. Faints are what ends runs.
-    "survivor": RULES + """
-PLAY LIKE THIS
-- Early on you have one Pokemon. If it faints you have lost. Widening the team is
-  worth more than any experience you could gain.
-- Never walk a Pokemon on low HP into a fight. Heal first if a pokecenter is
-  reachable.
-- Prefer a wild fight over a trainer when your team is thin: trainers bring more
-  Pokemon and scale with the map.
-- Type matchups decide battles. Check your team before choosing a fight.
 
-Think briefly, then call `play`. Always call `play`.""",
-
-    # Bias towards progression. Badges only come from moving forward.
-    "explorer": RULES + """
-PLAY LIKE THIS
-- Badges are the only thing that counts, and they come from pushing down the map.
-  Do not linger on safe nodes that add nothing.
-- Before choosing, use `what_lies_ahead`: the node you take decides what is
-  reachable next, and closing off a good branch costs more than one bad fight.
-- A slightly risky fight that opens a good path beats a safe node that leads
-  nowhere.
-- Keep enough team to survive, but survival on its own scores nothing.
-
-Think briefly, then call `play`. Always call `play`.""",
-
-    # Force the model to look before it leaps.
-    "analyst": RULES + """
-HOW TO DECIDE
-Before choosing, gather what you need:
-1. Call `team_details` if any HP or type matchup could matter here.
-2. Call `what_lies_ahead` whenever you are on the map. What a node leads to
-   matters as much as the node itself, because the others close forever.
-Only then call `play`, naming in one sentence the option you rejected and why.
-
-Always finish with `play`.""",
-}
-
-DEFAULT_STRATEGY = "survivor"
+# ---------------------------------------------------------------------- tools
+#
+# Shared for the same reason the rules are: a model given a tool another model
+# was not is not being compared, it is being helped.
 
 TOOLS = [
     {
@@ -190,52 +180,86 @@ class LLMConfigError(LLMError):
     """
 
 
+class LLMBudgetError(LLMError):
+    """The run asked for more tokens than the bot allowed itself.
+
+    Only raised when a bot sets `TOKEN_BUDGET`. A model that thinks ten times
+    longer than the others is not straightforwardly better than them, and over
+    fifty runs the difference is money, so a bot may declare a ceiling and be
+    held to it rather than discovering the bill afterwards.
+    """
+
+
 # ------------------------------------------------------------------------ bot
 
 
 class LLMBot(Bot):
+    """A bot that asks a model what to do, one call per turn.
+
+    Subclass it and set `PROMPT`. Everything else has a working default.
+
+    | attribute      | what it decides                                        |
+    |----------------|--------------------------------------------------------|
+    | `PROMPT`       | the system prompt: **this is your submission**          |
+    | `MODEL`        | model id, or None to take `$MODEL_ID`                   |
+    | `TEMPERATURE`  | sampling                                               |
+    | `MAX_TOKENS`   | ceiling on one answer                                  |
+    | `MAX_ROUNDS`   | tool rounds before the turn is given up on             |
+    | `MEMORY`       | how many past turns are shown back to the model        |
+    | `TOKEN_BUDGET` | tokens per run, 0 for no ceiling                       |
+
+    On `MODEL`: pin it in the bot file if you want a leaderboard row that means
+    one specific model — the id is not a secret, and pinning it puts it inside
+    the fingerprint, so swapping the model shows as a changed bot. Leave it None
+    and the bot plays whatever `$MODEL_ID` names, which is what you want while
+    experimenting and what the four prompt bots shipped in `bots/` do.
+    """
+
     name = "llm"
 
-    def __init__(
-        self,
-        seed: int = 0,
-        endpoint: str | None = None,
-        token: str | None = None,
-        model: str | None = None,
-        max_rounds: int = 4,
-        max_tokens: int = 1500,
-        temperature: float = 0.6,
-        memory: int = 6,
-        strategy: str | None = None,
-        verbose: bool = False,
-    ) -> None:
+    HARNESS = HARNESS
+    PROMPT = GAME_RULES + CLOSING
+    MODEL: str | None = None
+    TEMPERATURE = 0.6
+    MAX_TOKENS = 1500
+    MAX_ROUNDS = 4
+    MEMORY = 6
+    TOKEN_BUDGET = 0
+
+    def __init__(self, seed: int = 0, endpoint: str | None = None,
+                 token: str | None = None, model: str | None = None,
+                 verbose: bool = False, **overrides: Any) -> None:
+        super().__init__(seed=seed)
         self.endpoint = (endpoint or os.environ.get("FW_ENDPOINT", "")).rstrip("/")
         self.token = token or os.environ.get("FW_TOKEN", "")
-        self.model = model or os.environ.get("MODEL_ID", "")
+        self.model = model or self.MODEL or os.environ.get("MODEL_ID", "")
         if not self.endpoint or not self.token:
-            raise LLMError(
+            raise LLMConfigError(
                 "FW_ENDPOINT and FW_TOKEN environment variables are required\n"
-                '  export FW_ENDPOINT="https://..."\n  export FW_TOKEN="..."'
+                '  export FW_ENDPOINT="https://..."   # base URL, no /v1\n'
+                '  export FW_TOKEN="..."'
             )
         if not self.model:
-            raise LLMError('MODEL_ID is required, e.g. export MODEL_ID="gpt-4o-mini"')
-        self.max_rounds = max_rounds
-        self.max_tokens = max_tokens
-        self.temperature = temperature
-        self.memory = memory
-        self.strategy = (
-            strategy or os.environ.get("POKELIKE_LLM_STRATEGY") or DEFAULT_STRATEGY
-        )
-        if self.strategy not in STRATEGIES:
-            raise LLMError(
-                f"unknown strategy '{self.strategy}' — available: "
-                f"{', '.join(sorted(STRATEGIES))}"
+            raise LLMConfigError(
+                f"{type(self).__name__} pins no MODEL, so MODEL_ID is required\n"
+                '  export MODEL_ID="gpt-4o-mini"'
             )
-        self.system = STRATEGIES[self.strategy]
+
+        # Per-instance copies of the class settings, so a caller can override one
+        # without editing the bot: create("llm-survivor") uses the declared ones,
+        # LLMBot(temperature=0) in a notebook does not.
+        self.system = overrides.pop("prompt", None) or self.PROMPT
+        self.temperature = overrides.pop("temperature", self.TEMPERATURE)
+        self.max_tokens = overrides.pop("max_tokens", self.MAX_TOKENS)
+        self.max_rounds = overrides.pop("max_rounds", self.MAX_ROUNDS)
+        self.memory = overrides.pop("memory", self.MEMORY)
+        self.token_budget = overrides.pop("token_budget", self.TOKEN_BUDGET)
+        if overrides:
+            raise TypeError(f"unknown settings: {', '.join(sorted(overrides))}")
         self.verbose = verbose or bool(os.environ.get("POKELIKE_VERBOSE"))
 
-        # counters for the stats registry
         self.calls = 0
+        self.turns = 0
         self.tokens_used = 0
         self.fallbacks = 0
         self.journal: list[str] = []
@@ -246,21 +270,31 @@ class LLMBot(Bot):
     # ------------------------------------------------------------------ hooks
 
     def on_start(self, seed: int) -> None:
+        self.seed = seed
         self.journal = []
         self._pending = None
-        self.calls = 0
-        self.tokens_used = 0
-        self.fallbacks = 0
+        self.calls = self.turns = self.tokens_used = self.fallbacks = 0
         self._last_why = ""
 
     def notes(self) -> dict[str, Any]:
-        """Ends up in the `extra` column of the run registry."""
+        """Ends up in the run registry, and in the result a benchmark records.
+
+        `fallback_rate` is the honest column of an LLM benchmark. Every fallback
+        is a turn the model did not decide, played by the backup heuristic under
+        the model's name — so a row with a high one is measuring our heuristic,
+        not the model, and should be read as a broken run rather than a bad one.
+        """
         return {
             "model": self.model,
-            "strategy": self.strategy,
+            "harness": self.HARNESS,
+            "bot": type(self).__name__,
             "calls": self.calls,
+            "turns": self.turns,
             "tokens": self.tokens_used,
             "fallbacks": self.fallbacks,
+            "fallback_rate": round(self.fallbacks / self.turns, 3) if self.turns else 0.0,
+            "temperature": self.temperature,
+            "reproducible": False,
         }
 
     def artifacts(self) -> list:
@@ -269,15 +303,15 @@ class LLMBot(Bot):
         The prompt and the model reference, never the key. An LLM result cannot
         be reproduced exactly — providers change models behind a fixed name and
         sampling is stochastic — so the least we can do is record precisely what
-        was asked of which model.
+        was asked of which model, under which harness.
         """
-        from ..leaderboard import Artifact
+        from pokelike.leaderboard import Artifact
 
         return [
             Artifact(
                 name="prompt.md",
                 kind="prompt",
-                description=f"system prompt, strategy '{self.strategy}'",
+                description=f"system prompt, {type(self).__name__}",
                 text=self.system,
             ),
             Artifact(
@@ -286,10 +320,13 @@ class LLMBot(Bot):
                 description="which model answered, and how it was asked",
                 data={
                     "model": self.model,
-                    "strategy": self.strategy,
+                    "pinned": self.MODEL is not None,
+                    "harness": self.HARNESS,
                     "temperature": self.temperature,
                     "max_tokens": self.max_tokens,
                     "max_rounds": self.max_rounds,
+                    "memory": self.memory,
+                    "token_budget": self.token_budget,
                     "tools": [t["function"]["name"] for t in TOOLS],
                     "reproducible": False,
                     "why_not": (
@@ -310,8 +347,8 @@ class LLMBot(Bot):
 
         The run loop asks for this before `choose`, so the whole turn is thought
         about once: `_agentic_round` runs here, the chosen action is cached, and
-        `choose` returns it without a second request. One HTTP call per turn, as
-        before — the model simply gets one more tool.
+        `choose` returns it without a second request. One HTTP call per turn —
+        the model simply gets one more tool.
 
         Offered only on the map screen. Elsewhere the options ARE the team (the
         swap screen, the equip modal), so reordering underneath would change what
@@ -338,6 +375,7 @@ class LLMBot(Bot):
         return (0, lead)
 
     def choose(self, state: dict[str, Any]) -> int:
+        self.turns += 1
         n = len(state["actions"])
         # Already decided in rearrange, this same turn. `steps` guards it: a
         # cached index must never be replayed against a different turn.
@@ -345,32 +383,22 @@ class LLMBot(Bot):
             _, index, why = self._pending
             self._pending = None
             if isinstance(index, int) and 0 <= index < n:
-                self._last_why = why
-                self.journal.append(f"step {state.get('steps')}: [{index}] {why[:90]}")
-                self.journal = self.journal[-self.memory:]
-                if self.verbose:
-                    print(f"   [llm] -> [{index}] {why[:100]}")
-                return index
+                return self._commit(state, index, why)
         try:
             index, why, _ = self._agentic_round(state)
-        except LLMConfigError:
-            # Not recoverable: every later call fails identically. Better to stop
-            # than to quietly hand the run to the backup heuristic.
+        except (LLMConfigError, LLMBudgetError):
+            # Not recoverable: every later call fails identically, or the run has
+            # spent what it was allowed. Better to stop than to quietly hand the
+            # rest of the run to the backup heuristic and file it as an LLM run.
             raise
         except Exception as e:  # noqa: BLE001 — a transient failure must not end the run
-            self.fallbacks += 1
-            self._last_why = f"(fell back: {str(e)[:80]})"
-            if self.verbose:
-                print(f"   [llm] fallback: {type(e).__name__}: {e}")
-            return self._fallback(state)
+            return self._fall_back(state, f"{type(e).__name__}: {e}"[:80])
 
         if not isinstance(index, int) or not 0 <= index < n:
-            self.fallbacks += 1
-            self._last_why = f"(fell back: model returned index {index})"
-            if self.verbose:
-                print(f"   [llm] invalid index ({index}), falling back")
-            return self._fallback(state)
+            return self._fall_back(state, f"model returned index {index}")
+        return self._commit(state, index, why)
 
+    def _commit(self, state: dict[str, Any], index: int, why: str) -> int:
         self._last_why = why
         self.journal.append(f"step {state.get('steps')}: [{index}] {why[:90]}")
         self.journal = self.journal[-self.memory:]
@@ -378,11 +406,20 @@ class LLMBot(Bot):
             print(f"   [llm] -> [{index}] {why[:100]}")
         return index
 
+    def _fall_back(self, state: dict[str, Any], reason: str) -> int:
+        self.fallbacks += 1
+        self._last_why = f"(fell back: {reason})"
+        if self.verbose:
+            print(f"   [llm] fallback: {reason}")
+        return self._fallback(state)
+
     def _fallback(self, state: dict[str, Any]) -> int:
         """Backup choice when the model does not answer or gets it wrong.
 
         Not random: it prefers what keeps the team alive — heal first if someone
-        is hurt, otherwise widen the team.
+        is hurt, otherwise widen the team. Override it if your bot would rather
+        fail differently, but count on it being used: over fifty runs, something
+        times out.
         """
         actions = state["actions"]
         team = state.get("team") or []
@@ -496,6 +533,10 @@ class LLMBot(Bot):
     # ------------------------------------------------------------------- HTTP
 
     def _call(self, messages: list[dict[str, Any]]) -> dict[str, Any]:
+        if self.token_budget and self.tokens_used >= self.token_budget:
+            raise LLMBudgetError(
+                f"run spent {self.tokens_used} tokens, budget is {self.token_budget}"
+            )
         body = json.dumps({
             "model": self.model,
             "messages": messages,
@@ -503,6 +544,10 @@ class LLMBot(Bot):
             "tool_choice": "auto",
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
+            # Best effort only. Providers that honour it get closer to repeatable
+            # runs; most ignore it, and none of them promise it. Nothing here
+            # depends on it working — see `reproducible: False` in the artifacts.
+            "seed": self.seed,
         }).encode("utf-8")
 
         req = urllib.request.Request(

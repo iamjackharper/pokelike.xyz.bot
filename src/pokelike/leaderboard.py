@@ -1,69 +1,56 @@
-"""Submissions: what a bot leaves behind so its result can be trusted.
+"""The leaderboard: reading what each bot scored, and writing what one scored.
 
-A leaderboard is only worth reading if an entry says exactly what produced it.
-That means three things travel together and are never allowed to drift apart:
+A bot is a folder under `bots/`, and its measurement lives in that same folder:
 
-    the result   what it scored, on which seeds, against which game build
-    the bot      the source that was actually run
-    the artifacts  weights, prompts, model names, hyperparameters
+    bots/<name>/
+    ├── bot.py        the code that ran
+    ├── artifacts/    the weights, prompts or tables it needs
+    └── result.json   the benchmark, with a fingerprint of both
 
-This module builds that folder, and it does so from data the bot itself
-declares. Nothing is left to a convention someone might forget: if it is not in
-`Bot.artifacts()` it does not get archived, and if it is, it gets hashed.
+Entries used to be separate immutable folders named `<slug>-<hash>`, one per
+measurement. That kept every past result re-runnable from any checkout, and cost
+a new folder each time anyone measured anything, plus a copy of a bot that
+already existed. A bot is now one folder that evolves, and git holds its history.
 
-    leaderboard/
-    ├── index.json                    generated from the entries
-    └── entries/
-        └── <slug>-<hash>/
-            ├── submission.json       metadata, results, artifact manifest
-            ├── bot.py                a copy of the bot that ran
-            └── artifacts/
-                ├── manifest.json
-                └── ...               whatever the bot declared
+WHAT THE FINGERPRINT IS FOR
+A score means nothing without the code it came from. `result.json` records a
+sha256 over `bot.py` and every artifact, so a result and the thing that produced
+it cannot drift apart unnoticed: `pokelike leaderboard` says `stale` beside any
+row whose files have changed since it was measured.
 
-The folder name carries a short hash over the bot source, the declared
-artifacts and the seed list. That makes an entry immutable by construction: a
-tweaked bot produces a different folder rather than silently overwriting the
-old result, and nobody can swap the weights while keeping the score.
+It also records the sha256 of the game bundle. Scores from before and after an
+upstream game update are not comparable, and without it a table mixes them
+silently.
 """
 
 from __future__ import annotations
 
 import hashlib
-import inspect
 import json
-import re
 import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-# The kinds of thing a bot can leave behind. Open on purpose: an unknown kind is
-# archived anyway, it just is not understood by the index.
-KINDS = (
-    "weights-json",    # a tabular policy small enough to live in the repo
-    "weights-file",    # a local binary (npz, pt, safetensors)
-    "weights-remote",  # url + sha256 + how to load it (Hugging Face, a release)
-    "prompt",          # the prompts of an LLM bot
-    "model-ref",       # provider, model name, temperature, version
-    "config",          # the hyperparameters it was trained with
-    "code-ref",        # the git commit of the training code
-    "notes",           # anything else worth keeping
-)
+from .bot.catalogue import BOTS, folder, slugify
 
-# Above this, a file belongs somewhere else and should be referenced instead of
-# committed. Git repositories are not artifact stores.
-MAX_INLINE_BYTES = 5 * 1024 * 1024
+# What an artifact is FOR, so a reader knows what they are looking at without
+# opening it. Anything else is archived too, with a note.
+KINDS = {
+    "weights-json": "a trained policy, as JSON",
+    "weights-remote": "weights hosted elsewhere, with a url and a sha256",
+    "config": "how it was trained or configured",
+    "prompt": "the text given to a language model",
+    "notes": "anything else worth keeping beside the result",
+}
 
 
 @dataclass
 class Artifact:
-    """One thing a bot wants archived alongside its result.
+    """Something a bot needs, archived beside it.
 
-    Exactly one of `path`, `data` or `text` carries the content:
-      path  copy this existing file in
-      data  serialise this object as JSON
-      text  write this string as-is
+    Give it `path` to copy a file, or `data` to write a JSON document. A bot
+    declares these from `artifacts()`, and the benchmark stores them.
     """
 
     name: str
@@ -71,172 +58,154 @@ class Artifact:
     description: str = ""
     path: Path | None = None
     data: Any = None
-    text: str | None = None
+    url: str | None = None
+    extra: dict[str, Any] = field(default_factory=dict)
 
     def write_into(self, folder: Path) -> dict[str, Any]:
-        """Materialises the artifact and returns its manifest entry."""
+        folder.mkdir(parents=True, exist_ok=True)
         target = folder / self.name
-        target.parent.mkdir(parents=True, exist_ok=True)
-
         if self.path is not None:
-            src = Path(self.path)
-            if not src.is_file():
-                raise FileNotFoundError(f"artifact '{self.name}' points at {src}, which does not exist")
-            size = src.stat().st_size
-            if size > MAX_INLINE_BYTES:
-                raise ValueError(
-                    f"artifact '{self.name}' is {size / 1e6:.1f} MB, over the "
-                    f"{MAX_INLINE_BYTES / 1e6:.0f} MB limit for files kept in the repo.\n"
-                    "Upload it somewhere (a GitHub release, Hugging Face) and declare a "
-                    "'weights-remote' artifact with the url and its sha256 instead."
-                )
-            shutil.copy2(src, target)
+            shutil.copy2(self.path, target)
         elif self.data is not None:
             target.write_text(json.dumps(self.data, indent=1), encoding="utf-8")
-        elif self.text is not None:
-            target.write_text(self.text, encoding="utf-8")
-        else:
-            raise ValueError(f"artifact '{self.name}' has no content: set path, data or text")
-
-        blob = target.read_bytes()
-        return {
-            "name": self.name,
-            "kind": self.kind,
-            "description": self.description,
-            "bytes": len(blob),
-            "sha256": hashlib.sha256(blob).hexdigest(),
+        elif self.url is None:
+            raise ValueError(f"artifact '{self.name}' has no path, data or url")
+        entry = {
+            "name": self.name, "kind": self.kind, "description": self.description,
+            **({"url": self.url} if self.url else {}), **self.extra,
         }
+        if target.is_file():
+            entry["bytes"] = target.stat().st_size
+            entry["sha256"] = sha256_of(target)
+        return entry
 
 
-# ------------------------------------------------------------------- helpers
+# ---------------------------------------------------------------- fingerprint
 
 
-def slugify(name: str) -> str:
-    s = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
-    return s or "bot"
-
-
-def _bot_source(bot: Any) -> tuple[str, str]:
-    """The source file of the bot's class, so the entry keeps what actually ran."""
-    try:
-        f = Path(inspect.getfile(type(bot)))
-        return f.name, f.read_text(encoding="utf-8")
-    except Exception:  # noqa: BLE001 — a bot defined in a REPL has no file
-        return "bot.py", "# source not available (bot defined outside a file)\n"
-
-
-def entry_id(name: str, source: str, manifest: list[dict], seeds: list[int]) -> str:
-    """`<slug>-<hash>`, where the hash covers everything that defines the run."""
+def sha256_of(path: Path) -> str:
     h = hashlib.sha256()
-    h.update(source.encode("utf-8"))
-    for m in sorted(manifest, key=lambda x: x["name"]):
-        h.update(m["name"].encode("utf-8"))
-        h.update(m["sha256"].encode("utf-8"))
-    h.update(json.dumps(seeds).encode("utf-8"))
-    return f"{slugify(name)}-{h.hexdigest()[:6]}"
+    h.update(Path(path).read_bytes())
+    return h.hexdigest()
+
+
+def fingerprint(bot_dir: Path) -> str:
+    """One hash over the bot's code and everything it carries.
+
+    Covers `bot.py` and every file under `artifacts/`, each hashed with its name
+    so that renaming a file changes the fingerprint too. This is what makes a
+    recorded score checkable: re-hash the folder, compare, and you know whether
+    the row still describes what is on disk.
+    """
+    h = hashlib.sha256()
+    files = [bot_dir / "bot.py", *sorted((bot_dir / "artifacts").glob("**/*"))]
+    for f in files:
+        if not f.is_file():
+            continue
+        h.update(str(f.relative_to(bot_dir)).encode("utf-8"))
+        h.update(f.read_bytes())
+    return h.hexdigest()
 
 
 # -------------------------------------------------------------------- writing
 
 
-def write_entry(root: Path, result: dict[str, Any], bot: Any) -> Path:
-    """Creates the whole entry folder. Returns its path.
+def record_result(name: str, result: dict[str, Any], bot: Any,
+                  root: Path | None = None) -> Path:
+    """Writes `result.json` into the bot's own folder, artifacts included."""
+    d = folder(name, root)
+    if not (d / "bot.py").is_file():
+        raise FileNotFoundError(
+            f"{d} is not a bot: no bot.py.\n"
+            f"Create one with:  uv run pokelike new-bot {slugify(name)}"
+        )
 
-    Built in a temporary folder first, because the entry id depends on the
-    hashes of the artifacts, which are only known once they are written.
-    """
-    entries = Path(root) / "entries"
-    entries.mkdir(parents=True, exist_ok=True)
-
-    staging = entries / f".staging-{slugify(result['bot'])}"
-    if staging.exists():
-        shutil.rmtree(staging)
-    (staging / "artifacts").mkdir(parents=True)
-
-    declared: list[Artifact] = list(getattr(bot, "artifacts", lambda: [])() or [])
+    declared = list(getattr(bot, "artifacts", lambda: [])() or [])
     for a in declared:
         if a.kind not in KINDS:
-            print(f"  note: artifact '{a.name}' has an unrecognised kind '{a.kind}', "
-                  f"archiving it anyway")
-    manifest = [a.write_into(staging / "artifacts") for a in declared]
+            print(f"  note: artifact '{a.name}' has an unrecognised kind "
+                  f"'{a.kind}', archiving it anyway")
+    manifest = [a.write_into(d / "artifacts") for a in declared]
 
-    filename, source = _bot_source(bot)
-    (staging / "bot.py").write_text(source, encoding="utf-8")
-
-    eid = entry_id(result["bot"], source, manifest, result.get("seeds") or [])
     document = {
         **result,
-        "id": eid,
-        "bot_source_file": filename,
+        "bot": slugify(name),
+        # Written LAST, over the artifacts as they now are on disk.
+        "fingerprint": fingerprint(d),
         "artifacts": manifest,
     }
-    (staging / "submission.json").write_text(
-        json.dumps(document, indent=1), encoding="utf-8"
-    )
-    (staging / "artifacts" / "manifest.json").write_text(
-        json.dumps(manifest, indent=1), encoding="utf-8"
-    )
-
-    final = entries / eid
-    if final.exists():
-        shutil.rmtree(final)
-    staging.rename(final)
-    return final
+    (d / "result.json").write_text(json.dumps(document, indent=1), encoding="utf-8")
+    return d
 
 
 # -------------------------------------------------------------------- reading
 
 
-def load_entries(root: Path) -> list[dict[str, Any]]:
-    entries = Path(root) / "entries"
-    if not entries.is_dir():
+def load_results(root: Path | None = None) -> list[dict[str, Any]]:
+    base = Path(root) if root else BOTS
+    if not base.is_dir():
         return []
     out = []
-    for f in sorted(entries.glob("*/submission.json")):
+    for f in sorted(base.glob("*/result.json")):
         try:
-            out.append(json.loads(f.read_text(encoding="utf-8")))
+            r = json.loads(f.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             print(f"  warning: {f} is not valid JSON, skipping")
+            continue
+        # The folder IS the name. A `bot` field left over from somewhere else
+        # would let a row claim to be a bot it is not.
+        r["bot"] = f.parent.name
+        # Recomputed every time it is read, so a row cannot claim a score for
+        # code that has since been edited without saying so.
+        #
+        # A result with NO fingerprint is not clean, it is unchecked -- it
+        # predates the mechanism, or was hand-written. Reported separately rather
+        # than folded into either bucket: calling it stale would be a claim we
+        # cannot support, and calling it fine would be the silence the
+        # fingerprint exists to prevent.
+        r["unverified"] = not r.get("fingerprint")
+        r["stale"] = bool(r.get("fingerprint")) and r["fingerprint"] != fingerprint(f.parent)
+        out.append(r)
     return out
 
 
-def build_index(root: Path) -> dict[str, Any]:
-    """Regenerates index.json from whatever entries are on disk."""
-    entries = load_entries(root)
+def build_index(root: Path | None = None) -> dict[str, Any]:
+    """Regenerates index.json from whatever is measured on disk."""
+    base = Path(root) if root else BOTS
     rows = []
-    for e in entries:
+    for e in load_results(base):
         s = e.get("summary") or {}
+        notes = e.get("notes") or {}
         rows.append({
-            "id": e.get("id"),
-            "bot": e.get("bot"),
-            "author": e.get("author"),
-            "category": e.get("category"),
-            "description": e.get("description"),
-            "score_mean": s.get("score_mean"),
-            "score_stdev": s.get("score_stdev"),
-            "score_best": s.get("score_best"),
-            "badges_mean": s.get("badges_mean"),
-            "badges_best": s.get("badges_best"),
-            "maps_mean": s.get("maps_mean"),
-            "completed": s.get("completed"),
-            "runs": s.get("runs"),
+            "bot": e.get("bot"), "author": e.get("author"),
+            "category": e.get("category"), "description": e.get("description"),
+            "score_mean": s.get("score_mean"), "score_stdev": s.get("score_stdev"),
+            "score_best": s.get("score_best"), "badges_mean": s.get("badges_mean"),
+            "badges_best": s.get("badges_best"), "maps_mean": s.get("maps_mean"),
+            "completed": s.get("completed"), "runs": s.get("runs"),
             "game": (e.get("game") or {}).get("sha256"),
+            # LLM rows only. `model` says what actually answered -- a bot that
+            # takes $MODEL_ID plays a different model for whoever ran it, so the
+            # row is meaningless without it. `harness` and `fallback_rate` are
+            # the two ways such a row can be true and still misleading.
+            "model": notes.get("model"),
+            "harness": notes.get("harness"),
+            "fallback_rate": notes.get("fallback_rate"),
+            "fingerprint": (e.get("fingerprint") or "")[:12],
+            "stale": e.get("stale", False),
+            "unverified": e.get("unverified", False),
             "artifacts": len(e.get("artifacts") or []),
         })
-    # Ranked by badges, not by score. Badges are the game's own progression
-    # counter in Story mode; the engine's score formula was written for the
-    # Battle Tower and two of its terms (mapsCleared, winBonus) never fire here,
-    # so it rewards fighting rather than getting further. See
-    # experiments/env/rewards.py for the full story.
+    # Ranked by badges, not score. The engine's score formula was written for the
+    # Battle Tower and two of its six terms never fire in Story mode, so it
+    # rewards fighting rather than getting further. See experiments/env/rewards.py.
     rows.sort(key=lambda r: (
         r["badges_mean"] is None, -(r["badges_mean"] or 0), -(r["score_mean"] or 0)
     ))
     index = {"entries": rows}
-    (Path(root) / "index.json").write_text(json.dumps(index, indent=1), encoding="utf-8")
-    # The README table is regenerated from the same data, in the same call. A
-    # second command to run would be a second command to forget, and then the
-    # table on the page and the entries on disk would disagree.
-    render_readme(Path(root), index)
+    base.mkdir(parents=True, exist_ok=True)
+    (base / "index.json").write_text(json.dumps(index, indent=1), encoding="utf-8")
+    render_readme(base, index)
     return index
 
 
@@ -245,53 +214,62 @@ README_END = "<!-- END standings -->"
 
 
 def as_markdown(index: dict[str, Any]) -> str:
-    """The standings as a markdown table.
-
-    Ranked by badges. The engine's score formula was written for the Battle
-    Tower and two of its six terms never fire in Story mode, so it rewards
-    fighting rather than getting further — the score column is kept because a
-    policy that scores badly while earning badges is telling you something, but
-    it is not the ranking.
-    """
+    """The standings as a markdown table, ranked by badges."""
     rows = index.get("entries") or []
     if not rows:
-        return ("_No submissions yet._ Yours would be the first — see "
-                "**How to submit** below.\n")
-
+        return ("_No bots measured yet._ Yours would be the first — see "
+                "[GUIDE.md](../GUIDE.md).\n")
     out = [
-        "| # | bot | author | how | runs | badges~ | badges+ | score~ | best | game |",
+        "| # | bot | author | how | runs | badges~ | badges+ | score~ | best | code |",
         "|--:|---|---|---|--:|--:|--:|--:|--:|---|",
     ]
     for i, r in enumerate(rows, 1):
         n = lambda k, d="-": r[k] if r.get(k) is not None else d  # noqa: E731
-        # The bundle hash matters: scores from before and after an upstream game
-        # update are not comparable, and without it a table mixes them silently.
-        game = (r.get("game") or "")[:8] or "-"
+        mark = " ⚠︎" if r.get("stale") else (" ?" if r.get("unverified") else "")
         out.append(
-            f"| {i} | **{r.get('bot') or '?'}** | {r.get('author') or '-'} "
+            f"| {i} | **[{r.get('bot')}]({r.get('bot')}/)** | {r.get('author') or '-'} "
             f"| {r.get('category') or '-'} | {n('runs', 0)} "
             f"| **{n('badges_mean')}** | {n('badges_best')} "
-            f"| {n('score_mean')} | {n('score_best')} | `{game}` |"
+            f"| {n('score_mean')} | {n('score_best')} | `{r.get('fingerprint') or '-'}`{mark} |"
         )
+
+    # An LLM row is true and still misleading unless three things are visible:
+    # which model answered, which harness asked it, and how many turns it did
+    # not actually decide. A fallback is our heuristic playing under the model's
+    # name, so a row full of them measures us.
+    llm = [r for r in rows if r.get("model")]
+    if llm:
+        out += ["", "**Models.**", "",
+                "| bot | model | harness | fallback rate |", "|---|---|--:|--:|"]
+        for r in llm:
+            rate = r.get("fallback_rate")
+            flag = " ⚠︎" if rate is not None and rate > 0.1 else ""
+            out.append(f"| {r.get('bot')} | `{r.get('model')}` | {r.get('harness', '-')} "
+                       f"| {rate if rate is not None else '-'}{flag} |")
+        out += ["",
+                "An LLM result is **not reproducible**: providers change models behind a "
+                "fixed name and sampling is stochastic. `fallback rate` is the share of "
+                "turns the model did not decide, played instead by the harness's backup "
+                "heuristic — **⚠︎ above 0.1 means the row is measuring us more than the "
+                "model**. `harness` is the version of the shared loop in "
+                "`pokelike/bot/llm.py`; rows measured under different numbers were not "
+                "asked the same question."]
     out += [
         "",
-        "Ranked by **badges**, the game's own progression counter. `badges~` is the "
-        "mean over the standard 50 seeds and `badges+` the best single run. "
-        "`game` is the sha256 prefix of the game bundle that was played: results "
-        "under different hashes are not comparable.",
+        "Ranked by **badges**, the game's own progress counter. `badges~` is the mean "
+        "over the standard 50 seeds, `badges+` the best single run. `code` is a "
+        "fingerprint over the bot and its artifacts; **⚠︎ means the files changed "
+        "since the score was measured**, so the row no longer describes what is on "
+        "disk, and **? means the result carries no fingerprint at all** and cannot "
+        "be checked either way. Re-running the benchmark clears both.",
         "",
     ]
     return "\n".join(out)
 
 
 def render_readme(root: Path, index: dict[str, Any]) -> Path | None:
-    """Writes the standings into leaderboard/README.md, between the markers.
-
-    Called whenever the index is rebuilt, so a submitted entry shows up in the
-    table without anyone having to remember a second command — which means the
-    pull request that adds an entry also carries the row for it.
-    """
-    readme = root / "README.md"
+    """Writes the standings into bots/README.md, between the markers."""
+    readme = Path(root) / "README.md"
     if not readme.is_file():
         return None
     text = readme.read_text(encoding="utf-8")
@@ -308,18 +286,17 @@ def render_readme(root: Path, index: dict[str, Any]) -> Path | None:
 def format_table(index: dict[str, Any]) -> str:
     rows = index.get("entries") or []
     if not rows:
-        return "no submissions yet"
+        return "no bots measured yet"
     head = (f"{'bot':<20}{'category':>10}{'runs':>6}{'badge~':>8}{'badge+':>8}"
             f"{'score~':>9}{'stdev':>8}{'best':>7}{'done':>6}")
     out = [head, "-" * len(head)]
     for r in rows:
+        v = lambda k: r[k] if r.get(k) is not None else "-"  # noqa: E731
         out.append(
             f"{(r['bot'] or '')[:19]:<20}{(r['category'] or ''):>10}{r['runs'] or 0:>6}"
-            f"{r['badges_mean'] if r['badges_mean'] is not None else '-':>8}"
-            f"{r['badges_best'] if r.get('badges_best') is not None else '-':>8}"
-            f"{r['score_mean'] if r['score_mean'] is not None else '-':>9}"
-            f"{r['score_stdev'] if r['score_stdev'] is not None else '-':>8}"
-            f"{r['score_best'] if r['score_best'] is not None else '-':>7}"
-            f"{r['completed'] if r['completed'] is not None else '-':>6}"
+            f"{v('badges_mean'):>8}{v('badges_best'):>8}{v('score_mean'):>9}"
+            f"{v('score_stdev'):>8}{v('score_best'):>7}{v('completed'):>6}"
+            + ("  <- code changed since this was measured" if r.get("stale")
+               else "  <- no fingerprint: cannot be checked" if r.get("unverified") else "")
         )
     return "\n".join(out)
