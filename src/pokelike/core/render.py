@@ -185,3 +185,46 @@ def trace_view(trace: list[dict[str, Any]], detail: int = 1) -> str:
             out.append(f"      |    {t['why'][:110]}")
         out.append("")
     return "\n".join(out)
+
+
+def ending_view(final: dict[str, Any], alive: dict[str, Any] | None,
+                score: dict[str, Any] | None) -> str:
+    """What the last decision led to.
+
+    The trace stops one move short by construction: it records a decision and
+    then takes it, so the state that decision produced is only ever visible as
+    the header of the NEXT entry — and the last one has no next. So a log of a
+    losing run showed every choice and never the death.
+
+    Reads the team from `last_alive`, because at game over the engine wipes
+    `state` and the final observation has an empty team.
+    """
+    ended = final.get("screen") or "?"
+    won = ended == "win-screen"
+    run = (alive or {}).get("run") or {}
+    out = ["", f"  === run over: {ended} ==="]
+    out.append(f"      | {'the League is beaten' if won else 'the run ended here'}"
+               f"  —  badges {run.get('badges', 0)}, map {run.get('map', 0)}")
+
+    # NOT the final team. At game over the engine wipes `state`, so this is the
+    # last snapshot taken while it was still populated — which is from BEFORE
+    # whatever ended the run. Saying "the team is out" over three Pokemon at 60%
+    # HP would be inventing a cause of death the log does not know.
+    team = (alive or {}).get("team") or []
+    if team:
+        out.append("      | team as of the last snapshot (before the final fight):")
+        for i, p in enumerate(team):
+            frac = p["hp"] / p["max_hp"] if p["max_hp"] else 0
+            state = "fainted" if p["hp"] == 0 else f"{p['hp']}/{p['max_hp']}"
+            lead = " (led)" if i == 0 else ""
+            out.append(f"      |   {i}. {p['name']:<13}Lv{p['level']:<3} {state:>9}"
+                       f"{'  <- weak' if 0 < frac < 0.35 else ''}{lead}")
+
+    b = (score or {}).get("breakdown") or {}
+    if b:
+        out.append(f"      | {b.get('enemiesKO', 0)} enemies KO'd, "
+                   f"{b.get('faints', 0)} of yours fainted  ->  "
+                   f"5x{b.get('enemiesKO', 0)} - 10x{b.get('faints', 0)} = "
+                   f"{(score or {}).get('points_no_time')}")
+    out.append("")
+    return "\n".join(out)

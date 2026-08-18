@@ -262,6 +262,10 @@ def cmd_bot(args) -> int:
             r = play_run(game, bot, seed, max_steps=args.max_steps, on_step=each_step,
                          on_decision=each_decision if args.detailed else None)
 
+            if args.detailed:
+                print(render.ending_view(r["final_state"], game.last_alive,
+                                         r["score_detail"]), flush=True)
+
             if not args.no_stats:
                 record(bot=args.bot, seed=seed, state=r["final_state"],
                        score=r["score_detail"], steps=r["steps"], alive=game.last_alive,
