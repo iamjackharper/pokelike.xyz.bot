@@ -61,9 +61,13 @@ def team_view(team: list[dict] | None) -> str:
         # already here but read as decoration; saying so makes the order legible
         # as the decision it is.
         lead = "  <- leads" if i == 0 and len(team) > 1 else ""
+        # What it actually attacks with. The engine knows; nothing on screen says
+        # it, so a player reading only the terminal was choosing blind too.
+        mv = p.get("move") or {}
+        move = f"  {mv['name']} {mv.get('power', '?')}" if mv.get("name") else ""
         rows.append(
             f"  {i}. {p['name']:<13}Lv{p['level']:>2}  {bar} {p['hp']:>3}/{p['max_hp']:<3}"
-            f"  {'/'.join(p.get('types') or [])}{item}{shiny}{lead}"
+            f"  {'/'.join(p.get('types') or [])}{move}{item}{shiny}{lead}"
         )
     return "\n".join(rows)
 
@@ -77,6 +81,33 @@ def actions_view(actions: list[dict]) -> str:
             rows.append(f"  [{i}] go to node {a['id']:<6} ({a['node']})")
         else:
             rows.append(f"  [{i}] {a['label']}")
+    return "\n".join(rows)
+
+
+def tutor_view(obs: dict[str, Any]) -> str:
+    """The tutor's offer against what that Pokemon already uses.
+
+    The buttons read "→ SURF:Wartortle Lv35" and carry neither power nor type,
+    so the comparison that decides the choice is not on screen at all. It is in
+    the state — `team[i].move` and `offered_moves[i]` — and this is where it
+    becomes readable.
+    """
+    offered = obs.get("offered_moves") or {}
+    team = obs.get("team") or []
+    if not offered or not team:
+        return ""
+    rows = []
+    for i, p in enumerate(team):
+        new = offered.get(str(i)) or offered.get(i) or {}
+        if not new.get("name"):
+            continue
+        cur = p.get("move") or {}
+        gain = (new.get("power") or 0) - (cur.get("power") or 0)
+        arrow = "+" if gain > 0 else ("=" if gain == 0 else "")
+        rows.append(
+            f"  {i}. {p['name']:<13}{cur.get('name', '?'):<15}{cur.get('power', '?'):>4}"
+            f"   ->  {new['name']:<15}{new.get('power', '?'):>4}  {arrow}{gain if gain else ''}"
+        )
     return "\n".join(rows)
 
 
@@ -102,6 +133,10 @@ def screen(obs: dict[str, Any], with_legend: bool = False) -> str:
         parts += ["", "MAP   [here]  <legal move>  x'=done", map_view(obs["map"])]
         if with_legend:
             parts += ["", LEGEND]
+
+    offers = tutor_view(obs)
+    if offers:
+        parts += ["", "MOVE TUTOR — what each offer replaces", offers]
 
     parts += ["", "ACTIONS", actions_view(obs.get("actions") or [])]
 

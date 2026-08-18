@@ -142,6 +142,24 @@ TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "set_lead",
+            "description": (
+                "Move a team member to slot 0, so they enter the next battle first. "
+                "Free: it does not use the turn, and you still have to call play "
+                "afterwards. Only offered on the map screen."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "index": {"type": "integer", "description": "team slot to promote"},
+                },
+                "required": ["index"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "play",
             "description": "Perform the chosen action and end the turn.",
             "parameters": {
@@ -222,11 +240,14 @@ class LLMBot(Bot):
         self.fallbacks = 0
         self.journal: list[str] = []
         self._last_why = ""
+        # The turn decided in `rearrange`, waiting for `choose` to collect it.
+        self._pending: tuple[int | None, int | None, str] | None = None
 
     # ------------------------------------------------------------------ hooks
 
     def on_start(self, seed: int) -> None:
         self.journal = []
+        self._pending = None
         self.calls = 0
         self.tokens_used = 0
         self.fallbacks = 0
@@ -284,10 +305,50 @@ class LLMBot(Bot):
     def explain(self) -> str:
         return self._last_why
 
+    def rearrange(self, state: dict[str, Any]) -> tuple[int, int] | None:
+        """Who leads, decided in the SAME model call as the move.
+
+        The run loop asks for this before `choose`, so the whole turn is thought
+        about once: `_agentic_round` runs here, the chosen action is cached, and
+        `choose` returns it without a second request. One HTTP call per turn, as
+        before — the model simply gets one more tool.
+
+        Offered only on the map screen. Elsewhere the options ARE the team (the
+        swap screen, the equip modal), so reordering underneath would change what
+        an index means between deciding and playing.
+        """
+        self._pending = None
+        if state.get("screen") != "map-screen" or not state.get("can_reorder"):
+            return None
+        try:
+            index, why, lead = self._agentic_round(state, allow_lead=True)
+        except LLMConfigError:
+            raise
+        except Exception:  # noqa: BLE001 — handled again, and counted, in choose
+            return None
+        self._pending = (state.get("steps"), index, why)
+        team = state.get("team") or []
+        if lead is None or not 0 < lead < len(team):
+            return None
+        self._last_why = f"lead: {team[lead]['name']}"
+        return (0, lead)
+
     def choose(self, state: dict[str, Any]) -> int:
         n = len(state["actions"])
+        # Already decided in rearrange, this same turn. `steps` guards it: a
+        # cached index must never be replayed against a different turn.
+        if self._pending and self._pending[0] == state.get("steps"):
+            _, index, why = self._pending
+            self._pending = None
+            if isinstance(index, int) and 0 <= index < n:
+                self._last_why = why
+                self.journal.append(f"step {state.get('steps')}: [{index}] {why[:90]}")
+                self.journal = self.journal[-self.memory:]
+                if self.verbose:
+                    print(f"   [llm] -> [{index}] {why[:100]}")
+                return index
         try:
-            index, why = self._agentic_round(state)
+            index, why, _ = self._agentic_round(state)
         except LLMConfigError:
             # Not recoverable: every later call fails identically. Better to stop
             # than to quietly hand the run to the backup heuristic.
@@ -332,7 +393,10 @@ class LLMBot(Bot):
 
     # ---------------------------------------------------------- agentic loop
 
-    def _agentic_round(self, state: dict[str, Any]) -> tuple[int, str]:
+    def _agentic_round(self, state: dict[str, Any],
+                       allow_lead: bool = False) -> tuple[int, str, int | None]:
+        """One turn of thinking. Returns (action index, reason, lead or None)."""
+        lead: int | None = None
         messages: list[dict[str, Any]] = [
             {"role": "system", "content": self.system},
             {"role": "user", "content": self._situation(state)},
@@ -345,7 +409,7 @@ class LLMBot(Bot):
                 # No tool: maybe it wrote the index out in prose.
                 index = self._index_from_text(msg.get("content") or "", len(state["actions"]))
                 if index is not None:
-                    return index, "(read from prose)"
+                    return index, "(read from prose)", lead
                 raise LLMError("the model called no tool")
 
             messages.append({
@@ -362,7 +426,25 @@ class LLMBot(Bot):
                     args = {}
 
                 if name == "play":
-                    return args.get("index"), str(args.get("why", ""))
+                    return args.get("index"), str(args.get("why", "")), lead
+
+                if name == "set_lead":
+                    # Recorded, not applied here: the bot has no handle on the
+                    # game, and the run loop is what performs the swap. Kept even
+                    # when not allowed, so the model gets told why rather than
+                    # silently ignored.
+                    want = args.get("index")
+                    if allow_lead and isinstance(want, int):
+                        lead = want
+                        reply = f"ok, slot {want} will lead. Now call play()."
+                    else:
+                        reply = ("not available on this screen: the options here are "
+                                 "your team, so reordering would change what an index "
+                                 "means. Call play().")
+                    messages.append({
+                        "role": "tool", "tool_call_id": c["id"], "content": reply,
+                    })
+                    continue
 
                 messages.append({
                     "role": "tool",

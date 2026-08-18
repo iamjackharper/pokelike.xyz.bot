@@ -29,3 +29,21 @@ class RandomBot(Bot):
 
     def choose(self, state: dict[str, Any]) -> int:
         return self._rng.randrange(len(state["actions"]))
+
+    def rearrange(self, state: dict[str, Any]) -> tuple[int, int] | None:
+        """Also random about who leads, which is what makes it a fair baseline.
+
+        Team order is a decision the game offers and this bot is meant to take
+        every decision uniformly. Leaving `rearrange` at its default would have
+        made it random about moves but FIXED about order — a baseline that is
+        secretly following one policy, and an unfair yardstick for any bot that
+        does think about the order.
+
+        "Leave it alone" is one of the options rather than the fallback, so it
+        gets the same weight as each swap and doing nothing is not privileged.
+        """
+        team = state.get("team") or []
+        if not state.get("can_reorder") or len(team) < 2:
+            return None
+        pick = self._rng.randrange(len(team))      # 0 means: leave it
+        return None if pick == 0 else (0, pick)
