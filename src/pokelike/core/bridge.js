@@ -93,16 +93,25 @@
       '.poke-card, .choice-card, .trainer-card, .item-card, .equip-pokemon-row button, button'
     )].filter((e) => shown(e) && !e.disabled && !NOISE.test(e.id + ' ' + e.className));
 
-    // Nothing matched, but the layer is one the player is expected to act on.
-    // The engine does not always build options out of buttons or known classes:
-    // the evolution overlay's options are bare `div`s created with inline
-    // styles, and the elite-prep bag is a row of `span.item-badge`. Selecting by
-    // tag or class would miss both, so fall back to the container's own visible
-    // children — whatever the engine chose to make them out of.
+    // Nothing matched, but the layer is one the player may be expected to act
+    // on. The engine does not always build options out of buttons or known
+    // classes: the branching-evolution options are bare `div`s made with inline
+    // styles, and the elite-prep bag is a row of `span.item-badge`.
+    //
+    // Falling back to every visible child is too greedy, and it showed: the
+    // evolution ANIMATION (`#evo-overlay`) has children too, so a random bot was
+    // offered "What? Squirtle is evolving!" and "slot1" as a choice and spent a
+    // decision on it. What separates a real option is that the engine made it
+    // clickable — `cursor: pointer` is in the inline style it writes for the
+    // branching choice, and absent from anything merely being animated.
     if (!els.length && (L.kind === 'overlay' || L.kind === 'modal')) {
-      els = [...root.children].filter(
-        (e) => shown(e) && !NOISE.test(e.id + ' ' + (typeof e.className === 'string' ? e.className : ''))
-      );
+      els = [...root.children].filter((e) => {
+        if (!shown(e)) return false;
+        const cls = typeof e.className === 'string' ? e.className : '';
+        if (NOISE.test(e.id + ' ' + cls)) return false;
+        return getComputedStyle(e).cursor === 'pointer' || e.tagName === 'BUTTON'
+          || e.getAttribute('role') === 'button';
+      });
     }
     return { L, els };
   };
