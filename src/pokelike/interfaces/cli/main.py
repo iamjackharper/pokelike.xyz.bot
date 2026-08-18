@@ -248,6 +248,10 @@ def cmd_bot(args) -> int:
             seed = args.seed + i
 
             def each_step(obs, steps, _i=i):
+                # Before the decision, so you see the board it was taken on.
+                if args.graph and obs.get("map"):
+                    print(render.graph_view(obs["map"], colour=sys.stdout.isatty(),
+                                            emoji=not args.ascii_map), flush=True)
                 if args.shots:
                     game.screenshot(
                         Path(args.shots) / f"{_i:02d}-{steps:03d}-{obs['screen']}.png"
@@ -454,6 +458,11 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--shots", metavar="FOLDER", help="save an image at every step")
     s.add_argument("--pause", type=int, default=800, help="ms between moves with --watch")
     s.add_argument("--no-stats", action="store_true", help="do not record the runs")
+    s.add_argument("-g", "--graph", action="store_true",
+                   help="draw the map before each decision, with where you are on it")
+    s.add_argument("--ascii-map", action="store_true",
+                   help="draw the map with symbols instead of emoji, for terminals "
+                        "whose font has no colour emoji")
     s.add_argument("-d", "--detailed", action="count", default=0,
                    help="one line per decision; -dd adds the bot's reasoning, "
                         "-ddd adds the team")
