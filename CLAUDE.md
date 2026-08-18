@@ -30,10 +30,7 @@ uv run pytest -m "not slow"      # fast tests only, no browser
 uv run pokelike bench --bot random             # the standard benchmark, 50 seeds
 uv run pokelike bench --bot random --dry-run   # ... without writing an entry
 
-uv run python -m experiments.sarsa_lambda.train --episodes 300      # train a policy
-uv run python -m experiments.sarsa_lambda.evaluate --seed0 40000    # vs random, paired
-uv run python -m experiments.sarsa_lambda.ablation --workers 4      # feature variants,
-uv run python -m experiments.sarsa_lambda.ablation --list           # trained in parallel
+uv run python -m experiments.example.train --episodes 20   # the shape of an experiment
 ```
 
 ## Architecture
@@ -66,14 +63,17 @@ src/pokelike/
     └── python/            a script, a notebook or the REPL
         ├── driver.py        session(), open_game(), play(), compare()
         └── example.ipynb    the cell-by-cell walkthrough
-experiments/             attempts at a better bot, outside the package
-├── env/                   the game as an RL problem: environment, rewards, encoding
-├── dyna_q/                tabular RL on that MDP: agent, train, evaluate
-└── llm/                   prompt strategies compared on identical seeds
+experiments/             YOUR scratch area, and gitignored apart from these two
+├── env/                   the game as an RL problem: environment, rewards,
+│                          encoding, and tee() for per-experiment logs
+└── example/               the smallest complete experiment, as a starting point
 leaderboard/             submissions, their weights, and how to submit
 tests/                   golden fingerprints + unit tests
 tools/deobfuscate.py     makes the bundle readable (needs node)
 ```
+
+Nothing in `src/` may import from `experiments/`: it is a scratch area, mostly
+untracked, and the package cannot depend on files that are not in the clone.
 
 `interfaces/` and `bot/` contain no game logic: they all go through `Game`'s five
 methods. If you feel like putting a game rule in the CLI, it belongs in `core`.

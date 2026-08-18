@@ -5,17 +5,19 @@
 
     q̂(s, a, w) = wᵀ x(s, a)
 
-Trained by `experiments/sarsa_lambda/`. Sutton & Barto, 2nd edition: chapter 10
-for the semi-gradient control update, section 12.7 for the SARSA(lambda) form.
+Sutton & Barto, 2nd edition: chapter 10 for the semi-gradient control update,
+section 12.7 for the SARSA(lambda) form. The training code is not in the repo —
+`experiments/` is a scratch area and untracked — which is exactly why the feature
+set is frozen below rather than imported.
 
 WHY THE FEATURE CODE IS COPIED IN HERE
 --------------------------------------
 Same reason as `dyna_q.py`, and it matters more here. A weight vector means
 nothing without the exact function that produced the vectors it multiplies:
 `w[43]` is a number, and only `feature_names()` says it is `mon_new_type`. If
-this file imported `experiments/sarsa_lambda/features/`, then inserting one
-feature there would shift every index and silently reinterpret every policy ever
-submitted, including ones already on the leaderboard.
+this file imported its training code, then inserting one feature there would
+shift every index and silently reinterpret every policy ever submitted,
+including ones already on the leaderboard.
 
 There is a mechanical reason on top of the principle: a leaderboard entry
 archives ONE file, the one holding the bot's class, and hashes it for the entry
@@ -109,7 +111,7 @@ def best_submitted() -> Path | None:
 
 # ---------------------------------------------- the frozen feature set, v2
 #
-# Copied MECHANICALLY from experiments/sarsa_lambda/features/groups.py, never
+# Copied MECHANICALLY from the training code that produced the weights, never
 # transcribed by hand, and pinned to it by a test. Hand-copying is how two
 # feature sets drift apart while both look right.
 
@@ -560,8 +562,10 @@ class SarsaBot(Bot):
             raise FileNotFoundError(
                 "no trained weights found. Looked in:\n  "
                 + "\n  ".join(str(p) for p in WEIGHT_CANDIDATES)
-                + "\n\ntrain some:  uv run python -m experiments.sarsa_lambda.train --episodes 300"
-                + "\nor point at some:  POKELIKE_SARSA_WEIGHTS=/path/to/weights.json"
+                + "\n\nThe archived weights of every submission are in "
+                + "leaderboard/entries/, and one is normally found there. If not, "
+                + "point at some you trained:\n  "
+                + "POKELIKE_SARSA_WEIGHTS=/path/to/weights.json"
             )
         data = json.loads(path.read_text(encoding="utf-8"))
         version = data.get("encoding_version")
@@ -675,7 +679,7 @@ class SarsaBot(Bot):
                     "n_features": N_FEATURES,
                     "hyperparameters": stored.get("hyperparameters"),
                     "updates": stored.get("updates"),
-                    "trainer": "experiments/sarsa_lambda/train.py",
+                    "trainer": "linear SARSA(lambda), trained outside the package",
                     "top_weights": dict(self.top_weights(15)),
                 },
             ),

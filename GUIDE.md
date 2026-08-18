@@ -174,6 +174,22 @@ hash stops identifying what actually ran.
 
 ---
 
+## Where to experiment
+
+`experiments/` is a scratch area and **it is not tracked**: everything under it
+is gitignored apart from the shared `env/` and one worked `example/`. Whatever
+you try there — training runs, sweeps, prompts, dead ends — stays on your
+machine, and a pull request that adds a bot cannot drag a training run along
+with it by accident.
+
+```bash
+cp -r experiments/example experiments/mine
+uv run python -m experiments.example.train --episodes 20   # the shape of one
+```
+
+Nothing in `src/pokelike/` imports from there, which is why your bot has to be
+self-contained: see the rule above.
+
 ## What counts as a bot
 
 Anything that picks a move given the state. A prompt around an LLM, a model

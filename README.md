@@ -435,10 +435,7 @@ here did not.
 
 **`llm`** ([bot/llm.py](src/pokelike/bot/llm.py)) is self-contained: prompts,
 tools, agentic loop and the HTTP call with `urllib`. Four prompt strategies ship
-with it, selectable with `POKELIKE_LLM_STRATEGY`, and
-[experiments/llm/compare.py](experiments/llm/compare.py) plays them against each
-other on identical seeds so the better prompt is measured rather than argued
-about. Each turn the model gets the
+with it, selectable with `POKELIKE_LLM_STRATEGY`. Each turn the model gets the
 situation and the numbered actions, may call read-only tools, and closes with
 `play(index)`:
 
@@ -461,7 +458,7 @@ backup heuristic while reporting it as an LLM result — which through `bench`
 would put an entry on the leaderboard labelled `llm` that no model ever played.
 
 **`dyna_q`** ([bot/dyna_q.py](src/pokelike/bot/dyna_q.py)) plays a policy trained
-by [experiments/dyna_q](experiments/dyna_q/). It doubles as the worked example of what
+by tabular RL. It doubles as the worked example of what
 a leaderboard submission looks like, which is why it carries its own copy of the
 state encoding instead of importing the training code.
 
@@ -476,9 +473,7 @@ currently leads the leaderboard: 1.3 badges and 59.3 mean score over the 50
 standard seeds, against random's 0.68 and −3.5. Same algorithm family, same
 budget; what changed is that 100 hand-built linear features let it see what is on
 the card, what an item does, what the move tutor is offering, and who should
-lead. Trained by
-[experiments/sarsa_lambda](experiments/sarsa_lambda/) — Sutton & Barto chapter 10
-for the update, 12.7 for the traces:
+lead. Sutton & Barto chapter 10 for the update, 12.7 for the traces:
 
     q̂(s, a, w) = wᵀ x(s, a)
 
@@ -557,7 +552,7 @@ it is training — teaching a policy with RL and finding a better prompt for an 
 are both ways of improving a player.
 
 ```bash
-uv run python -m experiments.dyna_q.train --episodes 200 --reward progress
+uv run python -m experiments.example.train --episodes 20
 uv run python -m experiments.llm.compare --strategies survivor,explorer --seeds 5
 ```
 

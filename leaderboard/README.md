@@ -136,8 +136,7 @@ q value it gave every option before choosing. Drop both for a plain run, and use
 `--bot sarsa` loads whichever submission currently **leads the table above**,
 read from `index.json` — not a hardcoded file, so it follows the leaderboard
 rather than needing to be updated when someone takes the top spot. A locally
-trained model in `experiments/sarsa_lambda/output/models/` wins over it if you
-have one, and `POKELIKE_SARSA_WEIGHTS=/path/to/weights.json` beats everything.
+trained model of your own wins over it if `POKELIKE_SARSA_WEIGHTS` points at one.
 
 **`random-baseline` above is stale and known to be.** It was measured before the
 random bot learned to reorder its team, so those numbers describe a bot that no

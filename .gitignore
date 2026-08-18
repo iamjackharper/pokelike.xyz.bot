@@ -9,16 +9,29 @@ stats/
 
 .env
 
-experiments/*/models/
-experiments/*/runs/
-experiments/*/output/
-
 # working list, not documentation
 TODO.md
-experiments/*/logs/
 
-# too big for git (GitHub caps files at 100 MB): upload it to a release or
-# drag it into an issue to get a CDN link, and reference that from the README
-# source recordings: the GIF beside them is what ships (gitignore has no
-# trailing comments, so this one goes on its own line)
+# Source recordings. The GIFs beside them are what ships; a 200 MB mp4 is past
+# GitHub's 100 MB file cap anyway. (gitignore has no trailing comments, so this
+# note goes on its own line.)
 img/*.mp4
+
+# ---------------------------------------------------------------------------
+# experiments/ is a scratch area. What you try there is YOURS: it does not
+# belong in anyone else's clone, and a pull request that adds a bot should not
+# drag a training run along with it.
+#
+# Only two things are tracked: the shared environment every experiment builds
+# on, and the one worked example that shows the shape.
+experiments/*
+!experiments/README.md
+!experiments/__init__.py
+!experiments/env/
+!experiments/example/
+
+# ...and not what a run produces, even for those two.
+experiments/env/output/
+experiments/example/output/
+experiments/env/logs/
+experiments/example/logs/

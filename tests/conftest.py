@@ -18,10 +18,9 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 SITE = ROOT / "site"
 
-# `experiments/` is training code, not part of the shipped package, so it is not
-# installed. Tests still need to import it: the one that matters checks that the
-# feature set frozen inside a bot has not drifted from the one it was trained
-# with, which can only be done by holding the two side by side.
+# `experiments/` is a scratch area and mostly untracked, so nothing under tests/
+# may depend on it. The root goes on the path only so the example experiment
+# stays importable for anyone who wants to run it from here.
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
