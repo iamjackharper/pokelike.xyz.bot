@@ -1,8 +1,9 @@
 # llm-example
 
-Every knob the shared LLM harness has, turned, with a reason written next to each.
-**A reference, not a contender** — the other `llm-*` bots each change one thing so
-the comparison between them means something; this one changes everything at once.
+**The reference for building an LLM bot, and for building a benchmark of them.**
+Every parameter you can play with, in one file, each one next to the part of the
+request it lands in. Not a contender: it is not benchmarked, because a bot that
+moves everything at once cannot tell you which move mattered.
 
 ```bash
 export FW_ENDPOINT="https://..."   # base URL, no /v1
@@ -11,42 +12,116 @@ export MODEL_ID="..."
 uv run pokelike bot --bot llm-example --runs 1 -d
 ```
 
+## What one turn actually sends
+
+One HTTP POST to `{FW_ENDPOINT}/v1/chat/completions`. Four things in it are
+prompt, not three — the tool schemas are read by the model like anything else,
+and they are re-sent every turn:
+
+| part of the body | where you tune it | `llm-survivor` |
+|---|---|--:|
+| `messages[0]`, role `system` | `PROMPT` | 1665 char |
+| `tools` | `EXTRA_TOOLS`, `tools()` | 1137 char |
+| `messages[1]`, role `user` | `STATE_VIEW` / `view()` | 831 char |
+| role `tool` replies | `run_tool()` | 120–135 char each |
+| `model`, `temperature`, `max_tokens`, `seed` | `MODEL`, `TEMPERATURE`, `MAX_TOKENS` | — |
+
+**3633 characters a turn before the model has asked for anything.** The tool
+definitions cost more than the state does — a fifth tool is not free because
+nobody calls it, you pay for its schema every turn of every run.
+
+The `user` message is three pieces, one yours and two the harness's:
+
+```
+_situation(state)
+├── view(state)                       ← YOURS
+├── "YOUR RECENT MOVES:" + journal    ← harness, length is MEMORY
+└── "Pick an index between 0 and N"   ← harness, never yours to drop
+```
+
+That split is why replacing the view wholesale is safe. It did not used to be:
+all three lived in one method, so a bot that changed the view silently lost its
+memory and stopped telling the model how many options it had.
+
+## The view, which is the deepest knob
+
+Four settings need no code:
+
+| `STATE_VIEW` | the model gets | |
+|---|---|--:|
+| `"screen"` | the rendered view a person sees | ~880 char |
+| `"json"` | the whole state dict | ~5900 char |
+| `"both"` | the view, then the dict | ~6800 char |
+| `["team", "actions"]` | those keys, as JSON | varies |
+
+What `"screen"` leaves out, measured: the engine's type→item table (0 of 18
+shown), the map edges, raw `base_stats`, `item_id`, and 21 of 23 node ids. It
+renders what a person would look at, not everything that is true.
+
+`view()` is for the rest. This bot overrides it to show what "easier for a model"
+looks like, which is not the same as easier for a person:
+
+```
+TURN 6 — map 0, 0 badges, 2 Pokemon alive.
+
+YOUR TEAM
+  0. Charmander   Lv8    71% HP  Fire      Incinerate 60   <- LEADS THE NEXT BATTLE
+  1. Rattata      Lv7   100% HP  Normal    Tackle 40
+
+CARRYING: nothing
+
+YOUR OPTIONS
+  [0] trainer  — then you could reach: battle, trainer
+  [1] item  — then you could reach: battle, trainer
+  Taking one of these closes the others for good.
+```
+
+390 characters against the default's 831, and three deliberate changes: HP as a
+percentage because `#######...` and `17/24` both make the model divide before it
+can compare; the consequence written as a sentence instead of drawn as a graph;
+the exits inline instead of behind a tool call.
+
+That last one is a real trade, not a free win — it is cheaper, and it also
+removes the chance to observe whether the model knows to ask.
+
+## If you are benchmarking models
+
+Hold everything below the model still and vary `MODEL` alone. Three fields decide
+whether two rows are comparable, and all three are recorded and shown in the
+standings:
+
 | | |
 |---|---|
-| how it works | the shared harness with two extra tools (`state_json`, `bag`), a state view that adds HP fractions the ASCII screen only draws, and a 60k-token per-run ceiling |
-| what it scored | nothing: it is not benchmarked, on purpose |
-| what was tried and dropped | pushing the whole state dict into every turn. A late-run map is kilobytes, most of it irrelevant to this turn, and paying for it every turn makes an LLM benchmark about context windows rather than about play. It is a tool instead, so the model pays only when it asks |
+| `harness` | the version of the shared loop |
+| `state_view` | what the model was looking at |
+| `stock_tools` | the shared four, or a set of its own |
+
+And one decides whether a row is worth reading at all: **`fallback_rate`**, the
+share of turns the model did not decide. Those turns were played by `_fallback`
+under the model's name. Above 0.1 the row is measuring us.
+
+Budget: ~30k tokens a run, ~1.5M for a fifty-seed entry. `STATE_VIEW = "json"`
+is 6.6x that.
+
+## A model from Hugging Face
+
+Three routes, and two need no code:
+
+| | |
+|---|---|
+| Inference API / Endpoints | OpenAI-compatible. Point `FW_ENDPOINT` at it, done |
+| your fine-tune behind vLLM or TGI | same |
+| a local checkpoint | override `_call()` |
+
+For the third, pin the repo id **and a commit sha** in the bot file rather than a
+branch — the fingerprint covers the pointer, not the weights, so a moving branch
+means a row claiming a model that no longer exists.
 
 ## What to copy
 
 | you want | look at |
 |---|---|
-| a different strategy | `PROMPT` — for most bots this is the whole submission |
+| a different strategy | `PROMPT` |
 | the model to see something new | `EXTRA_TOOLS` + `run_tool()` |
-| to change what the model reads each turn | `_situation()` — the deepest hook here |
-| a model that is not an HTTP endpoint | `_call()` — the one hook this file does **not** use |
-
-`_call()` is where a local model goes: load it however you like, return the
-OpenAI-shaped `message` dict, and the loop, the tools and the fallback policy
-above it keep working unchanged.
-
-## Two things it is honest about
-
-**Custom tools are recorded.** Offering the model tools the others did not have
-is allowed and is marked in the standings — not as a fault, but because it is a
-different question, and comparing it with the rest as though it were the same one
-is the actual mistake.
-
-**Overriding `_fallback()` is rarely wise.** Whatever it does is played under the
-bot's name on every turn the model did not answer, and `fallback_rate` reports
-the share. A clever fallback is cleverness being measured as though the model
-produced it.
-
-## It joins prompt comparisons by default
-
-`experiments/llm/compare.py` takes every `llm-*` bot on disk. Name the ones you
-mean if you would rather leave this out:
-
-```bash
-uv run python -m experiments.llm.compare --bots llm-survivor,llm-explorer --seeds 5
-```
+| to change what it reads each turn | `STATE_VIEW`, then `view()` |
+| a model that is not an HTTP endpoint | `_call()` — the one hook this file does not use |

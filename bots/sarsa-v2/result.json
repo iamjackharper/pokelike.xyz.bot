@@ -1,9 +1,9 @@
 {
- "bot": "sarsa",
+ "bot": "sarsa-v2",
  "author": "pierpierpy",
  "category": "rl",
- "description": "Semi-gradient SARSA(lambda), 100 linear features incl. team order, items and the move tutor (S&B 10, 12.7), 300 episodes",
- "submitted_at": "2026-08-18T12:08:04+00:00",
+ "description": "",
+ "submitted_at": "2026-08-18T19:41:27+00:00",
  "pokelike_version": "0.1.0",
  "game": {
   "file": "bundle.eceae50bbd.js",
@@ -577,12 +577,13 @@
   }
  ],
  "notes": {
-  "weights": "sarsa_v2.json",
+  "weights": "weights.json",
   "features_version": 2,
   "n_features": 100,
   "training_updates": 9121,
   "decisions": 951
  },
+ "fingerprint": "a29ed6b2e77c7181f3ada60134838a287adec07ecabd0c349fd5ccc1d37f8916",
  "artifacts": [
   {
    "name": "weights.json",
@@ -598,6 +599,5 @@
    "bytes": 718,
    "sha256": "5396ee308a408db77d761f47dcddf5758f7f18716515d0f8af13233a39f08571"
   }
- ],
- "fingerprint": "d85f18fb544ff77d0822f75c71031973d820a409dceac8fbd798adcbc5336fb7"
+ ]
 }

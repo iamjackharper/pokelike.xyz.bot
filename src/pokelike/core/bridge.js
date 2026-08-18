@@ -243,8 +243,17 @@
     // __pk_realNow, not performance.now: the page clock is virtual and jumps
     // ahead on every read, so this budget would be spent in a few hundred
     // iterations instead of ninety seconds.
-    const started = window.__pk_realNow();
-    while (window.__pk_realNow() - started < timeoutMs) {
+    //
+    // The fallback is not defensive clutter, it is the correct reading of the
+    // one case that produces it. THIS FILE IS RE-READ FROM DISK ON EVERY RUN
+    // while browser.py is a module loaded once, so a long-running process that
+    // pulls mid-run gets a new bridge against an old init script -- and an old
+    // one does not virtualise the clock at all, which is exactly when
+    // performance.now IS the real clock. It cost a training run at episode 78
+    // to find that out.
+    const now = window.__pk_realNow || performance.now.bind(performance);
+    const started = now();
+    while (now() - started < timeoutMs) {
       const r = window.__pk_pump();
       if (r.ready) return true;
       // Pace only after actually clicking, so the click never lands on top of

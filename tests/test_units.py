@@ -105,6 +105,46 @@ def test_new_bot_writes_something_that_loads(tmp_path):
     assert "play" in [t["function"]["name"] for t in llm.tools(llm)]
 
 
+def test_every_bot_can_actually_be_recorded(tmp_path, monkeypatch):
+    """The last five seconds of a benchmark, exercised without the fifty runs.
+
+    `artifacts()` and `record_result` only run after a COMPLETE benchmark, so
+    nothing reached them for minutes at a time and three separate breakages sat
+    there unseen: a relative import in a recovered bot, an artifact copied onto
+    itself now that a bot's folder IS its archive rather than being copied into
+    one, and a NameError in the line that lists what was written.
+
+    Recording into tmp_path rather than bots/, so running the tests never files
+    a result.
+    """
+    import shutil
+
+    from pokelike.bot.catalogue import BOTS, available as on_disk, load_class
+    from pokelike.leaderboard import fingerprint, load_results, record_result
+
+    for var, val in (("FW_ENDPOINT", "https://x.invalid"),
+                     ("FW_TOKEN", "t"), ("MODEL_ID", "m")):
+        monkeypatch.setenv(var, val)
+
+    fake = {"summary": {"runs": 50, "badges_mean": 1.0}, "seeds": [1], "runs": []}
+    for name in on_disk():
+        shutil.copytree(BOTS / name, tmp_path / name,
+                        ignore=shutil.ignore_patterns("__pycache__"))
+        bot = load_class(tmp_path / name / "bot.py")()
+        # The call that was never made: a bot may declare artifacts, and a
+        # relative import inside artifacts() survives every other check.
+        assert isinstance(bot.artifacts(), list), f"{name}.artifacts() is not a list"
+        d = record_result(name, fake, bot, tmp_path)
+        assert (d / "result.json").is_file(), f"{name} recorded nothing"
+
+    rows = {r["bot"]: r for r in load_results(tmp_path)}
+    assert len(rows) == len(on_disk())
+    for name, r in rows.items():
+        assert not r["stale"], f"{name} is stale the moment it is written"
+        assert not r["unverified"], f"{name} was written without a fingerprint"
+        assert r["fingerprint"] == fingerprint(tmp_path / name)
+
+
 def test_the_two_sarsas_are_two_different_policies():
     """v1 and v2 exist side by side to be compared, so they must differ.
 
@@ -120,25 +160,35 @@ def test_the_two_sarsas_are_two_different_policies():
     assert len(v1["weights"]) != len(v2["weights"])
 
 
-def test_every_llm_bot_uses_the_shared_harness_and_its_own_prompt():
-    """The whole point of the split: same loop, different prompts.
+def test_every_llm_bot_uses_the_shared_harness_and_differs_from_the_others(monkeypatch):
+    """Same loop, and no two bots identical in every dimension.
 
-    A benchmark of models compares models only if the harness is held still. An
-    LLM bot that reimplements the loop, or two that ship the same prompt, are
-    measuring something other than what the standings claim.
+    A benchmark of models compares models only if the harness is held still, so
+    an LLM bot that reimplements the loop is measuring something else. Sharing a
+    PROMPT is fine and sometimes the point: `llm-raw` is `llm-survivor` word for
+    word with a different state view, which is what makes the pair a single
+    variable. What must not repeat is the whole configuration — two bots alike
+    in prompt, view and tools are one bot under two names, and the difference
+    between their rows would be pure noise read as a finding.
     """
     from pokelike.bot.catalogue import BOTS, available as on_disk, load_class
     from pokelike.bot.llm import HARNESS, LLMBot
 
-    prompts = {}
+    for var, val in (("FW_ENDPOINT", "https://x.invalid"),
+                     ("FW_TOKEN", "t"), ("MODEL_ID", "m")):
+        monkeypatch.setenv(var, val)
+
+    seen = {}
     for name in [n for n in on_disk() if n.startswith("llm-")]:
         cls = load_class(BOTS / name / "bot.py")
         assert issubclass(cls, LLMBot), f"{name} does not build on the shared harness"
         assert cls.HARNESS == HARNESS, f"{name} pins an old harness version"
-        assert cls.PROMPT and cls.PROMPT not in prompts, (
-            f"{name} has the same prompt as {prompts.get(cls.PROMPT)}")
-        prompts[cls.PROMPT] = name
-    assert len(prompts) >= 2, "there is nothing to compare"
+        assert cls.PROMPT, f"{name} has no prompt"
+        bot = cls()
+        shape = (cls.PROMPT, bot.view_name(), tuple(bot.tool_names()), cls.MODEL)
+        assert shape not in seen, f"{name} is identical to {seen.get(shape)}"
+        seen[shape] = name
+    assert len(seen) >= 2, "there is nothing to compare"
 
 
 def test_an_llm_bot_refuses_to_build_without_credentials(monkeypatch):
@@ -207,6 +257,56 @@ def test_a_bot_may_add_its_own_tools_but_not_remove_play(monkeypatch):
     with pytest.raises(LLMConfigError) as e:
         NoPlay()
     assert "play" in str(e.value)
+
+
+def test_the_state_view_is_the_bots_to_choose_and_cannot_break_the_plumbing(monkeypatch):
+    """What the model reads each turn is a knob, and replacing it is safe.
+
+    The old hook mixed the view with the journal and the "pick an index" line,
+    so a bot that replaced it wholesale silently lost its memory and stopped
+    telling the model how many options there were — and kept running, just
+    worse, for reasons nothing reported.
+    """
+    from pokelike.bot.llm import LLMBot, LLMConfigError
+
+    for var, val in (("FW_ENDPOINT", "https://x.invalid"),
+                     ("FW_TOKEN", "t"), ("MODEL_ID", "m")):
+        monkeypatch.setenv(var, val)
+
+    state = {"screen": "map-screen", "steps": 3, "team": [], "bag": ["Potion"],
+             "actions": [{"kind": "node", "id": "n1_0", "node": "catch"},
+                         {"kind": "node", "id": "n1_1", "node": "battle"}]}
+
+    class Probe(LLMBot):
+        PROMPT = "x"
+
+    seen = {spec: Probe(view=spec).view(state)
+            for spec in ("screen", "json", "both")}
+    assert "Potion" in seen["json"], "the raw dict must carry the whole state"
+    assert len(seen["both"]) > len(seen["screen"]), "both is the view plus the dict"
+    assert Probe(view=["bag"]).view(state) == '{"bag":["Potion"]}'
+    # A key absent on this screen is skipped, not an error: `map` is gone during
+    # a battle, and a view that raises there would end the run.
+    assert Probe(view=["bag", "map"]).view(state) == '{"bag":["Potion"]}'
+
+    assert Probe(view="json").view_name() == "json"
+    assert Probe(view=["bag"]).view_name() == "keys:bag"
+    with pytest.raises(LLMConfigError):
+        Probe(view="nonsense").view(state)
+
+    class Custom(LLMBot):
+        PROMPT = "x"
+
+        def view(self, state):
+            return "ONLY MINE"
+
+    bot = Custom()
+    bot.journal = ["step 1: [0] went to the trainer"]
+    whole = bot._situation(state)
+    assert "ONLY MINE" in whole
+    assert "YOUR RECENT MOVES" in whole, "replacing the view cost the bot its memory"
+    assert "Pick an index between 0 and 1" in whole, "the model was not told the range"
+    assert bot.view_name() == "custom", "a custom view must be recorded as one"
 
 
 def test_a_name_matching_two_bots_is_an_error_not_a_guess():

@@ -492,6 +492,8 @@ about thirty lines, and the prompt is the whole submission:
 | [`llm-survivor`](bots/llm-survivor/) | faints end runs; buy more run |
 | [`llm-explorer`](bots/llm-explorer/) | badges only come from going further |
 | [`llm-analyst`](bots/llm-analyst/) | says nothing about playing, only about looking first |
+| [`llm-raw`](bots/llm-raw/) | `llm-survivor`'s prompt, reading the raw state instead of the view |
+| [`llm-example`](bots/llm-example/) | a reference, not a contender: every knob turned, with reasons |
 
 Each turn the model gets the situation and the numbered actions, may call
 read-only tools, and closes with `play(index)`:
@@ -505,6 +507,29 @@ read-only tools, and closes with `play(index)`:
 
 `what_lies_ahead` is the one that matters: the choice closes the other nodes on
 that layer forever, and without reading the edges the model cannot know that.
+
+**What the model reads each turn is yours to choose too.** The default is the
+same ASCII view a person sees, which is 880 characters and leaves real things
+out — the engine's type/item table, which node connects to which, raw base
+stats — because it renders what someone would look at rather than everything
+that is true. One line changes it:
+
+| `STATE_VIEW` | the model gets | roughly |
+|---|---|--:|
+| `"screen"` | the rendered view. The default | 880 chars |
+| `"json"` | the whole state dict | 5900 chars |
+| `"both"` | the view, then the dict under it | 6800 chars |
+| `["team", "actions"]` | just those keys, as JSON | varies |
+
+Six times the tokens is the price of `"json"` — about 1.8M per benchmark against
+275k — and it is not only money: a map the turn does not need takes room from
+the reasoning the model was about to do. Whether that trade pays is an
+experiment, which is why [`llm-raw`](bots/llm-raw/) is `llm-survivor` with the
+same prompt and a different view, and nothing else.
+
+Override `view(state)` when none of the four fit. The journal and the "pick an
+index" line are wrapped around whatever it returns, so replacing the view
+wholesale cannot silently cost a bot its memory.
 
 **You can give it tools of your own**, or replace these outright — declare them
 in `EXTRA_TOOLS` and answer them in `run_tool`. Only `play` is required, since

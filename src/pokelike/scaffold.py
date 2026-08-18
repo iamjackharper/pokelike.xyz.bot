@@ -143,6 +143,16 @@ Think briefly, then call `play`. Always call `play`."""
     # TEMPERATURE = 0.6
     # MAX_TOKENS = 1500
     # MAX_ROUNDS = 4        # tool rounds before the turn is given up on
+    # What the model READS each turn. The default is the ASCII view a person
+    # sees; "json" is the whole state dict at about 6.6x the tokens. Which of
+    # the two plays better is an open question -- bots/llm-raw/ is the same
+    # prompt as bots/llm-survivor/ with only this changed.
+    #
+    # STATE_VIEW = "screen"   # "json" | "both" | ["team", "actions", ...]
+    #
+    # def view(self, state):          # when none of the four fit
+    #     return f"HP {...}"          # journal and instructions are added for you
+
     # MEMORY = 6            # past turns shown back to the model
     # TOKEN_BUDGET = 0      # per-run ceiling; 0 means none. ~30k is one run
 

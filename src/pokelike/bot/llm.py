@@ -216,6 +216,29 @@ class LLMBot(Bot):
     | `MEMORY`       | how many past turns are shown back to the model        |
     | `TOKEN_BUDGET` | tokens per run, 0 for no ceiling                       |
     | `EXTRA_TOOLS`  | tools of your own, on top of the shared four            |
+    | `STATE_VIEW`   | **what the model reads each turn**                      |
+
+    `STATE_VIEW` is the one to think hardest about, because it decides what the
+    model is looking at rather than what it is told to do:
+
+    | value | what the model gets | roughly |
+    |---|---|--:|
+    | `"screen"` | the ASCII view a person sees. The default | 880 chars |
+    | `"json"` | the whole state dict, compact JSON | 5900 chars |
+    | `"both"` | the view, then the dict under it | 6800 chars |
+    | `["team", "actions"]` | just those keys, as JSON | varies |
+
+    Six times the tokens is the price of `"json"`, and it is not only money:
+    filling the context with a map the turn does not need takes room from the
+    reasoning it was about to do. The default drops real things -- the engine's
+    type/item table, the map edges, raw base stats -- because it renders what a
+    person would look at, not everything that is true. Which of those matters is
+    an experiment, which is why this is a knob and not our decision.
+
+    `view(state)` is the escape hatch when none of the four fit. Override it and
+    return whatever string you like; the journal and the "pick an index"
+    instruction are added around it by the harness, so you cannot break them by
+    forgetting them.
 
     To give the model something the shared tools do not offer, declare it in
     `EXTRA_TOOLS` and answer it in `run_tool`:
@@ -258,6 +281,7 @@ class LLMBot(Bot):
     MEMORY = 6
     TOKEN_BUDGET = 0
     EXTRA_TOOLS: list[dict[str, Any]] = []
+    STATE_VIEW: Any = "screen"
 
     def __init__(self, seed: int = 0, endpoint: str | None = None,
                  token: str | None = None, model: str | None = None,
@@ -286,6 +310,11 @@ class LLMBot(Bot):
         self.max_tokens = overrides.pop("max_tokens", self.MAX_TOKENS)
         self.max_rounds = overrides.pop("max_rounds", self.MAX_ROUNDS)
         self.memory = overrides.pop("memory", self.MEMORY)
+        # Settable here as well as on the class so an experiment can put four
+        # views on the same seeds without four bot folders. A SUBMISSION should
+        # still declare it on the class: the fingerprint covers the class, and a
+        # row whose view was chosen by the caller does not say what it played.
+        self.state_view = overrides.pop("view", None) or self.STATE_VIEW
         self.token_budget = overrides.pop("token_budget", self.TOKEN_BUDGET)
         if overrides:
             raise TypeError(f"unknown settings: {', '.join(sorted(overrides))}")
@@ -349,6 +378,10 @@ class LLMBot(Bot):
             # False means this bot answers a different question from the others:
             # it gave the model tools they did not have, or took some away.
             "stock_tools": self.tool_names() == _STOCK_TOOL_NAMES,
+            # What the model was looking at. Two rows with different views are
+            # not answering the same question, any more than two with different
+            # tools are.
+            "state_view": self.view_name(),
             "reproducible": False,
         }
 
@@ -387,6 +420,7 @@ class LLMBot(Bot):
                     "token_budget": self.token_budget,
                     "tools": self.tool_names(),
                     "stock_tools": self.tool_names() == _STOCK_TOOL_NAMES,
+                    "state_view": self.view_name(),
                     "reproducible": False,
                     "why_not": (
                         "providers change models behind a fixed name and sampling is "
@@ -581,8 +615,57 @@ class LLMBot(Bot):
 
     # ---------------------------------------------------------------- context
 
+    def view(self, state: dict[str, Any]) -> str:
+        """What the model reads each turn. THE hook for changing that.
+
+        Reads `STATE_VIEW` (or whatever was passed as `view=`). Override it
+        outright for anything the four settings do not cover -- the harness adds
+        the journal and the instruction line around whatever this returns, so
+        replacing it wholesale cannot silently cost the bot its memory or leave
+        the model without the range of legal indices. That was the shape of the
+        old private `_situation`, where the thing you wanted to change and the
+        plumbing you must not break lived in one method.
+        """
+        spec = self.state_view
+        if isinstance(spec, str) and spec == "screen":
+            return render.screen(state)
+        if isinstance(spec, str) and spec in ("json", "both"):
+            raw = json.dumps(state, separators=(",", ":"))
+            if spec == "json":
+                return raw
+            return f"{render.screen(state)}\n\nTHE SAME STATE, IN FULL:\n{raw}"
+        if isinstance(spec, (list, tuple)):
+            missing = [k for k in spec if k not in state]
+            if missing:
+                # Not an error: a key can be absent on one screen and present on
+                # the next -- `map` is gone during a battle. Saying so beats a
+                # view that quietly shrinks and a run that gets worse for reasons
+                # nobody can see.
+                if self.verbose:
+                    print(f"   [llm] STATE_VIEW: no {', '.join(missing)} on this screen")
+            return json.dumps({k: state[k] for k in spec if k in state},
+                              separators=(",", ":"))
+        raise LLMConfigError(
+            f"STATE_VIEW is {spec!r}. Use 'screen', 'json', 'both', a list of "
+            f"state keys, or override view(state) yourself."
+        )
+
+    def view_name(self) -> str:
+        """What to record: the setting, or 'custom' if `view` was replaced."""
+        if type(self).view is not LLMBot.view:
+            return "custom"
+        return self.state_view if isinstance(self.state_view, str) else \
+            "keys:" + ",".join(self.state_view)
+
     def _situation(self, state: dict[str, Any]) -> str:
-        parts = [render.screen(state)]
+        """The whole user message: the view, plus what the harness owns.
+
+        Deliberately not the hook. The journal is what stops a bot walking the
+        same loop forever, and the instruction line is what tells the model how
+        many options there are -- neither is a choice a bot should be able to
+        drop by accident while changing something else.
+        """
+        parts = [self.view(state)]
         if self.journal:
             parts += ["", "YOUR RECENT MOVES:", *(f"  {r}" for r in self.journal)]
         parts += [
