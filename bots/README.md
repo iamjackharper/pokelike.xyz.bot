@@ -23,8 +23,8 @@ clone to a pull request. This page is the reference.
 
 | # | bot | author | how | runs | badges~ | badges+ | score~ | best | code |
 |--:|---|---|---|--:|--:|--:|--:|--:|---|
-| 1 | **[sarsa-v2](sarsa-v2/)** | pierpierpy | rl | 50 | **1.36** | 3 | 71 | 235 | `a29ed6b2e77c` |
-| 2 | **[sarsa-v1](sarsa-v1/)** | pierpierpy | rl | 50 | **1.3** | 4 | 59.3 | 195 | `f5df329f5dda` |
+| 1 | **[sarsa-v2](sarsa-v2/)** | pierpierpy | rl | 50 | **1.36** | 3 | 71 | 235 | `b15e0143bb76` |
+| 2 | **[sarsa-v1](sarsa-v1/)** | pierpierpy | rl | 50 | **1.3** | 4 | 59.3 | 195 | `79f2738b433f` |
 | 3 | **[dyna-q](dyna-q/)** | pierpierpy | rl | 50 | **0.62** | 3 | 4.9 | 85 | `6aeb11457d3c` |
 | 4 | **[random](random/)** | pierpierpy | rules | 50 | **0.56** | 2 | -9.5 | 45 | `15bb569eddef` |
 

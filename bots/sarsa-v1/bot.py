@@ -5,7 +5,7 @@
 
     q̂(s, a, w) = wᵀ x(s, a)
 
-Trained by `experiments/sarsa_lambda/`. Sutton & Barto, 2nd edition: chapter 10
+Trained by `experiments/sarsa/`. Sutton & Barto, 2nd edition: chapter 10
 for the semi-gradient control update, section 12.7 for the SARSA(lambda) form.
 
 WHICH ONE THIS IS
@@ -24,7 +24,7 @@ WHY THE FEATURE CODE IS COPIED IN HERE
 Same reason as `bots/dyna-q/bot.py`, and it matters more here. A weight vector means
 nothing without the exact function that produced the vectors it multiplies:
 `w[43]` is a number, and only `feature_names()` says it is `mon_new_type`. If
-this file imported `experiments/sarsa_lambda/features.py`, then inserting one
+this file imported `experiments/sarsa/features.py`, then inserting one
 feature there would shift every index and silently reinterpret every policy ever
 submitted, including ones already on the leaderboard.
 
@@ -270,7 +270,7 @@ class SarsaBot(Bot):
             raise FileNotFoundError(
                 "no trained weights found. Looked in:\n  "
                 + "\n  ".join(str(p) for p in WEIGHT_CANDIDATES)
-                + "\n\ntrain some:  uv run python -m experiments.sarsa_lambda.train --episodes 300"
+                + "\n\ntrain some:  uv run python -m experiments.sarsa.train --episodes 300"
                 + "\nor point at some:  POKELIKE_SARSA_WEIGHTS=/path/to/weights.json"
             )
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -363,7 +363,7 @@ class SarsaBot(Bot):
                     "n_features": N_FEATURES,
                     "hyperparameters": stored.get("hyperparameters"),
                     "updates": stored.get("updates"),
-                    "trainer": "experiments/sarsa_lambda/train.py",
+                    "trainer": "experiments/sarsa/train.py",
                     "top_weights": dict(self.top_weights(15)),
                 },
             ),

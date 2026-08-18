@@ -1,6 +1,6 @@
 """Does the learned policy beat random, on runs it has never seen?
 
-    uv run python -m experiments.sarsa_lambda.evaluate --episodes 25
+    uv run python -m experiments.sarsa.evaluate --episodes 25
 
 Both policies play THE SAME held-out seeds, and the comparison is paired: the
 question is not "what did SARSA average" but "on this identical run, did it do
@@ -76,7 +76,7 @@ def evaluate(table: str = "sarsa.json", episodes: int = 25,
     if not path.is_file():
         raise SystemExit(
             f"no weights at {path}\n{_available(MODELS)}\n\n"
-            f"train some first:  uv run python -m experiments.sarsa_lambda.train"
+            f"train some first:  uv run python -m experiments.sarsa.train"
         )
     agent = SarsaLambda.load(path)
     print(f"loaded {table}: {agent.summary()}")

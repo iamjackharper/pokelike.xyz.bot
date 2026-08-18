@@ -289,11 +289,14 @@ with session() as game:
 Whole runs and comparisons, without writing the loop:
 
 ```python
-from pokelike import play, compare
+from pokelike import play, compare, create
 
-result = play(MyBot(), seed=42)                 # one run, with its decision trace
-print(compare({"mine": MyBot()}, seeds=range(20))["table"])
+result = play(create("sarsa-v2"), seed=42)      # one run, with its decision trace
+print(compare({"mine": create("mine")}, seeds=range(20))["table"])
 ```
+
+`create` takes the name of a folder under `bots/` — the same name `--bot` takes,
+and there is nothing to import or register.
 
 `compare` plays every bot on the **same** seeds and pairs them. Runs vary
 enormously by luck here, so two separate averages mostly measure who drew the

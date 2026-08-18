@@ -9,14 +9,21 @@ worked examples, and the point of them is that you can read what was actually
 done rather than a description of it.
 
 ```
-experiments/
-├── env/            the game stated as an RL problem. Shared by all of them.
-├── example/        the smallest complete experiment. Start here.
-├── dyna_q/         tabular RL. It lost, and is kept because of that.
-├── sarsa_lambda/   linear function approximation. The one that worked.
-├── llm/            comparing prompts, which is not learning at all.
-└── <yours>/        ignored.
+experiments/          research                 bots/          what it produced
+├── env/       the problem, shared by all      —
+├── example/   the smallest complete one       —              start here
+├── dyna_q/    tabular RL. It lost             dyna-q/        kept because it lost
+├── sarsa/     linear FA. The one that worked  sarsa-v1/ -v2/ 81 and 100 features
+├── llm/       comparing prompts               llm-*/         one harness, six bots
+└── <yours>/   ignored, and yours              <yours>/
 ```
+
+**An experiment is named after the bot it produces**, so you never have to work
+out which folder trained what. The separator differs and that is Python, not
+taste: an experiment is a package you run with `-m`, so `experiments.dyna_q`
+must be a valid identifier, while a bot is a directory loaded by path and can be
+`dyna-q`. `--bot dyna_q` works anyway — names are normalised before they are
+looked up, so you can type either.
 
 Every one of them has the same shape, so moving between them costs nothing:
 
@@ -166,7 +173,9 @@ result and is noise.
 
 The demonstration is on one model: `full` scored 1.60 over those 25 seeds and
 **1.10** over the 50 benchmark seeds. Same weights, opposite conclusion, and a
-gap wider than anything in the table.
+gap wider than anything in the table. That is also why `full` is not on the
+leaderboard despite topping this one: the 1.60 is a number measured on the seeds
+it was chosen on, and `sarsa-v2` at 1.36 over the 50 beats it where it counts.
 
 **25 seeds cannot tell feature sets apart on this game.** Worth knowing before
 spending eight hours ranking variants that way. Comparisons against random are
@@ -187,11 +196,14 @@ Against the same seeds, paired. Runs vary enormously by luck here, so two
 separate averages mostly measure who drew the nicer maps:
 
 ```python
-from pokelike import compare
-from pokelike.bot.mine import MyBot
+from pokelike import compare, create
 
-print(compare({"mine": MyBot()}, seeds=range(25))["table"])
+print(compare({"mine": create("mine")}, seeds=range(25))["table"])
 ```
+
+`create` builds a bot by the name of its folder under `bots/`, the same name
+`--bot` takes. There is no module to import: nothing is registered anywhere, so
+a bot exists because its directory does.
 
 It reports wins, draws, losses and a t. With this much variance, a difference in
 means on its own says very little.

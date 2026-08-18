@@ -1,7 +1,7 @@
 """Train every variant at once, then judge them on the same held-out seeds.
 
-    uv run python -m experiments.sarsa_lambda.ablation --episodes 300 --workers 4
-    uv run python -m experiments.sarsa_lambda.ablation --list
+    uv run python -m experiments.sarsa.ablation --episodes 300 --workers 4
+    uv run python -m experiments.sarsa.ablation --list
 
 Each variant is a separate PROCESS with its own port and its own browser. Not
 threads: Playwright's sync API is bound to the thread that created it, so two
@@ -50,7 +50,7 @@ ALPHA_NORM = 9.0
 
 def _train_cmd(v, episodes: int, reward: str, port: int, seed0: int) -> list[str]:
     cmd = [
-        sys.executable, "-m", "experiments.sarsa_lambda.train",
+        sys.executable, "-m", "experiments.sarsa.train",
         "--episodes", str(episodes), "--reward", reward, "--seed0", str(seed0),
         "--port", str(port), "--out", f"ablation_{v.name}.json",
         "--alpha-norm", str(ALPHA_NORM),

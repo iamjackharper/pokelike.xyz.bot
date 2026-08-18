@@ -166,7 +166,7 @@ as being useless.
 ## Layout
 
 ```
-sarsa_lambda/
+sarsa/
 ├── agent.py          the algorithm: q̂ = wᵀx, traces, the update
 ├── train.py          the three things you run
 ├── evaluate.py
@@ -185,8 +185,8 @@ switch a group off and leave everything else meaning the same thing.
 ## Which features actually decide anything
 
 ```bash
-uv run python -m experiments.sarsa_lambda.ablation --list          # the questions
-uv run python -m experiments.sarsa_lambda.ablation --episodes 300 --workers 4
+uv run python -m experiments.sarsa.ablation --list          # the questions
+uv run python -m experiments.sarsa.ablation --episodes 300 --workers 4
 ```
 
 Every variant is a question with an answer you can be wrong about, written down
@@ -278,8 +278,8 @@ step fixed.**
 ## Running it
 
 ```bash
-uv run python -m experiments.sarsa_lambda.train --episodes 300 --reward progress
-uv run python -m experiments.sarsa_lambda.evaluate --episodes 25 --seed0 40000
+uv run python -m experiments.sarsa.train --episodes 300 --reward progress
+uv run python -m experiments.sarsa.evaluate --episodes 25 --seed0 40000
 ```
 
 | flag | meaning | default |

@@ -174,7 +174,7 @@ Water one with different stats. **No number of episodes fixes that: the
 information never reaches the table.**
 
 So the diagnosis in the previous section — attack the algorithm — was the wrong
-call. The limit was the representation. [`sarsa_lambda/`](../sarsa_lambda/) is
+call. The limit was the representation. [`sarsa/`](../sarsa/) is
 that hypothesis tested: same reward, same environment, same held-out protocol,
 81 linear features instead of a table (100 since). It won 15 of 25 with no
 losses, and now

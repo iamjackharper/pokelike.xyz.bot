@@ -3,7 +3,7 @@
  "author": "pierpierpy",
  "category": "rl",
  "description": "",
- "submitted_at": "2026-08-18T19:41:31+00:00",
+ "submitted_at": "2026-08-18T19:54:39+00:00",
  "pokelike_version": "0.1.0",
  "game": {
   "file": "bundle.eceae50bbd.js",
@@ -583,7 +583,7 @@
   "training_updates": 5988,
   "decisions": 978
  },
- "fingerprint": "f5df329f5ddaa2242f0aaeaeceeebf8b4be08d0ccca2c6916b7252ed2e77f597",
+ "fingerprint": "79f2738b433fd3ed04ad770c35119363e89722e78b2e9b3d1698f489f77cd122",
  "artifacts": [
   {
    "name": "weights.json",
@@ -596,8 +596,8 @@
    "name": "config.json",
    "kind": "config",
    "description": "how the policy was trained",
-   "bytes": 705,
-   "sha256": "72af2adac6d2d244c54db6522c50f48d679e896909de724c407a9d02d897b47a"
+   "bytes": 698,
+   "sha256": "8fe3eb97f49a658c61d5d2d7b1f8c8ed7ed4489da03ff993135bb2457f807692"
   }
  ]
 }

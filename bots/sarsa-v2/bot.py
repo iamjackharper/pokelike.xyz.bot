@@ -5,7 +5,7 @@
 
     q̂(s, a, w) = wᵀ x(s, a)
 
-Trained by `experiments/sarsa_lambda/`. Sutton & Barto, 2nd edition: chapter 10
+Trained by `experiments/sarsa/`. Sutton & Barto, 2nd edition: chapter 10
 for the semi-gradient control update, section 12.7 for the SARSA(lambda) form.
 
 WHICH ONE THIS IS
@@ -15,7 +15,7 @@ team-shape terms to `sarsa-v1`'s 81. It scored 1.36 badges over the fifty
 standard seeds against v1's 1.30 -- ahead, but by less than the noise on fifty
 runs, which is worth saying plainly rather than rounding up into a story.
 
-The ablation in `experiments/sarsa_lambda/` says the same thing from the other
+The ablation in `experiments/sarsa/` says the same thing from the other
 side: every variant beats random, and no variant beats another.
 
 WHY THE FEATURE CODE IS COPIED IN HERE
@@ -23,7 +23,7 @@ WHY THE FEATURE CODE IS COPIED IN HERE
 Same reason as `bots/dyna-q/bot.py`, and it matters more here. A weight vector means
 nothing without the exact function that produced the vectors it multiplies:
 `w[43]` is a number, and only `feature_names()` says it is `mon_new_type`. If
-this file imported `experiments/sarsa_lambda/features/`, then inserting one
+this file imported `experiments/sarsa/features/`, then inserting one
 feature there would shift every index and silently reinterpret every policy ever
 submitted, including ones already on the leaderboard.
 
@@ -73,7 +73,7 @@ def find_weights() -> Path:
 
 # ---------------------------------------------- the frozen feature set, v2
 #
-# Copied MECHANICALLY from experiments/sarsa_lambda/features/groups.py, never
+# Copied MECHANICALLY from experiments/sarsa/features/groups.py, never
 # transcribed by hand, and pinned to it by a test. Hand-copying is how two
 # feature sets drift apart while both look right.
 
@@ -639,7 +639,7 @@ class SarsaBot(Bot):
                     "n_features": N_FEATURES,
                     "hyperparameters": stored.get("hyperparameters"),
                     "updates": stored.get("updates"),
-                    "trainer": "experiments/sarsa_lambda/train.py",
+                    "trainer": "experiments/sarsa/train.py",
                     "top_weights": dict(self.top_weights(15)),
                 },
             ),

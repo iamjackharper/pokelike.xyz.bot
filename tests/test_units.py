@@ -75,7 +75,7 @@ def test_the_sarsa_bot_freezes_exactly_the_features_it_was_trained_on():
     If this fails, the fix is to bump `FEATURES_VERSION` and retrain, never to
     quietly paste the new names across.
     """
-    from experiments.sarsa_lambda.features import feature_names as trained_on
+    from experiments.sarsa.features import feature_names as trained_on
 
     from pokelike.bot.catalogue import load_class
 

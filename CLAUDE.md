@@ -54,8 +54,8 @@ uv run pokelike new-bot mine                   # a bot folder that already plays
 uv run pokelike new-bot mine --llm             # ... starting from the LLM harness
 
 uv run python -m experiments.example.train --episodes 20            # the shape of one
-uv run python -m experiments.sarsa_lambda.train --episodes 300      # the real thing
-uv run python -m experiments.sarsa_lambda.ablation --list           # feature variants
+uv run python -m experiments.sarsa.train --episodes 300      # the real thing
+uv run python -m experiments.sarsa.ablation --list           # feature variants
 ```
 
 ## Architecture
@@ -99,11 +99,23 @@ experiments/             research. OURS are tracked as worked examples; anything
 │                          encoding, tee() for per-experiment logs
 ├── example/               the smallest complete experiment
 ├── dyna_q/                tabular RL. LOST to random, and kept for that
-├── sarsa_lambda/          linear function approximation. The one that worked
+├── sarsa/                 linear function approximation. The one that worked
 └── llm/                   prompt strategies compared on identical seeds
 
 Every experiment has the same shape: README, agent, train, evaluate, output/,
 logs/. Keep it that way when adding one.
+
+**An experiment is named after the bot it produces** — `dyna_q/` → `dyna-q/`,
+`sarsa/` → `sarsa-v1/` and `sarsa-v2/`, `llm/` → `llm-*/`. The separator differs
+because an experiment is a package run with `-m`, so `experiments.dyna_q` has to
+be an identifier, while a bot is a directory loaded by path. `--bot dyna_q`
+resolves anyway: `slugify` normalises before looking anything up.
+
+The one thing NOT renamed with the folder is `trainer:` inside an already
+recorded `artifacts/config.json`. It says `experiments/sarsa_lambda/train.py`
+because that is what produced those weights. Rewriting a record to match a later
+rename is what the fingerprint exists to prevent, and it would mark both rows
+stale for a cosmetic edit.
 bots/                    THE BOTS. One folder each: bot.py, artifacts/,
 │                        result.json. Nothing registers them — the folder being
 │                        there is what makes `--bot <name>` work
