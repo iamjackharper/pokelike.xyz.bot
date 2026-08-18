@@ -105,8 +105,13 @@ CLOSING = "\nThink briefly, then call `play` with your chosen index. Always call
 
 # ---------------------------------------------------------------------- tools
 #
-# Shared for the same reason the rules are: a model given a tool another model
-# was not is not being compared, it is being helped.
+# Shared by default for the same reason the rules are: a model given a tool
+# another model was not is not being compared, it is being helped.
+#
+# A bot may still add its own, or replace these outright -- see `tools()` and
+# `run_tool()` on LLMBot. What it may not do is hide that it did: the tool names
+# go into every result and a bot whose set differs from the shared one is
+# marked in the standings, so its row is read as the different question it is.
 
 TOOLS = [
     {
@@ -165,6 +170,9 @@ TOOLS = [
 ]
 
 
+_STOCK_TOOL_NAMES = [t["function"]["name"] for t in TOOLS]
+
+
 class LLMError(RuntimeError):
     """Something went wrong on one call. Recoverable: fall back and play on."""
 
@@ -207,6 +215,30 @@ class LLMBot(Bot):
     | `MAX_ROUNDS`   | tool rounds before the turn is given up on             |
     | `MEMORY`       | how many past turns are shown back to the model        |
     | `TOKEN_BUDGET` | tokens per run, 0 for no ceiling                       |
+    | `EXTRA_TOOLS`  | tools of your own, on top of the shared four            |
+
+    To give the model something the shared tools do not offer, declare it in
+    `EXTRA_TOOLS` and answer it in `run_tool`:
+
+        class MyBot(LLMBot):
+            EXTRA_TOOLS = [{
+                "type": "function",
+                "function": {
+                    "name": "bag",
+                    "description": "What you are carrying.",
+                    "parameters": {"type": "object", "properties": {}},
+                },
+            }]
+
+            def run_tool(self, name, args, state):
+                if name == "bag":
+                    return ", ".join(state.get("bag") or []) or "(empty)"
+                return super().run_tool(name, args, state)
+
+    Replacing the shared set entirely is `tools()`. Both are allowed and both
+    are recorded: a bot with its own tools is answering a different question
+    from one without, and the standings say so rather than ranking them as
+    though they had been asked the same thing.
 
     On `MODEL`: pin it in the bot file if you want a leaderboard row that means
     one specific model — the id is not a secret, and pinning it puts it inside
@@ -225,6 +257,7 @@ class LLMBot(Bot):
     MAX_ROUNDS = 4
     MEMORY = 6
     TOKEN_BUDGET = 0
+    EXTRA_TOOLS: list[dict[str, Any]] = []
 
     def __init__(self, seed: int = 0, endpoint: str | None = None,
                  token: str | None = None, model: str | None = None,
@@ -257,6 +290,25 @@ class LLMBot(Bot):
         if overrides:
             raise TypeError(f"unknown settings: {', '.join(sorted(overrides))}")
         self.verbose = verbose or bool(os.environ.get("POKELIKE_VERBOSE"))
+
+        # Checked once, here, rather than discovered fifty runs in. Without
+        # `play` there is no way for the model to end a turn, so every turn
+        # exhausts its rounds and falls back -- a whole benchmark of our backup
+        # heuristic, filed under the model's name, with nothing that looks wrong
+        # until you read fallback_rate.
+        names = self.tool_names()
+        if "play" not in names:
+            raise LLMConfigError(
+                f"{type(self).__name__}.tools() offers no `play` tool "
+                f"({', '.join(names) or 'nothing'}).\n"
+                "  It is how the model ends a turn; without it every turn falls back."
+            )
+        if len(names) != len(set(names)):
+            raise LLMConfigError(
+                f"{type(self).__name__} declares a tool twice: "
+                f"{', '.join(sorted({n for n in names if names.count(n) > 1}))}.\n"
+                "  Providers reject a duplicated function name."
+            )
 
         self.calls = 0
         self.turns = 0
@@ -294,8 +346,14 @@ class LLMBot(Bot):
             "fallbacks": self.fallbacks,
             "fallback_rate": round(self.fallbacks / self.turns, 3) if self.turns else 0.0,
             "temperature": self.temperature,
+            # False means this bot answers a different question from the others:
+            # it gave the model tools they did not have, or took some away.
+            "stock_tools": self.tool_names() == _STOCK_TOOL_NAMES,
             "reproducible": False,
         }
+
+    def tool_names(self) -> list[str]:
+        return [t["function"]["name"] for t in self.tools()]
 
     def artifacts(self) -> list:
         """What a submission of this bot carries.
@@ -327,7 +385,8 @@ class LLMBot(Bot):
                     "max_rounds": self.max_rounds,
                     "memory": self.memory,
                     "token_budget": self.token_budget,
-                    "tools": [t["function"]["name"] for t in TOOLS],
+                    "tools": self.tool_names(),
+                    "stock_tools": self.tool_names() == _STOCK_TOOL_NAMES,
                     "reproducible": False,
                     "why_not": (
                         "providers change models behind a fixed name and sampling is "
@@ -490,12 +549,30 @@ class LLMBot(Bot):
                 messages.append({
                     "role": "tool",
                     "tool_call_id": c["id"],
-                    "content": self._run_tool(name, state),
+                    "content": self.run_tool(name, args, state),
                 })
 
         raise LLMError(f"no call to play() within {self.max_rounds} rounds")
 
-    def _run_tool(self, name: str, state: dict[str, Any]) -> str:
+    # ------------------------------------------------------------------ tools
+
+    def tools(self) -> list[dict[str, Any]]:
+        """The tools this bot offers the model, in OpenAI function-calling form.
+
+        The shared four plus whatever `EXTRA_TOOLS` declares. Override to drop
+        or replace them — but `play` has to survive: it is how a turn ends, and
+        a model with no way to end the turn falls back on every single one.
+        """
+        return [*TOOLS, *self.EXTRA_TOOLS]
+
+    def run_tool(self, name: str, args: dict[str, Any], state: dict[str, Any]) -> str:
+        """Answers one tool call. Whatever this returns is shown to the model.
+
+        Override for your own tools and call `super()` for the shared ones. An
+        unknown name gets a message rather than an exception: a model that
+        invents a tool should be told so and allowed to carry on, not have the
+        turn thrown away and played by the fallback.
+        """
         if name == "team_details":
             return render.team_view(state.get("team")) or "(empty team)"
         if name == "what_lies_ahead":
@@ -540,7 +617,7 @@ class LLMBot(Bot):
         body = json.dumps({
             "model": self.model,
             "messages": messages,
-            "tools": TOOLS,
+            "tools": self.tools(),
             "tool_choice": "auto",
             "max_tokens": self.max_tokens,
             "temperature": self.temperature,
