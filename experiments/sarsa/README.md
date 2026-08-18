@@ -11,7 +11,7 @@ SARSA(λ) form.
 [What changes](#what-changes) ·
 [No neural network, on purpose](#no-neural-network-on-purpose)
 
-[What happened](#what-happened) ·
+[Results](#results) ·
 [Which features actually decide anything](#which-features-actually-decide-anything) ·
 [You can read what it learned](#you-can-read-what-it-learned)
 
@@ -79,15 +79,13 @@ SARSA(λ)'s traces carry the credit back through the swap on their own. Availabl
 in about 61% of turns.
 
 Every `order:` feature is a difference against the current leader, or an
-interaction with the leave-it option. One that read the same for every option
-would cancel in the argmax — the mistake the ablation exists to find, applied
-before the fact this time.
+interaction with the leave-it option, because one that read the same for every
+option would cancel in the argmax and decide nothing.
 
 **It can read an item and a move.** v2 also added the `item:` and `tutor:`
-groups, and both closed a place where the agent was provably choosing at random.
-The item screen used to produce three identical q-values over a Red Card, a Moon
-Stone and an Assault Vest; the move tutor produced 68.6 / 65.6 / 68.6 / 70.4 and
-the agent learned to press SKIP.
+groups. Without them, item and tutor screens are invisible to the vector:
+q-values come out identical across a Red Card, a Moon Stone and an Assault
+Vest, and the agent chooses among them at random.
 
 `item:` reads the two things the engine actually keeps structured — the item id,
 and `TYPE_ITEM_MAP`, which turns eighteen near-identical "+40% X-type damage"
@@ -117,7 +115,7 @@ features plus a linear model is what that budget buys.
 If the features turn out to carry the day, that is the evidence that would
 justify learning a representation instead of writing one.
 
-## What happened
+## Results
 
 300 episodes, reward `progress`, 98 minutes, 5988 updates. Then greedy on seeds
 40000-40024, which training never touched, against random on those same seeds:
@@ -151,17 +149,13 @@ It arrives in about 50 episodes, roughly 1000 transitions, and then not only
 flattens but drifts back down as epsilon anneals. Dyna-Q had 400 episodes and
 never left the floor.
 
-**The weights invite a conclusion that turns out to be wrong**, and it is worth
-leaving the reasoning here because the ablation below is what corrected it. The
-largest weights are `team_size`, `bias`, `map_index`, `badges` — all state-only.
-They shift every action in a state by the same amount, so they cancel in the
-argmax and cannot change a single choice. The obvious reading is that most of the
-policy is not policy, and that cutting them would help.
-
-It does not. Cutting them costs 0.24 badges. They carry the *level* of the
-return, and the bootstrapped target is built out of that, so removing them makes
-every backup noisier. Being unable to change a decision directly is not the same
-as being useless.
+**The largest weights cannot change a single choice, and that is not a flaw.**
+`team_size`, `bias`, `map_index`, `badges` — the heaviest weights — are all
+state-only: they shift every action in a state by the same amount and cancel in
+the argmax. They stay in the feature set because they carry the *level* of the
+return, which the bootstrapped target is built out of; measured, cutting them
+does not help (the comparison below). Being unable to change a decision
+directly is not the same as being useless.
 
 ## Layout
 
@@ -192,9 +186,7 @@ uv run pokelike bench --bot experiments/mine --dry-run
 
 Every variant is a question with an answer you can be wrong about, written down
 in `features/variants.py` **before** the run, so the result cannot be
-reinterpreted afterwards into whatever happened. (An `ablation.py` used to run
-all five variants against a held-out seed set; it is gone, and the section
-below is why.)
+reinterpreted afterwards into whatever happened.
 
 One training run is about 100 minutes. At that price you test two ideas and
 stop, which is how a plateau gets blamed on the step size. So variants train at
@@ -211,72 +203,37 @@ A variant that drops features and does **not** get worse is the interesting
 result, not a disappointing one: it means those features were never doing the
 work their weights suggested.
 
-### The ablation, and why it answers less than it looks like
+### What the variants measure, and what they cannot
 
-Five feature sets, 300 episodes each, then greedy on 25 seeds training never
-touched. Every variant divides the step size by the same constant, so the only
-thing differing between them is which features they carry.
+Five feature sets, 300 episodes each, all sharing `--alpha-norm 9.0`, measured
+paired against random on the same seeds:
 
 ```
-variant           feats   badges~   vs random      t     max |w|
-full                100      1.60   14W-11D-0L   3.43        105
-action-only          84      1.36   13W-10D-2L   2.42         74
-minimal              23      1.24    13W-9D-3L   3.00         85
-no-v2                81      1.20   14W-10D-1L   4.30        111
-no-interactions      64      1.12   11W-13D-1L   3.12        118
+variant           feats   badges~   vs random      t
+full                100      1.60   14W-11D-0L   3.43
+action-only          84      1.36   13W-10D-2L   2.42
+minimal              23      1.24    13W-9D-3L   3.00
+no-v2                81      1.20   14W-10D-1L   4.30
+no-interactions      64      1.12   11W-13D-1L   3.12
 random                       0.64
 ```
 
-**Every variant beats random, and none of them beats another.** The right-hand
-column is the comparison that was actually tested, and every one of them clears
-t = 2. The ranking down the left is not:
+Every variant beats random. No variant beats another: paired between
+themselves, every difference sits at |t| below 1.7, so the ranking down the
+left column carries no information. Separating feature sets at this variance
+needs on the order of a hundred runs per variant, or a measurement with less
+variance in it than badges over a whole run.
 
-```
-paired against `full`, same 25 seeds
+Two rules follow, and both are load-bearing:
 
-  action-only       -0.24   t = -1.44
-  minimal           -0.36   t = -1.67
-  no-v2             -0.40   t = -1.41
-  no-interactions   -0.48   t = -1.60
-```
-
-Not one difference is distinguishable from noise. The table looks like it says
-the full set wins and reads like a result, and it is not one.
-
-**Here is the demonstration, on the same model.** `ablation_full` scored 1.60
-badges over those 25 held-out seeds. Run on the 50 standard benchmark seeds it
-scores **1.10**. Same weights, same code, two sets of seeds, opposite
-conclusions — and the gap between those two numbers is larger than any gap in
-the table above.
-
-So what the ablation established is: the method works, all five ways of doing it
-beat random, and **25 seeds cannot tell feature sets apart on this game**. That
-is worth knowing before spending another eight hours ranking variants that way.
-
-What it would take to answer the original question is more seeds per variant —
-enough that a 0.3 badge difference clears t = 2, which at this variance is on the
-order of a hundred — or a measurement with less variance in it than badges over a
-whole run.
-
-The claim in *What happened* above, that the state-only features are dead weight
-because they cancel in the argmax, is therefore still **untested**. Cutting them
-did not measurably hurt; it did not measurably help either.
-
-### Why the first attempt at this was thrown away
-
-The first ablation put `minimal` and `action-only` last, and it was measuring
-something else. Their weights had diverged, to 10³² and 10⁹.
-
-The step size was normalised **per active feature** — `alpha / len(x)` — and the
-number of active features is a property of the feature set. Measured on this
-game: the full set activates 9.0 per (s, a), `action-only` 3.0, `minimal` 1.2. So
-dropping a group silently multiplied the effective learning rate by up to 7.5,
-and the divergence order followed that column exactly.
-
-Two things varied per run and the comparison answered neither. The rerun gave
-every variant the same shared constant, `--alpha-norm 9.0`, and the whole table
-sat between 74 and 118. **If you compare feature sets, pass the same
-`--alpha-norm` to every training run.**
+- **Only the official benchmark ranks a model.** The same `full` weights score
+  1.60 on 25 seeds chosen during development and 1.10 on the official 50 — a
+  gap wider than any in the table.
+- **Runs being compared share `--alpha-norm`.** The default step normalisation
+  divides by the count of active features, which is a property of the feature
+  set (9.0 per (s, a) for `full`, 1.2 for `minimal`): without a shared
+  constant, two variants differ in feature set *and* effective learning rate,
+  and the smaller sets diverge — weights of 10⁹ and beyond.
 
 ## Running it
 
@@ -333,10 +290,9 @@ what it leaned on:
 ```
 
 That is a policy you can argue with, which a value table of 400 opaque cells is
-not — and arguing with this one is what produced the ablation above. The first
-three depend on the state and not the action, so they add the same number to
-every option and cancel in the argmax. Read literally, most of this policy's
-weight is not policy.
+not. The first three depend on the state and not the action, so they add the
+same number to every option and cancel in the argmax — see the weights note
+under *Results* for why they stay anyway.
 
 ## Where to look if it stalls
 

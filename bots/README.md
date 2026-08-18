@@ -10,7 +10,7 @@ the bot: its code, whatever it needs to play, and what it scored.
 [What makes results comparable](#what-makes-results-comparable) ·
 [Categories](#categories) ·
 [If someone already took the name](#if-someone-already-took-the-name) ·
-[The honest part about verification](#the-honest-part-about-verification)
+[Verification](#verification)
 
 New here? **[GUIDE.md](../GUIDE.md)** walks the whole thing end to end, from a
 clone to a pull request. This page is the reference.
@@ -154,7 +154,7 @@ It is there so a reader can tell at a glance what kind of thing is winning.
 | `human` | a person playing, for reference |
 | `other` | search, planning, hybrids, whatever else |
 
-## The honest part about verification
+## Verification
 
 **Results are not re-run for you.** A number in the table is one somebody
 reported from their own machine, and the fingerprint only proves the code has not

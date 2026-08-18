@@ -105,9 +105,9 @@ experiments/             research. OURS are tracked as worked examples; anything
 Every experiment has the same shape: README, agent, train, output/, logs/. Keep
 it that way when adding one. There is ONE way to measure a candidate — the
 official benchmark, by path: `pokelike bench --bot experiments/mine --dry-run`.
-The per-experiment evaluate/ablation scripts that ran held-out seed sets are
-gone on purpose: a seed set picked during development once scored a model 1.60
-that the official 50 scored 1.10. Do not reintroduce them.
+Do not add per-experiment evaluation scripts with their own seed sets: a seed
+set picked during development mis-ranks models (the same weights score 1.60 on
+one such set and 1.10 on the official 50).
 
 **An experiment is named after the bot it produces** — `dyna_q/` → `dyna-q/`,
 `sarsa/` → `sarsa-v1/` and `sarsa-v2/`, `llm/` → `llm-*/`. The separator differs
@@ -167,9 +167,8 @@ state view (`STATE_VIEW` / `view()`), and the tools (`EXTRA_TOOLS` /
 `run_tool()`). Each is a genuine experimental variable, so each goes into
 `result.json` and into the standings — two rows with different views are no more
 comparable than two with different tools. `_situation()` deliberately is NOT the
-hook: it owns the journal and the "pick an index" line, and the old design, where
-the view and that plumbing lived in one method, let a bot replace the view and
-silently lose its memory.
+hook: it owns the journal and the "pick an index" line, so replacing the view
+cannot silently cost a bot its memory or drop the instruction. Keep that split.
 
 **Bot names resolve by exact match, then unique prefix.** An ambiguous prefix is
 an error naming the candidates, never a guess — `--bot sarsa` with both versions
@@ -229,11 +228,12 @@ release.
 
 ## Real pitfalls
 
-All of these were hit for real. Worth rereading before changing anything:
+Constraints that do not announce themselves. Worth rereading before changing
+anything:
 
 - **The site does not answer 404 for missing files**: it returns `index.html` with
   status 200. Without checking magic bytes the mirror fills with HTML dressed as
-  `.png` (it happened: 6612 junk files). See `SIGNATURES` in `assets/mirror.py`.
+  `.png`. See `SIGNATURES` in `assets/mirror.py`.
 - **Keep download concurrency low.** With 24 requests in flight the site cuts us
   off and *everything* fails silently, which is worse than being slow. The mirror
   runs at 6 and repairs missing files sequentially, from the exact list the
@@ -291,13 +291,11 @@ All of these were hit for real. Worth rereading before changing anything:
   `BRIDGE.read_text()` sits inside `load()`, so a process that has been running
   for an hour injects whatever is on disk NOW, while `INIT_SCRIPT` is the string
   it imported when it started. `git pull` mid-run therefore pairs a new bridge
-  with an old init script — and the speedup commit added `__pk_realNow` to one
-  and a call to it in the other, so the next `reset()` died with
-  `window.__pk_realNow is not a function`. It cost someone a training run at
-  episode 78. `__pk_settle` now falls back to `performance.now`, which is not
-  papering over it: an old init script does not virtualise the clock, so there
-  the real one IS correct. **Anything new that bridge.js needs from
-  `INIT_SCRIPT` has to degrade like that, or long runs break on pull.**
+  with an old init script. **Anything bridge.js needs from `INIT_SCRIPT` must
+  degrade when it is absent** — `__pk_settle` falls back to `performance.now`
+  when `__pk_realNow` is missing, which is also correct: an old init script
+  does not virtualise the clock, so there the real one is the right one.
+  Without that degradation, every long-running training breaks on pull.
 - **`INIT_SCRIPT` is substituted with `str.replace`, not `%`.** It is full of
   prose, and a comment mentioning a percentage made `INIT_SCRIPT % cfg` raise
   "not enough arguments for format string" from a line nowhere near the change.
@@ -306,16 +304,15 @@ All of these were hit for real. Worth rereading before changing anything:
 - **Seeds are 32-bit.** `(cfg.seed >>> 0) || 1`, so seed 0 is seed 1 and seed
   N is seed N + 2**32. `normalise_seed` rejects anything outside the range
   rather than truncating, because above 2**53 Python's `& 0xFFFFFFFF` and JS's
-  `>>> 0` disagree: there is no truncation that records the seed that ran. It
-  used to surface as an `OverflowError` from SQLite *after* a full run.
+  `>>> 0` disagree: there is no truncation that records the seed that ran.
 - **The bundle filename carries a content hash** and changes with every game
   release. If something breaks all at once, first thing: `pokelike mirror`.
 - **Not every failure should be recovered from.** The LLM bot falls back to a
   safe choice when a call fails, which is right for a timeout and wrong for a
-  401: a bad token used to produce a whole run of fallbacks that looked like a
-  model playing badly, and `bench` would have filed it on the leaderboard as an
-  `llm` entry no model ever played. Auth and model-not-found now raise
-  `LLMConfigError` and stop the run.
+  401: a bad token fails identically forever, so falling back on it plays the
+  whole run on the backup heuristic and files it as an `llm` entry no model
+  ever played. Auth and model-not-found raise `LLMConfigError` and stop the
+  run.
 - **A recoverable fallback is still not a decision the model made.** The other
   half of the same problem: timeouts *should* fall back, and every one of those
   turns is our backup heuristic playing under the model's name. So the harness
@@ -387,22 +384,19 @@ Regenerating it to make a red test go green defeats the point.
 ~6 decisions per second, ~4 s per run with a fast policy. Runs are independent:
 to go faster, launch more processes, not more threads.
 
-**Most of that came from one line, and the reason it was hidden is worth
-knowing.** A headless run used to spend 79% of its wall clock inside
-`__pk_settle`, and 98.6% of that on the battle screen — waiting for an animation
-whose outcome the engine had already decided. Capping `setTimeout` to 1 ms did
-not help, and neither did routing timers or `requestAnimationFrame` through a
-`MessageChannel` to dodge the browser's 4 ms clamp on nested timers: all three
-were measured, and all three bought 3-6%. The engine does not pace the battle by
-counting ticks, it **asks what time it is** and works out how far along it should
-be. So the clock is what had to move: `performance.now()` now jumps `tick` ms on
-every read (`Session.tick`, 64 by default), and an 800 ms battle collapses to
-about 180. 4.4x on a run, 7x on the test suite, with every golden fingerprint
-unchanged.
+**The virtual clock is what makes that speed, and capping timers is not
+enough.** The engine paces a battle by asking what time it is and working out
+how far along it should be, not by counting ticks — so capping `setTimeout`, or
+routing timers and `requestAnimationFrame` through a `MessageChannel` to dodge
+the browser's 4 ms clamp, each buys only 3-6% (measured). `performance.now()`
+therefore jumps `tick` ms on every read (`Session.tick`, 64 by default), which
+collapses an 800 ms battle animation to about 180 ms. Without it, ~79% of a
+run's wall clock is `__pk_settle` waiting on the battle screen for an outcome
+the engine has already decided.
 
 `__pk_realNow` is the true clock, kept for anything that must measure real
-elapsed time — `__pk_settle`'s own timeout budget, which would otherwise spend
-ninety seconds in a few hundred reads. `--watch` sets `tick` to 0: a person
+elapsed time — `__pk_settle`'s own timeout budget, which on the virtual clock
+would be spent in a few hundred reads. `--watch` sets `tick` to 0: a person
 watching wants to see the battle.
 
 The LLM bot is far slower (one or more HTTP calls per decision) and burns roughly
@@ -426,9 +420,8 @@ are not obvious and matter:
   what distinguishes people in the standings.
 - **Only a complete benchmark writes an entry.** `--runs N` and `--dry-run` both
   print the result and file nothing: a score over N seeds is not comparable to
-  one over 50, so it is not a submission. It used to write one regardless, which
-  meant a `--runs 5` sanity check left a real entry for the next `git add` to
-  pick up.
+  one over 50, so it is not a submission — and a `--runs 5` sanity check must
+  not leave a real entry behind for the next `git add` to pick up.
 - **The benchmark records the game bundle's sha256.** Scores from before and
   after an upstream game update are not comparable, and without the hash a
   leaderboard mixes them silently.
