@@ -1,0 +1,30 @@
+{
+ "algorithm": "semi-gradient SARSA(lambda), linear FA (S&B ch. 10 and 12.7)",
+ "features_version": 2,
+ "n_features": 100,
+ "hyperparameters": {
+  "alpha": 0.05,
+  "gamma": 0.98,
+  "lambda": 0.9,
+  "epsilon": 0.02
+ },
+ "updates": 9121,
+ "trainer": "experiments/sarsa_lambda/train.py",
+ "top_weights": {
+  "team_size": -114.788,
+  "bias": 106.562,
+  "map_index": -88.067,
+  "badges": -88.067,
+  "screen:trainer-screen": 79.932,
+  "min_hp": 52.707,
+  "screen:starter-screen": 49.33,
+  "depth": 43.938,
+  "screen:catch-screen": -31.422,
+  "node:trainer*small_team": 27.073,
+  "node:trainer*hurt": -23.652,
+  "mean_hp": 19.365,
+  "mon_new_type": 18.398,
+  "mon_best_stats": 17.863,
+  "node:battle*small_team": 16.776
+ }
+}

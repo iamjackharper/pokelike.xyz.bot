@@ -1,6 +1,23 @@
 {
  "entries": [
   {
+   "id": "sarsa-lambda-v2-7f0460",
+   "bot": "sarsa-lambda-v2",
+   "author": "pierpierpy",
+   "category": "rl",
+   "description": "Semi-gradient SARSA(lambda), 100 linear features incl. team order, items and the move tutor (S&B 10, 12.7), 300 episodes",
+   "score_mean": 71,
+   "score_stdev": 54.2,
+   "score_best": 235,
+   "badges_mean": 1.36,
+   "badges_best": 3,
+   "maps_mean": 0,
+   "completed": 0,
+   "runs": 50,
+   "game": "eceae50bbda9e32b",
+   "artifacts": 2
+  },
+  {
    "id": "sarsa-lambda-linear-5fa82e",
    "bot": "sarsa-lambda-linear",
    "author": "pierpierpy",

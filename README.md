@@ -1,5 +1,30 @@
 # pokelike.xyz.bot
 
+> ## 🏆 The bot contest is open
+>
+> Write something that plays [pokelike.xyz](https://pokelike.xyz/) better than
+> mine, and put it on the [leaderboard](leaderboard/). Anyone can enter, no
+> permission needed: fork, add your bot, open a pull request.
+>
+> **What counts as a bot is deliberately wide open.** A prompt around an LLM. A
+> language model fine-tuned on the game. Reinforcement learning of any flavour,
+> tabular or deep. A hand-written rulebook. Search over the game tree, since the
+> engine ships a battle simulator you can call. Something deterministic, if you
+> can find one that works. If it picks a move given the state, it qualifies.
+>
+> **How it is judged.** Every entry plays the same 50 fixed seeds, so nobody wins
+> on luck. Ranked by **badges**, the game's own progress counter. The submission
+> is built for you by one command, and it records the hash of the game bundle
+> that was played, because scores from before and after a game update are not
+> comparable.
+>
+> **Where to start.** [Writing a bot](#writing-a-bot) is one method,
+> `choose(state) -> int`. [How to submit](leaderboard/#how-to-submit) is five
+> steps. Current standings are in [leaderboard/README.md](leaderboard/).
+>
+> The bar to beat right now is **1.36 badges**. Random gets 0.68, so it is lower
+> than it sounds.
+
 Play [pokelike.xyz](https://pokelike.xyz/) — a Pokémon roguelike — from the
 command line, from Python, or over an HTTP API. No windows, no internet, and a
 score to compare players with.

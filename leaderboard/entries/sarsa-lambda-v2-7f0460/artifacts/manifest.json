@@ -1,0 +1,16 @@
+[
+ {
+  "name": "weights.json",
+  "kind": "weights-json",
+  "description": "w, 100 named features, feature set v2",
+  "bytes": 3347,
+  "sha256": "182504d2ca8fb711add581ac5dba628d734d2e4588eadc660061bd5fb7c22128"
+ },
+ {
+  "name": "config.json",
+  "kind": "config",
+  "description": "how the policy was trained",
+  "bytes": 718,
+  "sha256": "5396ee308a408db77d761f47dcddf5758f7f18716515d0f8af13233a39f08571"
+ }
+]
