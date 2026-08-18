@@ -5,7 +5,7 @@
 
 This file is the EXAMPLE OF WHAT A SUBMISSION LOOKS LIKE, and it is deliberately
 self-contained: the state and action encoding is copied in here rather than
-imported from the training code.
+imported from `experiments/dyna_q/`.
 
 That is not duplication by accident. A policy is only meaningful under the exact
 encoding it was trained with. If this file imported the training code, improving
@@ -42,8 +42,8 @@ REPO = Path(__file__).resolve().parents[3]
 # Point 3 is what lets anyone re-run a leaderboard result straight from a fresh
 # clone, without training anything first.
 TABLE_CANDIDATES = (
-    REPO / "experiments" / "dyna_q" / "models" / "dyna_q_v1.json",
-    REPO / "experiments" / "dyna_q" / "models" / "q_table.json",
+    REPO / "experiments" / "dyna_q" / "output" / "models" / "dyna_q_v2.json",
+    REPO / "experiments" / "dyna_q" / "output" / "models" / "q_table.json",
 )
 SUBMITTED = REPO / "leaderboard" / "entries"
 
@@ -219,7 +219,7 @@ class DynaQBot(Bot):
                     "hyperparameters": table.get("hyperparameters"),
                     "updates": table.get("updates"),
                     "states": len(self.Q),
-                    "trainer": "tabular Dyna-Q, trained outside the package",
+                    "trainer": "experiments/dyna_q/train.py",
                 },
             ),
         ]

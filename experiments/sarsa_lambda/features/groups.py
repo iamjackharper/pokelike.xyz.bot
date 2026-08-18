@@ -1,117 +1,32 @@
-"""A trained SARSA(lambda) policy with linear function approximation, playing greedily.
+"""Turning (state, action) into a feature vector.
 
-    pokelike bot --bot sarsa --runs 5
-    pokelike bench --bot sarsa --category rl --name my-sarsa
+This is the part that matters. Tabular Dyna-Q is blind by construction: it
+compresses the state to six numbers and keys actions by type, so on the starter
+screen it learns Q values of 6.3, 6.2, 6.3 — three indistinguishable slots where
+a player sees Bulbasaur, Charmander and Squirtle. No amount of extra episodes
+fixes that, because the information never reaches the table.
+
+Linear function approximation (Sutton & Barto, chapter 9) lets us hand the agent
+what it was missing:
 
     q̂(s, a, w) = wᵀ x(s, a)
 
-Trained by `experiments/sarsa_lambda/`. Sutton & Barto, 2nd edition: chapter 10
-for the semi-gradient control update, section 12.7 for the SARSA(lambda) form.
+Two consequences beyond seeing more. Features generalise, so a lesson learned
+about "catching something that adds a type I lack" transfers to every such
+choice rather than to one table cell — which matters enormously here, because
+every real step costs 0.7 seconds of browser. And actions are described rather
+than named, so five EQUIP buttons are five different vectors instead of one
+collapsed key.
 
-WHY THE FEATURE CODE IS COPIED IN HERE
---------------------------------------
-Same reason as `dyna_q.py`, and it matters more here. A weight vector means
-nothing without the exact function that produced the vectors it multiplies:
-`w[43]` is a number, and only `feature_names()` says it is `mon_new_type`. If
-this file imported `experiments/sarsa_lambda/features/`, then inserting one
-feature there would shift every index and silently reinterpret every policy ever
-submitted, including ones already on the leaderboard.
-
-There is a mechanical reason on top of the principle: a leaderboard entry
-archives ONE file, the one holding the bot's class, and hashes it for the entry
-id. Split the features into a second module and the archive keeps an
-unrunnable half and the hash stops identifying what actually ran.
-
-So: `FEATURES_VERSION` is frozen next to the weights, checked on load, and a
-mismatch is an error rather than a bot that plays badly for reasons nobody
-can see.
+The features are deliberately hand-made and few. With ~15 s per episode there is
+no budget for learning a representation from scratch, so the domain knowledge
+goes in by hand and the agent learns the weights.
 """
 
 from __future__ import annotations
 
-import json
-import os
-import random
 import re
-from pathlib import Path
 from typing import Any
-
-from .base import Bot
-
-# Bumped whenever the feature vector changes meaning: a new feature, a removed
-# one, a different order, a different scale. Weights carry the version they were
-# trained under, and refusing to load a mismatch is the whole safeguard.
-#
-# 2 added three groups — team order, items, and the move tutor — so a v1 weight
-# vector indexes an entirely different space.
-FEATURES_VERSION = 2
-
-REPO = Path(__file__).resolve().parents[3]
-
-# Where to look for the weights, in order:
-#   1. the POKELIKE_SARSA_WEIGHTS environment variable
-#   2. whatever the training script last produced locally
-#   3. the weights archived with a submitted entry
-# Point 3 is what lets anyone reproduce a leaderboard result from a fresh clone,
-# without training anything first.
-WEIGHT_CANDIDATES = (
-    REPO / "experiments" / "sarsa_lambda" / "output" / "models" / "sarsa_v2.json",
-    REPO / "experiments" / "sarsa_lambda" / "output" / "models" / "sarsa_v1.json",
-)
-SUBMITTED = REPO / "leaderboard" / "entries"
-
-
-def find_weights() -> Path | None:
-    override = os.environ.get("POKELIKE_SARSA_WEIGHTS")
-    if override:
-        return Path(override)
-    local = next((p for p in WEIGHT_CANDIDATES if p.is_file()), None)
-    if local:
-        return local
-    return best_submitted()
-
-
-def best_submitted() -> Path | None:
-    """The archived weights of whichever submission currently leads.
-
-    A fresh clone has no `output/` — it is gitignored — so this is what a friend
-    who just cloned actually plays, and it should be the best policy on the
-    board rather than whichever folder name happens to sort last. Ranked by the
-    same field the leaderboard ranks by, read from the index it already writes.
-    """
-    index = SUBMITTED.parent / "index.json"
-    ranked: list[str] = []
-    try:
-        entries = json.loads(index.read_text(encoding="utf-8")).get("entries") or []
-        ranked = [e["id"] for e in entries if e.get("id")]
-    except (json.JSONDecodeError, OSError, KeyError):
-        pass
-
-    def loadable(path: Path) -> bool:
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            return False
-        # Every trained bot archives under this name, so check it is OURS: the
-        # right shape, and a feature set this file can actually speak.
-        return bool(data.get("weights")) and data.get("encoding_version") == FEATURES_VERSION
-
-    for entry_id in ranked:                       # index order: best first
-        path = SUBMITTED / entry_id / "artifacts" / "weights.json"
-        if path.is_file() and loadable(path):
-            return path
-    # No index, or nothing in it fits: fall back to whatever is on disk.
-    for path in sorted(SUBMITTED.glob("*/artifacts/weights.json"), reverse=True):
-        if loadable(path):
-            return path
-    return None
-
-
-# ---------------------------------------------- the frozen feature set, v2
-#
-# Copied MECHANICALLY from experiments/sarsa_lambda/features/groups.py, never
-# transcribed by hand, and pinned to it by a test. Hand-copying is how two
-# feature sets drift apart while both look right.
 
 TYPES = {
     "NORMAL", "FIRE", "WATER", "ELECTRIC", "GRASS", "ICE", "FIGHTING", "POISON",
@@ -546,139 +461,3 @@ def _tutor_features(put, state: dict[str, Any], action: dict[str, Any],
         put("tutor:same_type",
             1.0 if offered["type"].upper() in {t.upper() for t in (mon.get("types") or [])}
             else 0.0)
-
-
-# ------------------------------------------------------------------- the bot
-
-
-class SarsaBot(Bot):
-    name = "sarsa"
-
-    def __init__(self, seed: int = 0, weights: str | Path | None = None) -> None:
-        path = Path(weights) if weights else find_weights()
-        if path is None or not path.is_file():
-            raise FileNotFoundError(
-                "no trained weights found. Looked in:\n  "
-                + "\n  ".join(str(p) for p in WEIGHT_CANDIDATES)
-                + "\n\nThe archived weights of every submission are in "
-                + "leaderboard/entries/, and one is normally found there. If not, "
-                + "point at some you trained:\n  "
-                + "POKELIKE_SARSA_WEIGHTS=/path/to/weights.json"
-            )
-        data = json.loads(path.read_text(encoding="utf-8"))
-        version = data.get("encoding_version")
-        if version != FEATURES_VERSION:
-            raise ValueError(
-                f"these weights were trained with feature set v{version}, and this "
-                f"bot speaks v{FEATURES_VERSION}. The indices no longer point at the "
-                f"same features, so w would be read as a different policy entirely: "
-                f"retrain, or load them with a bot of the matching version."
-            )
-        stored = data.get("weights") or {}
-        self.w = [float(stored.get(n, 0.0)) for n in feature_names()]
-        self.weights_path = path
-        self.trained_updates = data.get("updates", 0)
-        self.rng = random.Random(seed)
-        self.decisions = 0
-        self._last_why = ""
-
-    def on_start(self, seed: int) -> None:
-        self.rng = random.Random(seed)
-
-    def q(self, x: dict[int, float]) -> float:
-        return sum(self.w[i] * v for i, v in x.items())
-
-    def choose(self, state: dict[str, Any]) -> int:
-        """Greedy over q̂(s, a, w). Ties broken at random, seeded.
-
-        There is no unseen-state fallback and none is needed: unlike a table,
-        a linear model returns a value for every action it has never met, which
-        is the reason for using one on a sample budget this small.
-        """
-        self.decisions += 1
-        actions = state["actions"]
-        values = [self.q(features(state, a)) for a in actions]
-        best = max(values)
-        self._last_why = "q: " + ", ".join(
-            f"{self._tag(a, i)}={v:.1f}" for i, (a, v) in enumerate(zip(actions, values))
-        )
-        return self.rng.choice([i for i, v in enumerate(values) if v == best])
-
-    @staticmethod
-    def _tag(action: dict[str, Any], index: int) -> str:
-        if action.get("kind") == "node":
-            return str(action.get("node") or "node")
-        label = (action.get("label") or "").strip().split("\n")[0]
-        return (label[:14] or f"slot{index}").lower()
-
-    def rearrange(self, state: dict[str, Any]) -> tuple[int, int] | None:
-        """Who should lead the next battle, scored by the same weights.
-
-        Team order is a decision the game does not put in `state["actions"]`,
-        because taking it costs no turn. It is trained as an extra state in the
-        MDP with reward 0, so the very same q-hat ranks "leave it" against each
-        candidate — no second model, no separate rule.
-        """
-        options = reorder_options(state)
-        if not options:
-            return None
-        values = [self.q(features(state, o)) for o in options]
-        best = max(values)
-        i = self.rng.choice([k for k, v in enumerate(values) if v == best])
-        b = options[i]["b"]
-        if b is None:
-            return None
-        team = state.get("team") or []
-        self._last_why = (f"lead: {team[b]['name'] if b < len(team) else b} "
-                          f"({values[i]:.1f}) over staying ({values[0]:.1f})")
-        return (0, b)
-
-    def explain(self) -> str:
-        return self._last_why
-
-    def notes(self) -> dict[str, Any]:
-        """Goes into the run registry and the benchmark result."""
-        return {
-            "weights": self.weights_path.name,
-            "features_version": FEATURES_VERSION,
-            "n_features": N_FEATURES,
-            "training_updates": self.trained_updates,
-            "decisions": self.decisions,
-        }
-
-    def top_weights(self, n: int = 12) -> list[tuple[str, float]]:
-        pairs = sorted(zip(feature_names(), self.w), key=lambda p: -abs(p[1]))
-        return [(name, round(w, 3)) for name, w in pairs[:n]]
-
-    def artifacts(self) -> list:
-        """What a submission of this bot must carry with it.
-
-        The weights alone are not enough to understand a result: the feature
-        version says what the numbers index, and without the training config the
-        score is something nobody can reproduce or improve on.
-        """
-        from ..leaderboard import Artifact
-
-        stored = json.loads(self.weights_path.read_text(encoding="utf-8"))
-        return [
-            Artifact(
-                name="weights.json",
-                kind="weights-json",
-                description=f"w, {N_FEATURES} named features, feature set v{FEATURES_VERSION}",
-                path=self.weights_path,
-            ),
-            Artifact(
-                name="config.json",
-                kind="config",
-                description="how the policy was trained",
-                data={
-                    "algorithm": "semi-gradient SARSA(lambda), linear FA (S&B ch. 10 and 12.7)",
-                    "features_version": FEATURES_VERSION,
-                    "n_features": N_FEATURES,
-                    "hyperparameters": stored.get("hyperparameters"),
-                    "updates": stored.get("updates"),
-                    "trainer": "experiments/sarsa_lambda/train.py",
-                    "top_weights": dict(self.top_weights(15)),
-                },
-            ),
-        ]

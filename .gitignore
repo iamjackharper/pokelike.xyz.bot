@@ -22,16 +22,17 @@ img/*.mp4
 # belong in anyone else's clone, and a pull request that adds a bot should not
 # drag a training run along with it.
 #
-# Only two things are tracked: the shared environment every experiment builds
-# on, and the one worked example that shows the shape.
+# Tracked: the shared environment, and OUR experiments, which are there to be
+# read as worked examples. Anything else you create is yours and is ignored.
 experiments/*
 !experiments/README.md
 !experiments/__init__.py
 !experiments/env/
 !experiments/example/
+!experiments/dyna_q/
+!experiments/llm/
+!experiments/sarsa_lambda/
 
-# ...and not what a run produces, even for those two.
-experiments/env/output/
-experiments/example/output/
-experiments/env/logs/
-experiments/example/logs/
+# ...and never what a run produces, for any of them.
+experiments/*/output/
+experiments/*/logs/

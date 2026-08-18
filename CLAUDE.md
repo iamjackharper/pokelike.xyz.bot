@@ -30,7 +30,9 @@ uv run pytest -m "not slow"      # fast tests only, no browser
 uv run pokelike bench --bot random             # the standard benchmark, 50 seeds
 uv run pokelike bench --bot random --dry-run   # ... without writing an entry
 
-uv run python -m experiments.example.train --episodes 20   # the shape of an experiment
+uv run python -m experiments.example.train --episodes 20            # the shape of one
+uv run python -m experiments.sarsa_lambda.train --episodes 300      # the real thing
+uv run python -m experiments.sarsa_lambda.ablation --list           # feature variants
 ```
 
 ## Architecture
@@ -63,10 +65,18 @@ src/pokelike/
     └── python/            a script, a notebook or the REPL
         ├── driver.py        session(), open_game(), play(), compare()
         └── example.ipynb    the cell-by-cell walkthrough
-experiments/             YOUR scratch area, and gitignored apart from these two
+experiments/             research. OURS are tracked as worked examples; anything
+│                        else anyone creates here is gitignored, as are all
+│                        output/ and logs/ folders
 ├── env/                   the game as an RL problem: environment, rewards,
-│                          encoding, and tee() for per-experiment logs
-└── example/               the smallest complete experiment, as a starting point
+│                          encoding, tee() for per-experiment logs
+├── example/               the smallest complete experiment
+├── dyna_q/                tabular RL. LOST to random, and kept for that
+├── sarsa_lambda/          linear function approximation. The one that worked
+└── llm/                   prompt strategies compared on identical seeds
+
+Every experiment has the same shape: README, agent, train, evaluate, output/,
+logs/. Keep it that way when adding one.
 leaderboard/             submissions, their weights, and how to submit
 tests/                   golden fingerprints + unit tests
 tools/deobfuscate.py     makes the bundle readable (needs node)

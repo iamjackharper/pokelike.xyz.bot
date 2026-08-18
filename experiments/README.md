@@ -1,19 +1,48 @@
 # experiments
 
-**This is your scratch area, and it is not tracked.**
+**Yours is not tracked. Ours are, to be read.**
 
-Everything under `experiments/` is gitignored except the two things below, so
-whatever you try here stays on your machine. A pull request that adds a bot
-should carry the bot, not the six training runs it took to get there.
+Anything you create under `experiments/` is gitignored, so what you try stays on
+your machine and a pull request that adds a bot cannot drag six training runs
+along with it. The folders below are ours and are checked in on purpose: they are
+worked examples, and the point of them is that you can read what was actually
+done rather than a description of it.
 
 ```
 experiments/
-├── env/         the game stated as an RL problem. Shared, tracked.
-├── example/     the smallest complete experiment. Tracked, as a starting point.
-└── <yours>/     anything else. Ignored.
+├── env/            the game stated as an RL problem. Shared by all of them.
+├── example/        the smallest complete experiment. Start here.
+├── dyna_q/         tabular RL. It lost, and is kept because of that.
+├── sarsa_lambda/   linear function approximation. The one that worked.
+├── llm/            comparing prompts, which is not learning at all.
+└── <yours>/        ignored.
 ```
 
-Copy `example/` to `experiments/mine/` and work there.
+Every one of them has the same shape, so moving between them costs nothing:
+
+```
+<experiment>/
+├── README.md    what it asks, and what happened
+├── agent.py     the thing being learned, if anything is
+├── train.py     the loop
+├── evaluate.py  against random, on held-out seeds, paired
+├── output/      weights and histories        (ignored)
+└── logs/        what each run printed        (ignored)
+```
+
+Copy the one closest to your idea into `experiments/mine/` and work there.
+
+## What you have to show, and what you do not
+
+Submitting a bot **does** reveal the bot: an entry archives the file that ran and
+hashes it, and that is the only reason the number beside it means anything. A
+leaderboard where the code is hidden is a list of claims.
+
+Submitting does **not** reveal how you got there. The sweeps, the rewards you
+tried, the prompts you threw away, the twenty runs that went nowhere — that is
+research, it lives here, and it stays yours.
+
+You have to show what your bot does. Not how you arrived at it.
 
 ---
 
@@ -80,9 +109,8 @@ been, with something better in the middle.
 
 ## What was learned here
 
-The code that produced these is not in the repo, because it was ours and the
-same rule applies to us. The findings are, because they are the part worth
-keeping.
+The code for each is in its own folder with its own README. This is the short
+version, in the order it happened.
 
 **Tabular Dyna-Q lost to random.** 400 episodes, a state key of six numbers:
 −3.8 mean score against random's 7.0 on held-out seeds, winning 6 of 20. Its own
