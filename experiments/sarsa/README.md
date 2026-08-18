@@ -168,14 +168,12 @@ as being useless.
 ```
 sarsa/
 ├── agent.py          the algorithm: q̂ = wᵀx, traces, the update
-├── train.py          the three things you run
-├── evaluate.py
-├── ablation.py
+├── train.py          the one thing you run
 ├── features/         THE REPRESENTATION — the part worth arguing about
 │   ├── groups.py       the 100 features, in named groups
 │   └── variants.py     which groups a run carries, and what it is asking
 ├── logs/             what each run printed, written by the run (gitignored)
-└── output/           weights, histories, ablation results (gitignored)
+└── output/           weights and histories (gitignored)
 ```
 
 `features/` is its own package because of what Dyna-Q taught: the update rule was
@@ -184,14 +182,19 @@ switch a group off and leave everything else meaning the same thing.
 
 ## Which features actually decide anything
 
+Train a variant by naming its groups, then measure it like everything else —
+the official benchmark, from wherever the weights are:
+
 ```bash
-uv run python -m experiments.sarsa.ablation --list          # the questions
-uv run python -m experiments.sarsa.ablation --episodes 300 --workers 4
+uv run python -m experiments.sarsa.train --episodes 300 --groups node,mon,lookahead --out candidate.json
+uv run pokelike bench --bot experiments/mine --dry-run
 ```
 
 Every variant is a question with an answer you can be wrong about, written down
 in `features/variants.py` **before** the run, so the result cannot be
-reinterpreted afterwards into whatever happened.
+reinterpreted afterwards into whatever happened. (An `ablation.py` used to run
+all five variants against a held-out seed set; it is gone, and the section
+below is why.)
 
 One training run is about 100 minutes. At that price you test two ideas and
 stop, which is how a plateau gets blamed on the step size. So variants train at
@@ -270,16 +273,16 @@ game: the full set activates 9.0 per (s, a), `action-only` 3.0, `minimal` 1.2. S
 dropping a group silently multiplied the effective learning rate by up to 7.5,
 and the divergence order followed that column exactly.
 
-Two things varied per run and the comparison answered neither. Every variant now
-divides by a shared constant, `ALPHA_NORM = 9.0` in `ablation.py`, and the whole
-table sits between 74 and 118. **If you ablate a feature set, hold the effective
-step fixed.**
+Two things varied per run and the comparison answered neither. The rerun gave
+every variant the same shared constant, `--alpha-norm 9.0`, and the whole table
+sat between 74 and 118. **If you compare feature sets, pass the same
+`--alpha-norm` to every training run.**
 
 ## Running it
 
 ```bash
 uv run python -m experiments.sarsa.train --episodes 300 --reward progress
-uv run python -m experiments.sarsa.evaluate --episodes 25 --seed0 40000
+uv run pokelike bench --bot experiments/mine --dry-run    # measure: official 50, records nothing
 ```
 
 | flag | meaning | default |
@@ -290,8 +293,8 @@ uv run python -m experiments.sarsa.evaluate --episodes 25 --seed0 40000
 | `--epsilon` | initial exploration, annealed to 0.02 | 0.3 |
 | `--reward` | which reward (see `env/rewards.py`) | progress |
 | `--out` | *train*: file to write in `output/models/` | `sarsa.json` |
-| `--table` | *evaluate*: file to read from `output/models/` | `sarsa.json` |
-| `--groups` | *train*: feature groups to keep, comma separated | all |
+| `--groups` | feature groups to keep, comma separated | all |
+| `--alpha-norm` | shared step divisor — same value across runs you compare | per-feature |
 
 `--out` deliberately does not default to a name a submitted bot reads. Both
 [`bots/sarsa-v1/`](../../bots/sarsa-v1/) and

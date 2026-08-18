@@ -53,9 +53,9 @@ uv run pokelike leaderboard                    # rebuild the standings from disk
 uv run pokelike new-bot mine                   # a bot folder that already plays
 uv run pokelike new-bot mine --llm             # ... starting from the LLM harness
 
-uv run python -m experiments.example.train --episodes 20            # the shape of one
+uv run python -m experiments.example.train --episodes 20     # the shape of one
 uv run python -m experiments.sarsa.train --episodes 300      # the real thing
-uv run python -m experiments.sarsa.ablation --list           # feature variants
+uv run pokelike bench --bot experiments/mine --dry-run       # measure a candidate
 ```
 
 ## Architecture
@@ -102,8 +102,12 @@ experiments/             research. OURS are tracked as worked examples; anything
 ├── sarsa/                 linear function approximation. The one that worked
 └── llm/                   prompt strategies compared on identical seeds
 
-Every experiment has the same shape: README, agent, train, evaluate, output/,
-logs/. Keep it that way when adding one.
+Every experiment has the same shape: README, agent, train, output/, logs/. Keep
+it that way when adding one. There is ONE way to measure a candidate — the
+official benchmark, by path: `pokelike bench --bot experiments/mine --dry-run`.
+The per-experiment evaluate/ablation scripts that ran held-out seed sets are
+gone on purpose: a seed set picked during development once scored a model 1.60
+that the official 50 scored 1.10. Do not reintroduce them.
 
 **An experiment is named after the bot it produces** — `dyna_q/` → `dyna-q/`,
 `sarsa/` → `sarsa-v1/` and `sarsa-v2/`, `llm/` → `llm-*/`. The separator differs

@@ -151,17 +151,11 @@ defining two of them is refused rather than guessed at.
 
 ## 5. Measure it
 
-Against random, on the **same** seeds, paired. Runs vary enormously by luck here,
-so two separate averages mostly measure who drew the nicer maps:
-
-```python
-from pokelike import compare
-from pokelike.bot import create
-
-print(compare({"mine": create("mine")}, seeds=range(25))["table"])
-```
-
-Then the official benchmark, the 50 fixed seeds everyone is scored on:
+One measurement, the official benchmark: the 50 fixed seeds everyone is scored
+on. Runs vary enormously by luck here, so any hand-picked set of seeds mostly
+measures who drew the nicer maps — a model in this repo once scored 1.60 on 25
+seeds chosen during development and 1.10 on the official 50. Same weights,
+opposite conclusion. So there is no second protocol:
 
 ```bash
 uv run pokelike bench --bot mine --dry-run                       # nothing recorded

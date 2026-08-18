@@ -32,7 +32,6 @@ Every one of them has the same shape, so moving between them costs nothing:
 ├── README.md    what it asks, and what happened
 ├── agent.py     the thing being learned, if anything is
 ├── train.py     the loop
-├── evaluate.py  against random, on held-out seeds, paired
 ├── output/      weights and histories        (ignored)
 └── logs/        what each run printed        (ignored)
 ```
@@ -192,18 +191,17 @@ answered neither. **If you ablate a feature set, hold the effective step fixed.*
 
 ## Measuring anything
 
-Against the same seeds, paired. Runs vary enormously by luck here, so two
-separate averages mostly measure who drew the nicer maps:
+One way, the official benchmark, straight from where the bot lives:
 
-```python
-from pokelike import compare, create
-
-print(compare({"mine": create("mine")}, seeds=range(25))["table"])
+```bash
+uv run pokelike bench --bot experiments/mine --dry-run
 ```
 
-`create` builds a bot by the name of its folder under `bots/`, the same name
-`--bot` takes. There is no module to import: nothing is registered anywhere, so
-a bot exists because its directory does.
+The 50 fixed seeds everyone is scored on; measured by path it records nothing.
+Compare the number with `uv run pokelike leaderboard`.
 
-It reports wins, draws, losses and a t. With this much variance, a difference in
-means on its own says very little.
+There is deliberately no second protocol. Runs vary enormously by luck, so any
+seed set picked during development mostly measures who drew the nicer maps —
+the section above has the demonstration: 1.60 on 25 development seeds, 1.10 on
+the official 50, same weights. When your bot earns its place, bring it into
+`bots/` the standard way and bench it there, under its own name.

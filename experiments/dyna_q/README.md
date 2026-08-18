@@ -75,8 +75,8 @@ plateaus — either stochastic Dyna-Q with outcome counts, or **Dyna-Q+**
 # train (about 15 minutes for 50 episodes)
 uv run python -m experiments.dyna_q.train --episodes 50
 
-# does it beat random? same seeds for both, held out from training
-uv run python -m experiments.dyna_q.evaluate --episodes 30 --seed0 5000
+# how good is it? the official benchmark, straight from this folder
+uv run pokelike bench --bot bots/dyna-q --dry-run
 ```
 
 | flag | meaning | default |
