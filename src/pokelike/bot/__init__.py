@@ -76,9 +76,27 @@ def resolve(name: str) -> str:
 
 
 def create(name: str, seed: int = 0) -> Bot:
-    """Builds a bot by name: a folder in `bots/`, or the built-in baseline."""
+    """Builds a bot by name — a folder in `bots/`, the baseline — or by PATH.
+
+    A path (anything with a separator in it) loads the bot where it lives, so
+    the bot you are writing inside your experiment folder can be played and
+    benchmarked without moving it:
+
+        uv run pokelike bench --bot experiments/mine --dry-run
+
+    Only a bot in `bots/` can be recorded; measuring by path never records.
+    """
     from .catalogue import available as on_disk
-    from .catalogue import load
+    from .catalogue import load, load_class
+
+    if "/" in name or "\\" in name:
+        from pathlib import Path
+
+        path = Path(name)
+        bot_py = path if path.name == "bot.py" else path / "bot.py"
+        if not bot_py.is_file():
+            raise KeyError(f"no bot.py at {path}")
+        return load_class(bot_py)(seed=seed)
 
     full = resolve(name)
     if full in on_disk():

@@ -39,9 +39,9 @@ _situation(state)
 └── "Pick an index between 0 and N"   ← harness, never yours to drop
 ```
 
-That split is why replacing the view wholesale is safe. It did not used to be:
-all three lived in one method, so a bot that changed the view silently lost its
-memory and stopped telling the model how many options it had.
+The harness owns the journal and the instruction line, so replacing the view
+wholesale cannot cost the bot its memory or leave the model without the range
+of legal indices.
 
 ## The view, which is the deepest knob
 

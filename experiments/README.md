@@ -9,14 +9,21 @@ worked examples, and the point of them is that you can read what was actually
 done rather than a description of it.
 
 ```
-experiments/
-├── env/            the game stated as an RL problem. Shared by all of them.
-├── example/        the smallest complete experiment. Start here.
-├── dyna_q/         tabular RL. It lost, and is kept because of that.
-├── sarsa_lambda/   linear function approximation. The one that worked.
-├── llm/            comparing prompts, which is not learning at all.
-└── <yours>/        ignored.
+experiments/          research                 bots/          what it produced
+├── env/       the problem, shared by all      —
+├── example/   the smallest complete one       —              start here
+├── dyna_q/    tabular RL. It lost             dyna-q/        kept because it lost
+├── sarsa/     linear FA. The one that worked  sarsa-v1/ -v2/ 81 and 100 features
+├── llm/       comparing prompts               llm-*/         one harness, six bots
+└── <yours>/   ignored, and yours              <yours>/
 ```
+
+**An experiment is named after the bot it produces**, so you never have to work
+out which folder trained what. The separator differs and that is Python, not
+taste: an experiment is a package you run with `-m`, so `experiments.dyna_q`
+must be a valid identifier, while a bot is a directory loaded by path and can be
+`dyna-q`. `--bot dyna_q` works anyway — names are normalised before they are
+looked up, so you can type either.
 
 Every one of them has the same shape, so moving between them costs nothing:
 
@@ -25,7 +32,6 @@ Every one of them has the same shape, so moving between them costs nothing:
 ├── README.md    what it asks, and what happened
 ├── agent.py     the thing being learned, if anything is
 ├── train.py     the loop
-├── evaluate.py  against random, on held-out seeds, paired
 ├── output/      weights and histories        (ignored)
 └── logs/        what each run printed        (ignored)
 ```
@@ -38,7 +44,7 @@ Copy the one closest to your idea into `experiments/mine/` and work there.
 
 [`env/`](#env--the-game-as-an-rl-problem) ·
 [`example/`](#example--the-shape-with-nothing-clever-in-it) ·
-[What was learned here](#what-was-learned-here) ·
+[Findings](#findings) ·
 [Measuring anything](#measuring-anything)
 
 ---
@@ -118,80 +124,49 @@ been, with something better in the middle.
 
 ---
 
-## What was learned here
+## Findings
 
-The code for each is in its own folder with its own README. This is the short
-version, in the order it happened.
+Each folder's README has the detail. The results that shape how things are done
+here:
 
-**Tabular Dyna-Q lost to random.** 400 episodes, a state key of six numbers:
-−3.8 mean score against random's 7.0 on held-out seeds, winning 6 of 20. Its own
-decision log said why before the evaluation did:
+**A tabular state key cannot see what decides this game.** `dyna-q` scores 0.62
+badges on the benchmark against random's 0.56. On the starter screen its
+learned values are 6.3 / 6.2 / 6.3 across three starters its six-number
+encoding cannot tell apart: the information never reaches the table, so more
+episodes do not change it.
 
-```
-    1 | starter-screen
-      | [0] Bulbasaur Lv5  [1] Charmander Lv5  [2] Squirtle Lv5
-      |    Q: slot0=6.3, slot1=6.2, slot2=6.3
-```
+**The representation is what beats random, not the algorithm.** `sarsa-v1` and
+`sarsa-v2` score 1.30 and 1.36 with the same algorithm family, reward and
+budget as `dyna-q`. The difference between them and it is the feature vector.
 
-Three values within a rounding error, because the encoding showed it three
-indistinguishable slots where a player sees a Grass starter, a Fire one and a
-Water one with different stats. **No number of episodes fixes that: the
-information never reaches the table.**
+**Feature-set differences sit below the noise floor.** Five variants, 23 to 100
+features, all beat random (t between 2.4 and 4.3 paired) and none measurably
+beats another (|t| below 1.7). The 0.06 badges between `sarsa-v1` and
+`sarsa-v2` is smaller than the spread of the benchmark itself.
 
-**Linear SARSA(λ) with hand-built features won**, on the same reward, the same
-environment and the same protocol: 15 wins, 10 draws, no losses over 25 held-out
-seeds, +0.88 badges per run, t = 4.18. The change was the representation, not
-the algorithm.
+**Seed sets picked during development rank models wrongly.** One set of weights
+scores 1.60 on the 25 seeds it was selected on and 1.10 on the official 50.
+This is why there is exactly one measurement (below).
 
-**And then more features bought nothing.** Nineteen more — team order, items, the
-move tutor — measured head to head on the 50 standard seeds against the same
-policy without them: +0.06 badges, t = 0.62. Adding what the agent can see is not
-the same as adding what it can *use*.
-
-**Then an ablation answered less than it looked like.** Five feature sets, 300
-episodes each, 25 held-out seeds, step size held fixed across variants:
-
-```
-full             100 feature   1.60 badges   vs random  t 3.43
-action-only       84           1.36                     t 2.42
-minimal           23           1.24                     t 3.00
-no-v2             81           1.20                     t 4.30
-no-interactions   64           1.12                     t 3.12
-random                         0.64
-```
-
-Every variant beats random and **none beats another**: paired against the full
-set, the four differences come out at t = −1.4 to −1.7. The ranking reads like a
-result and is noise.
-
-The demonstration is on one model: `full` scored 1.60 over those 25 seeds and
-**1.10** over the 50 benchmark seeds. Same weights, opposite conclusion, and a
-gap wider than anything in the table.
-
-**25 seeds cannot tell feature sets apart on this game.** Worth knowing before
-spending eight hours ranking variants that way. Comparisons against random are
-fine — those are large effects — but variant against variant needs far more runs,
-or a measurement with less variance in it than badges over a whole run.
-
-**A warning worth repeating.** The FIRST attempt at that ablation put the two
-smallest sets last, and was measuring something else: their weights had diverged,
-to 10⁹ and 10³². The step size was normalised per active feature, and the number
-of active features is a property of the feature set — the full set activates 9.0
-per (s, a), the smallest 1.2. So dropping a group silently multiplied the
-learning rate by up to 7.5, each run differed in two ways, and the comparison
-answered neither. **If you ablate a feature set, hold the effective step fixed.**
+**Training runs being compared must share `--alpha-norm`.** The default step
+normalisation divides by the number of active features, which is a property of
+the feature set: without a shared constant, two variants differ in feature set
+*and* effective learning rate, and the comparison answers neither. Left to the
+default, small sets diverge — weights of 10⁹ and beyond.
 
 ## Measuring anything
 
-Against the same seeds, paired. Runs vary enormously by luck here, so two
-separate averages mostly measure who drew the nicer maps:
+One way, the official benchmark, straight from where the bot lives:
 
-```python
-from pokelike import compare
-from pokelike.bot.mine import MyBot
-
-print(compare({"mine": MyBot()}, seeds=range(25))["table"])
+```bash
+uv run pokelike bench --bot experiments/mine --dry-run
 ```
 
-It reports wins, draws, losses and a t. With this much variance, a difference in
-means on its own says very little.
+The 50 fixed seeds everyone is scored on; measured by path it records nothing.
+Compare the number with `uv run pokelike leaderboard`.
+
+There is deliberately no second protocol. Runs vary enormously by luck, so any
+seed set picked during development mostly measures who drew the nicer maps —
+the section above has the demonstration: 1.60 on 25 development seeds, 1.10 on
+the official 50, same weights. When your bot earns its place, bring it into
+`bots/` the standard way and bench it there, under its own name.

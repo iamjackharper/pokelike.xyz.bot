@@ -151,17 +151,10 @@ defining two of them is refused rather than guessed at.
 
 ## 5. Measure it
 
-Against random, on the **same** seeds, paired. Runs vary enormously by luck here,
-so two separate averages mostly measure who drew the nicer maps:
-
-```python
-from pokelike import compare
-from pokelike.bot import create
-
-print(compare({"mine": create("mine")}, seeds=range(25))["table"])
-```
-
-Then the official benchmark, the 50 fixed seeds everyone is scored on:
+One measurement, the official benchmark: the 50 fixed seeds everyone is scored
+on. There is deliberately no second protocol — runs vary enormously by luck, so
+a hand-picked seed set mostly measures who drew the nicer maps, and the same
+weights can score 1.60 on one set and 1.10 on the official 50.
 
 ```bash
 uv run pokelike bench --bot mine --dry-run                       # nothing recorded
@@ -262,6 +255,16 @@ it by accident.
 cp -r experiments/example experiments/mine
 uv run python -m experiments.example.train --episodes 20   # the shape of one
 ```
+
+And you measure a candidate right where it lives — write a `bot.py` in your
+experiment folder and point the benchmark at it:
+
+```bash
+uv run pokelike bench --bot experiments/mine --dry-run
+```
+
+Measured by path, never recorded. When it earns its place, bring it into
+`bots/` the standard way (step 3) and bench it there, under its own name.
 
 That is the split, and it is the whole answer to "what do I have to reveal":
 

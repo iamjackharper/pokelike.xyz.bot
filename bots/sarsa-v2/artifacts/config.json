@@ -9,7 +9,7 @@
   "epsilon": 0.02
  },
  "updates": 9121,
- "trainer": "experiments/sarsa_lambda/train.py",
+ "trainer": "experiments/sarsa/train.py",
  "top_weights": {
   "team_size": -114.788,
   "bias": 106.562,

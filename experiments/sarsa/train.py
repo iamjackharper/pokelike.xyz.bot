@@ -1,6 +1,6 @@
 """Training loop for semi-gradient SARSA(λ).
 
-    uv run python -m experiments.sarsa_lambda.train --episodes 300
+    uv run python -m experiments.sarsa.train --episodes 300
 
 Unlike the tabular experiment this drives `Game` directly and works on action
 INDICES, not on action keys. That is not a detail: keying by type collapses the
@@ -220,7 +220,7 @@ def main() -> int:
     p.add_argument("--resume", action="store_true",
                    help="continue from the checkpoint instead of starting over")
     a = p.parse_args()
-    # Written to experiments/sarsa_lambda/logs/ by the run itself, so the log of
+    # Written to experiments/sarsa/logs/ by the run itself, so the log of
     # a training run is never the thing that was not kept.
     with tee(HERE, a.out.replace(".json", "")) as path:
         train(

@@ -75,7 +75,7 @@ def test_the_sarsa_bot_freezes_exactly_the_features_it_was_trained_on():
     If this fails, the fix is to bump `FEATURES_VERSION` and retrain, never to
     quietly paste the new names across.
     """
-    from experiments.sarsa_lambda.features import feature_names as trained_on
+    from experiments.sarsa.features import feature_names as trained_on
 
     from pokelike.bot.catalogue import load_class
 
@@ -143,6 +143,30 @@ def test_every_bot_can_actually_be_recorded(tmp_path, monkeypatch):
         assert not r["stale"], f"{name} is stale the moment it is written"
         assert not r["unverified"], f"{name} was written without a fingerprint"
         assert r["fingerprint"] == fingerprint(tmp_path / name)
+
+
+def test_a_bot_is_measured_where_it_lives(tmp_path):
+    """`--bot <path>` loads the bot from any folder — an experiment's, usually.
+
+    The point is that measuring a candidate never requires moving it, and above
+    all never requires wearing another bot's name: you benchmark the folder you
+    are working in, and only a bot brought into bots/ the standard way is ever
+    recorded.
+    """
+    from pokelike.bot import create
+
+    (tmp_path / "bot.py").write_text(
+        "from pokelike.bot.base import Bot\n"
+        "class MineBot(Bot):\n"
+        "    name = 'mine'\n"
+        "    def choose(self, state): return 1\n",
+        encoding="utf-8",
+    )
+    bot = create(str(tmp_path))
+    assert bot.choose({"actions": [{}, {}]}) == 1
+    assert create(str(tmp_path / "bot.py")).name == "mine"
+    with pytest.raises(KeyError):
+        create(str(tmp_path / "empty"))
 
 
 def test_the_two_sarsas_are_two_different_policies():

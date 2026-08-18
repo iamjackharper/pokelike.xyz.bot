@@ -289,11 +289,14 @@ with session() as game:
 Whole runs and comparisons, without writing the loop:
 
 ```python
-from pokelike import play, compare
+from pokelike import play, compare, create
 
-result = play(MyBot(), seed=42)                 # one run, with its decision trace
-print(compare({"mine": MyBot()}, seeds=range(20))["table"])
+result = play(create("sarsa-v2"), seed=42)      # one run, with its decision trace
+print(compare({"mine": create("mine")}, seeds=range(20))["table"])
 ```
+
+`create` takes the name of a folder under `bots/` — the same name `--bot` takes,
+and there is nothing to import or register.
 
 `compare` plays every bot on the **same** seeds and pairs them. Runs vary
 enormously by luck here, so two separate averages mostly measure who drew the
@@ -561,11 +564,11 @@ by tabular RL. It doubles as the worked example of what
 a leaderboard submission looks like, which is why it carries its own copy of the
 state encoding instead of importing the training code.
 
-It also **lost**, and that is left standing on the leaderboard rather than
-quietly retried: −3.8 mean score against random's 7.0 on held-out seeds, winning
-6 of 20. Its own decision log said why before the evaluation did — on the starter
-screen it learned Q values of 6.3 / 6.2 / 6.3, three slots its encoding cannot
-tell apart.
+It barely clears random — 0.62 badges to 0.56 on the benchmark — and stays on
+the leaderboard at that number. The limit is visible in its own decision log:
+on the starter screen its learned Q values are 6.3 / 6.2 / 6.3, three slots its
+six-number encoding cannot tell apart, so the information a player uses never
+reaches the table.
 
 **`sarsa-v1`** and **`sarsa-v2`** ([bots/sarsa-v1/](bots/sarsa-v1/),
 [bots/sarsa-v2/](bots/sarsa-v2/)) are the answer to that, and lead the
@@ -580,11 +583,10 @@ chapter 10 for the update, 12.7 for the traces:
 Because the model is linear you can read the policy instead of only running it:
 training prints the weights it leaned on hardest, by name.
 
-Both are kept. v2 has 100 features to v1's 81 and is ahead by 0.06 badges, which
-is **less than the noise on fifty runs** — worth saying plainly rather than
-rounding up into a story. A leaderboard that overwrites its own history cannot
-tell you whether the next idea helped, so `--bot sarsa` names neither: it is an
-error listing both.
+Both are kept. v2 has 100 features to v1's 81 and is ahead by 0.06 badges,
+less than the noise on fifty runs. A leaderboard that overwrites its own
+history cannot tell you whether the next idea helped, so `--bot sarsa` names
+neither: it is an error listing both.
 
 ---
 
