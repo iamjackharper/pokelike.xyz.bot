@@ -6,6 +6,19 @@ prompt and an LLM, a trained RL policy, a search, a mix.
 You do **not** need write access to this repo, and you should not expect any.
 The way in is a fork and a pull request, and the steps are spelled out below.
 
+**Contents**
+[What makes results comparable](#what-makes-results-comparable) ·
+[What a submission is](#what-a-submission-is) ·
+[Declaring your artifacts](#declaring-your-artifacts)
+
+[Standings](#standings) ·
+[How to submit](#how-to-submit) ·
+[Categories](#categories) ·
+[Reading the table](#reading-the-table) ·
+[The honest part about verification](#the-honest-part-about-verification)
+
+---
+
 ## What makes results comparable
 
 Two things, and both are recorded automatically.

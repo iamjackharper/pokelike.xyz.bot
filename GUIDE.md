@@ -5,6 +5,23 @@ two that are easy to get wrong are marked.
 
 ---
 
+**The seven steps**
+[1 Set up](#1-set-up-once) ·
+[2 See the state](#2-look-at-what-a-bot-receives) ·
+[3 Write it](#3-write-the-file) ·
+[4 Register it](#4-register-it) ·
+[5 Watch it](#5-watch-it-play) ·
+[6 Measure it](#6-measure-it) ·
+[7 Submit](#7-submit)
+
+**Then**
+[The optional hooks](#the-optional-hooks) ·
+[The rule that is not obvious](#the-rule-that-is-not-obvious) ·
+[Where to experiment](#where-to-experiment) ·
+[What counts as a bot](#what-counts-as-a-bot)
+
+---
+
 ## 1. Set up, once
 
 ```bash

@@ -32,6 +32,17 @@ Every one of them has the same shape, so moving between them costs nothing:
 
 Copy the one closest to your idea into `experiments/mine/` and work there.
 
+**Contents**
+[What you have to show, and what you do not](#what-you-have-to-show-and-what-you-do-not) ·
+[What the area is for](#what-the-area-is-for)
+
+[`env/`](#env--the-game-as-an-rl-problem) ·
+[`example/`](#example--the-shape-with-nothing-clever-in-it) ·
+[What was learned here](#what-was-learned-here) ·
+[Measuring anything](#measuring-anything)
+
+---
+
 ## What you have to show, and what you do not
 
 Submitting a bot **does** reveal the bot: an entry archives the file that ran and

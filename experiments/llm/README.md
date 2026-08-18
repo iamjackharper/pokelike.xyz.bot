@@ -1,5 +1,11 @@
 # Comparing prompts
 
+**Contents**
+[Why paired, again](#why-paired-again) ·
+[What it costs](#what-it-costs)
+
+---
+
 ```bash
 uv run python -m experiments.llm.compare --strategies survivor,explorer --seeds 5
 ```
