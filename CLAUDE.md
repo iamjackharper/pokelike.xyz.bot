@@ -27,7 +27,8 @@ uv run pokelike bot -d --runs 1  # log every decision, for any bot
 uv run pytest                    # full suite, ~3 minutes
 uv run pytest -m "not slow"      # fast tests only, no browser
 
-uv run pokelike bench --bot random --runs 10   # the standard benchmark, 50 seeds
+uv run pokelike bench --bot random             # the standard benchmark, 50 seeds
+uv run pokelike bench --bot random --dry-run   # ... without writing an entry
 
 uv run python -m experiments.sarsa_lambda.train --episodes 300      # train a policy
 uv run python -m experiments.sarsa_lambda.evaluate --seed0 40000    # vs random, paired
@@ -265,6 +266,11 @@ are not obvious and matter:
   encoding inside the bot file rather than importing `experiments/env/encoding.py`,
   so improving the training code cannot silently change what past submissions
   mean. `bot/dyna_q.py` is the worked example.
+- **Only a complete benchmark writes an entry.** `--runs N` and `--dry-run` both
+  print the result and file nothing: a score over N seeds is not comparable to
+  one over 50, so it is not a submission. It used to write one regardless, which
+  meant a `--runs 5` sanity check left a real entry for the next `git add` to
+  pick up.
 - **The benchmark records the game bundle's sha256.** Scores from before and
   after an upstream game update are not comparable, and without the hash a
   leaderboard mixes them silently.

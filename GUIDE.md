@@ -103,15 +103,23 @@ from pokelike.bot.mine import MyBot
 print(compare({"mine": MyBot()}, seeds=range(25))["table"])
 ```
 
-Then the official benchmark, the 50 fixed seeds everyone is scored on:
+Then the official benchmark, the 50 fixed seeds everyone is scored on. Try it
+without committing to anything first:
+
+```bash
+uv run pokelike bench --bot mine --name my-bot --dry-run     # plays 50, writes nothing
+uv run pokelike bench --bot mine --runs 5                    # a quick look, writes nothing
+```
+
+When the number is one you want on the board, drop the flag:
 
 ```bash
 uv run pokelike bench --bot mine --name my-bot --author YOUR-HANDLE --category rules
 ```
 
-> **Easy to get wrong.** `bench` always writes a real entry, whatever `--runs`
-> says. There is no dry run. Delete the folders from any practice runs out of
-> `leaderboard/entries/` before step 7, or you will submit them.
+Only a **complete** run writes an entry. `--runs N` is a practice run by
+definition — a score over 5 seeds is not comparable to one over 50 — so it
+prints the result and files nothing.
 
 ## 7. Submit
 

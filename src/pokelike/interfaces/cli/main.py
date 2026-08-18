@@ -316,6 +316,22 @@ def cmd_bench(args) -> int:
 
     print(format_result(result))
 
+    # A PARTIAL run does not produce an entry, and neither does --dry-run.
+    #
+    # This used to write one whatever happened, so a `--runs 5` sanity check left
+    # a real submission on disk that the next `git add` would pick up. Refusing
+    # is not caution, it is the same rule the leaderboard already states: a score
+    # over 5 seeds is not comparable to one over 50, so it is not a submission,
+    # and something that is not a submission should not be written as one.
+    partial = len(seeds) < len(STANDARD_SEEDS)
+    if args.dry_run or partial:
+        why = ("--dry-run" if args.dry_run
+               else f"only {len(seeds)} of the {len(STANDARD_SEEDS)} standard seeds")
+        print(f"\n  no entry written ({why}).")
+        if partial and not args.dry_run:
+            print("  run it without --runs to produce a submittable result.")
+        return 0
+
     # The entry folder is built here rather than left to the submitter: the bot
     # source, whatever it declared in artifacts(), and the result all get hashed
     # together, so they can never drift apart.
@@ -481,7 +497,10 @@ def main(argv: list[str] | None = None) -> int:
                    help="rules, rl, llm, human or other")
     s.add_argument("--description", default="", help="one line on how it works")
     s.add_argument("--runs", type=int, default=0,
-                   help="use only the first N standard seeds (a full run is 50)")
+                   help="use only the first N standard seeds. A partial run is a "
+                        "practice run: it prints the result and writes no entry")
+    s.add_argument("--dry-run", action="store_true",
+                   help="play all 50 and print the result, but write no entry")
     s.set_defaults(func=cmd_bench)
 
     s = sub.add_parser("leaderboard", help="rebuild and print the leaderboard table")

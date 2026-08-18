@@ -178,10 +178,10 @@ It plays the 50 standard seeds, builds your entry folder, and prints the exact
 git commands to finish. A full benchmark takes about 15 minutes for a fast bot;
 use `--runs 10` while developing, but submit the full 50.
 
-There is no dry run: `bench` always writes an entry folder and rebuilds the
-index, whatever `--runs` says. A 10-seed result is a real entry on your disk,
-recorded as 10 runs — so delete it before opening a pull request, or the
-comparison it lands next to is not one.
+Neither writes an entry. `--runs N` is a practice run by definition, since a
+score over 10 seeds is not comparable to one over 50, and `--dry-run` plays all
+50 and files nothing. An entry appears only when a complete benchmark has
+actually been played, so nothing lands in `entries/` by accident.
 
 **4. Commit, push, open the PR.** The command tells you what to `git add`. GitHub
 will offer to open the pull request from your new branch.
