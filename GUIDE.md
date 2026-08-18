@@ -263,6 +263,16 @@ cp -r experiments/example experiments/mine
 uv run python -m experiments.example.train --episodes 20   # the shape of one
 ```
 
+And you measure a candidate right where it lives — write a `bot.py` in your
+experiment folder and point the benchmark at it:
+
+```bash
+uv run pokelike bench --bot experiments/mine --dry-run
+```
+
+Measured by path, never recorded. When it earns its place, bring it into
+`bots/` the standard way (step 3) and bench it there, under its own name.
+
 That is the split, and it is the whole answer to "what do I have to reveal":
 
 **You show what your bot does. Not how you arrived at it.**

@@ -299,26 +299,19 @@ uv run python -m experiments.sarsa.evaluate --episodes 25 --seed0 40000
 inside their own folder and nowhere else, so a training run cannot silently
 replace a policy that is on the leaderboard.
 
-## Promote, then benchmark — never under another bot's name
+## Measuring a candidate
 
-When a training run produces weights worth measuring, the candidate gets its
-own folder first and is measured under its own name:
+Write the bot inside your experiment folder and point the benchmark at it:
 
 ```bash
-uv run python -m experiments.sarsa.promote long_full.json --name sarsa-v3
-uv run pokelike bench --bot sarsa-v3 --dry-run
+uv run pokelike bench --bot experiments/mine --dry-run
 ```
 
-`promote` writes `bots/<name>/`: the weights, a copy of the frozen player whose
-`FEATURES_VERSION` matches them, renamed, and a README stub. If the candidate
-wins, record it and keep the folder; if it loses, delete the folder — until a
-result is recorded and committed, it is just a directory on your machine.
-
-What promotion replaces is the tempting shortcut of swapping weights into an
-existing bot for the measurement. That produces a report that says `sarsa-v2`
-and is not sarsa-v2: a number that looks official and describes nothing on
-disk. The benchmark must only ever measure what a folder holds, under the name
-the folder has.
+A bot measured by path is never recorded — the run prints its numbers on the
+official 50 seeds and that is all. Compare them with `pokelike leaderboard`.
+When it earns its place, bring it into `bots/` the standard way — `new-bot`, or
+copy your `bot.py` and artifacts into a folder of its own — and bench it there,
+under its own name. A candidate is never measured under another bot's name.
 
 ## You can read what it learned
 

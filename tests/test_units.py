@@ -145,32 +145,28 @@ def test_every_bot_can_actually_be_recorded(tmp_path, monkeypatch):
         assert r["fingerprint"] == fingerprint(tmp_path / name)
 
 
-def test_promotion_gives_a_candidate_its_own_identity(tmp_path):
-    """Weights become a bot with its own name — never measured under another's.
+def test_a_bot_is_measured_where_it_lives(tmp_path):
+    """`--bot <path>` loads the bot from any folder — an experiment's, usually.
 
-    The shortcut this replaces was swapping weights into an existing bot via an
-    environment variable for the benchmark: the report then names a bot that
-    did not play. Promotion writes a real folder, so what bench measures is
-    what the folder holds, under the name the folder has.
+    The point is that measuring a candidate never requires moving it, and above
+    all never requires wearing another bot's name: you benchmark the folder you
+    are working in, and only a bot brought into bots/ the standard way is ever
+    recorded.
     """
-    import shutil
+    from pokelike.bot import create
 
-    from experiments.sarsa.promote import promote
-
-    from pokelike.bot.catalogue import BOTS, load_class
-
-    # A private bots-root with the real template in it, so nothing touches bots/.
-    shutil.copytree(BOTS / "sarsa-v2", tmp_path / "sarsa-v2",
-                    ignore=shutil.ignore_patterns("__pycache__"))
-    d = promote(str(BOTS / "sarsa-v2" / "artifacts" / "weights.json"),
-                "candidate", root=tmp_path)
-    bot = load_class(d / "bot.py")(seed=0)
-    assert bot.name == "candidate", "the candidate plays under someone else's name"
-    assert bot.weights_path == d / "artifacts" / "weights.json", (
-        "the candidate reads weights from outside its own folder")
-
-    with pytest.raises(SystemExit):
-        promote(str(d / "artifacts" / "weights.json"), "candidate", root=tmp_path)
+    (tmp_path / "bot.py").write_text(
+        "from pokelike.bot.base import Bot\n"
+        "class MineBot(Bot):\n"
+        "    name = 'mine'\n"
+        "    def choose(self, state): return 1\n",
+        encoding="utf-8",
+    )
+    bot = create(str(tmp_path))
+    assert bot.choose({"actions": [{}, {}]}) == 1
+    assert create(str(tmp_path / "bot.py")).name == "mine"
+    with pytest.raises(KeyError):
+        create(str(tmp_path / "empty"))
 
 
 def test_the_two_sarsas_are_two_different_policies():

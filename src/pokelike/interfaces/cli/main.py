@@ -335,11 +335,19 @@ def cmd_bench(args) -> int:
         print(e.args[0], file=sys.stderr)
         raise SystemExit(2) from e
 
+    # A path means the bot is being measured where it lives — inside an
+    # experiment folder, usually. That is the point: you benchmark what you are
+    # working on without moving it. It is never recorded from there; recording
+    # is for bots/, reached by the standard procedure.
+    from_path = "/" in args.bot or "\\" in args.bot
+    display = (Path(args.bot).resolve().parent.name if args.bot.endswith("bot.py")
+               else Path(args.bot).resolve().name) if from_path else args.bot
+
     seeds = STANDARD_SEEDS[: args.runs] if args.runs else STANDARD_SEEDS
     server, game = _server_and_game(args)
     try:
         result = run_benchmark(
-            game, bot, bot_name=args.name or args.bot, site=SITE_ROOT, seeds=seeds,
+            game, bot, bot_name=args.name or display, site=SITE_ROOT, seeds=seeds,
             author=args.author, category=args.category, description=args.description,
         )
     finally:
@@ -356,7 +364,12 @@ def cmd_bench(args) -> int:
     # over 5 seeds is not comparable to one over 50, so it is not a submission,
     # and something that is not a submission should not be written as one.
     partial = len(seeds) < len(STANDARD_SEEDS)
-    if args.dry_run or partial:
+    if args.dry_run or partial or from_path:
+        if from_path:
+            print(f"\n  nothing recorded (measured from {args.bot}).")
+            print("  When it earns its place: bring it into bots/ the standard way —")
+            print("  new-bot, or copy your bot.py and artifacts — then bench it there.")
+            return 0
         why = ("--dry-run" if args.dry_run
                else f"only {len(seeds)} of the {len(STANDARD_SEEDS)} standard seeds")
         print(f"\n  nothing recorded ({why}).")
