@@ -145,6 +145,34 @@ def test_every_bot_can_actually_be_recorded(tmp_path, monkeypatch):
         assert r["fingerprint"] == fingerprint(tmp_path / name)
 
 
+def test_promotion_gives_a_candidate_its_own_identity(tmp_path):
+    """Weights become a bot with its own name — never measured under another's.
+
+    The shortcut this replaces was swapping weights into an existing bot via an
+    environment variable for the benchmark: the report then names a bot that
+    did not play. Promotion writes a real folder, so what bench measures is
+    what the folder holds, under the name the folder has.
+    """
+    import shutil
+
+    from experiments.sarsa.promote import promote
+
+    from pokelike.bot.catalogue import BOTS, load_class
+
+    # A private bots-root with the real template in it, so nothing touches bots/.
+    shutil.copytree(BOTS / "sarsa-v2", tmp_path / "sarsa-v2",
+                    ignore=shutil.ignore_patterns("__pycache__"))
+    d = promote(str(BOTS / "sarsa-v2" / "artifacts" / "weights.json"),
+                "candidate", root=tmp_path)
+    bot = load_class(d / "bot.py")(seed=0)
+    assert bot.name == "candidate", "the candidate plays under someone else's name"
+    assert bot.weights_path == d / "artifacts" / "weights.json", (
+        "the candidate reads weights from outside its own folder")
+
+    with pytest.raises(SystemExit):
+        promote(str(d / "artifacts" / "weights.json"), "candidate", root=tmp_path)
+
+
 def test_the_two_sarsas_are_two_different_policies():
     """v1 and v2 exist side by side to be compared, so they must differ.
 
