@@ -271,6 +271,17 @@ All of these were hit for real. Worth rereading before changing anything:
   offered as actions, and actions are applied by dispatching an event on the
   element rather than clicking a coordinate, so they never intercepted anything
   either.
+- **`bridge.js` is re-read from disk on every run; `browser.py` is not.**
+  `BRIDGE.read_text()` sits inside `load()`, so a process that has been running
+  for an hour injects whatever is on disk NOW, while `INIT_SCRIPT` is the string
+  it imported when it started. `git pull` mid-run therefore pairs a new bridge
+  with an old init script — and the speedup commit added `__pk_realNow` to one
+  and a call to it in the other, so the next `reset()` died with
+  `window.__pk_realNow is not a function`. It cost someone a training run at
+  episode 78. `__pk_settle` now falls back to `performance.now`, which is not
+  papering over it: an old init script does not virtualise the clock, so there
+  the real one IS correct. **Anything new that bridge.js needs from
+  `INIT_SCRIPT` has to degrade like that, or long runs break on pull.**
 - **`INIT_SCRIPT` is substituted with `str.replace`, not `%`.** It is full of
   prose, and a comment mentioning a percentage made `INIT_SCRIPT % cfg` raise
   "not enough arguments for format string" from a line nowhere near the change.
