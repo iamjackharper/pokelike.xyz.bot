@@ -49,8 +49,16 @@ KINDS = {
 class Artifact:
     """Something a bot needs, archived beside it.
 
-    Give it `path` to copy a file, or `data` to write a JSON document. A bot
-    declares these from `artifacts()`, and the benchmark stores them.
+    Give it `path` to copy a file, `data` to write a JSON document, or `text`
+    to write it out as it is. A bot declares these from `artifacts()`, and the
+    benchmark stores them.
+
+    `text` exists because a prompt is prose. Putting one through `data` writes a
+    JSON string, escapes every newline, and produces a prompt.md nobody can
+    read -- which is the opposite of why it is archived. The LLM harness had
+    been passing `text=` to a dataclass with no such field since it was written,
+    and nothing noticed because artifacts() is only called by a complete
+    benchmark and no LLM bot had ever finished one.
     """
 
     name: str
@@ -58,6 +66,7 @@ class Artifact:
     description: str = ""
     path: Path | None = None
     data: Any = None
+    text: str | None = None
     url: str | None = None
     extra: dict[str, Any] = field(default_factory=dict)
 
@@ -65,11 +74,23 @@ class Artifact:
         folder.mkdir(parents=True, exist_ok=True)
         target = folder / self.name
         if self.path is not None:
-            shutil.copy2(self.path, target)
+            # A bot's artifacts already live in its own folder, so "archiving"
+            # them means copying a file onto itself -- which shutil refuses. It
+            # is not an error: the file IS the artifact and it is already where
+            # it belongs. It only became reachable when bots stopped being
+            # copied into an archive and started being the archive.
+            if Path(self.path).resolve() != target.resolve():
+                shutil.copy2(self.path, target)
+            elif not target.is_file():
+                raise FileNotFoundError(f"artifact '{self.name}' is missing at {target}")
         elif self.data is not None:
             target.write_text(json.dumps(self.data, indent=1), encoding="utf-8")
+        elif self.text is not None:
+            target.write_text(self.text, encoding="utf-8")
         elif self.url is None:
-            raise ValueError(f"artifact '{self.name}' has no path, data or url")
+            raise ValueError(
+                f"artifact '{self.name}' has no path, data, text or url"
+            )
         entry = {
             "name": self.name, "kind": self.kind, "description": self.description,
             **({"url": self.url} if self.url else {}), **self.extra,
@@ -192,6 +213,7 @@ def build_index(root: Path | None = None) -> dict[str, Any]:
             "harness": notes.get("harness"),
             "fallback_rate": notes.get("fallback_rate"),
             "stock_tools": notes.get("stock_tools"),
+            "state_view": notes.get("state_view"),
             "fingerprint": (e.get("fingerprint") or "")[:12],
             "stale": e.get("stale", False),
             "unverified": e.get("unverified", False),
@@ -241,15 +263,16 @@ def as_markdown(index: dict[str, Any]) -> str:
     llm = [r for r in rows if r.get("model")]
     if llm:
         out += ["", "**Models.**", "",
-                "| bot | model | harness | tools | fallback rate |",
-                "|---|---|--:|---|--:|"]
+                "| bot | model | harness | sees | tools | fallback rate |",
+                "|---|---|--:|---|---|--:|"]
         for r in llm:
             rate = r.get("fallback_rate")
             flag = " ⚠︎" if rate is not None and rate > 0.1 else ""
             stock = r.get("stock_tools")
             tools = "shared" if stock else ("own ⚠︎" if stock is False else "-")
             out.append(f"| {r.get('bot')} | `{r.get('model')}` | {r.get('harness', '-')} "
-                       f"| {tools} | {rate if rate is not None else '-'}{flag} |")
+                       f"| {r.get('state_view') or '-'} | {tools} "
+                       f"| {rate if rate is not None else '-'}{flag} |")
         out += ["",
                 "An LLM result is **not reproducible**: providers change models behind a "
                 "fixed name and sampling is stochastic. `fallback rate` is the share of "

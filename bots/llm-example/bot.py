@@ -22,7 +22,8 @@ What it demonstrates, in the order it appears below:
     EXTRA_TOOLS     tools of your own, on top of the shared four
     run_tool()      answering them
     tools()         the whole set, if you would rather rebuild it
-    _situation()    HOW THE STATE REACHES THE MODEL -- the deepest hook here
+    STATE_VIEW      what the model reads: "screen" | "json" | "both" | [keys]
+    view()          the same thing, when none of those four fit
     _fallback()     what to play when the model does not answer
     explain()       one line per decision in the log
     notes()         what gets recorded next to your score
@@ -39,6 +40,7 @@ import json
 from typing import Any
 
 from pokelike.bot.llm import GAME_RULES, LLMBot
+from pokelike.core import render
 
 
 class ExampleBot(LLMBot):
@@ -182,7 +184,9 @@ Think briefly, then call `play`. Always call `play`."""
     # is told. The default renders the ASCII screen a human sees plus a journal
     # of recent moves.
 
-    def _situation(self, state: dict[str, Any]) -> str:
+    STATE_VIEW = "screen"
+
+    def view(self, state: dict[str, Any]) -> str:
         """The rendered screen, plus a compact numeric line the screen omits.
 
         The point of the extra line: the ASCII view is built for a person, so it
@@ -194,9 +198,15 @@ Think briefly, then call `play`. Always call `play`."""
         The full dict is NOT pushed here on purpose -- it is a tool instead. A
         map late in a run is several kilobytes, most of it irrelevant to this
         turn, and paying for it on every single turn is how an LLM benchmark
-        becomes about context windows rather than about play.
+        becomes about context windows rather than about play. `bots/llm-raw/`
+        takes the other side of that bet with the same prompt, which is what
+        makes the pair worth measuring.
+
+        Note what this canNOT break: the journal and the "pick an index" line are
+        added by the harness around whatever comes back from here, so replacing
+        the view outright never costs the bot its memory.
         """
-        base = super()._situation(state)
+        base = render.screen(state)
         team = state.get("team") or []
         if not team:
             return base

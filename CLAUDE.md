@@ -111,8 +111,11 @@ bots/                    THE BOTS. One folder each: bot.py, artifacts/,
 ├── dyna-q/                tabular RL. LOST to random, and kept for that
 ├── sarsa-v1/ sarsa-v2/    81 and 100 features. Both kept: the difference
 │                          between them is what either result is evidence about
-└── llm-baseline/ llm-survivor/ llm-explorer/ llm-analyst/
-                           one shared harness, four prompts. ~30 lines each
+├── llm-baseline/ llm-survivor/ llm-explorer/ llm-analyst/
+│                          one shared harness, four prompts. ~30 lines each
+├── llm-raw/               llm-survivor's prompt, reading the raw state dict.
+│                          One variable moved, so the pair means something
+└── llm-example/           every knob turned, with reasons. Not benchmarked
 tests/                   golden fingerprints + unit tests
 tools/deobfuscate.py     makes the bundle readable (needs node)
 ```
@@ -142,6 +145,15 @@ shared anyway, because two bots with different loops are two harnesses being
 compared and the model is the smaller half of that difference. `HARNESS` is what
 keeps it honest: written into every result, flagged when it no longer matches.
 **Bump it whenever a change there could move a decision.**
+
+**Three things an LLM bot owns, and all three are recorded.** The prompt, the
+state view (`STATE_VIEW` / `view()`), and the tools (`EXTRA_TOOLS` /
+`run_tool()`). Each is a genuine experimental variable, so each goes into
+`result.json` and into the standings — two rows with different views are no more
+comparable than two with different tools. `_situation()` deliberately is NOT the
+hook: it owns the journal and the "pick an index" line, and the old design, where
+the view and that plumbing lived in one method, let a bot replace the view and
+silently lose its memory.
 
 **Bot names resolve by exact match, then unique prefix.** An ambiguous prefix is
 an error naming the candidates, never a guess — `--bot sarsa` with both versions

@@ -367,18 +367,31 @@ def cmd_bench(args) -> int:
     # Recorded INTO the bot's own folder, next to the code that earned it, along
     # with whatever it declared in artifacts() and a fingerprint over both. A
     # score and the thing that produced it cannot then drift apart unnoticed.
-    d = record_result(args.bot, result, bot, BOTS)
+    try:
+        d = record_result(args.bot, result, bot, BOTS)
+    except Exception as e:  # noqa: BLE001 — the runs are the expensive part
+        # Fifty runs took minutes; a failure in the last five seconds must not
+        # throw them away. Written somewhere plain, with the one command that
+        # files it once whatever broke is fixed.
+        from ...bench import save
+        from ...bot.catalogue import slugify
+
+        rescue = save(result, BOTS / slugify(args.bot) / "result.unrecorded.json")
+        print(f"\n  could not record: {type(e).__name__}: {e}", file=sys.stderr)
+        print(f"  the {len(seeds)} runs are NOT lost, they are in {rescue}", file=sys.stderr)
+        print("  fix the error, then:  uv run pokelike leaderboard", file=sys.stderr)
+        raise SystemExit(1) from e
     build_index(BOTS)
 
     rel = d.relative_to(Path.cwd()) if d.is_relative_to(Path.cwd()) else d
     print(f"\n  recorded in {rel}/result.json")
-    for f in sorted(entry.rglob("*")):
-        if f.is_file():
-            print(f"    {f.relative_to(entry)}")
+    for f in sorted(d.rglob("*")):
+        if f.is_file() and "__pycache__" not in f.parts:
+            print(f"    {f.relative_to(d)}")
     print("\n  to submit (you do not need write access to the repo):")
     print("    1. fork it on GitHub, if you have not already")
     print(f"    2. git checkout -b {result['bot']}")
-    print(f"    3. git add {rel} src/pokelike/bot/")
+    print(f"    3. git add {rel}")
     print(f"    4. git commit -m 'Add {result['bot']}' && git push origin {result['bot']}")
     print("    5. open the pull request GitHub offers you")
     return 0

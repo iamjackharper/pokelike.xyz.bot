@@ -97,8 +97,11 @@ different loops are two harnesses being compared, and the model is the smaller
 half of that difference.
 
 If the prompt is not where your idea lives, you can go further without leaving
-the harness: `EXTRA_TOOLS` and `run_tool` give the model something the shared
-tools do not offer, and overriding `_call` puts a different model behind it —
+the harness. `STATE_VIEW` decides what the model reads each turn — the rendered
+view by default, or `"json"` for the whole state dict, or a list of the keys you
+want; `view(state)` is there when none of those fit. `EXTRA_TOOLS` and
+`run_tool` give the model something the shared tools do not offer, and
+overriding `_call` puts a different model behind it —
 a local one, or anything that is not an HTTP endpoint at all. Both are recorded
 in your result, so your row says what it actually was.
 
