@@ -12,3 +12,6 @@ stats/
 experiments/*/models/
 experiments/*/runs/
 experiments/*/output/
+
+# working list, not documentation
+TODO.md

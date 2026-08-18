@@ -22,7 +22,7 @@ uv run pokelike setup            # browser + offline copy (once)
 uv run pokelike play --seed 42   # interactive run
 uv run pokelike bot --runs 5     # the random bot
 uv run pokelike stats -d         # summary, with the columns explained
-uv run pokelike schema           # what a bot receives (regenerates docs/STATE.md with --markdown)
+uv run pokelike schema           # what a bot receives (--markdown regenerates it in README.md)
 uv run pokelike bot -d --runs 1  # log every decision, for any bot
 uv run pytest                    # full suite, ~3 minutes
 uv run pytest -m "not slow"      # fast tests only, no browser
@@ -147,7 +147,25 @@ All of these were hit for real. Worth rereading before changing anything:
 - **`maxTeamSize` is a high-water mark, not a limit.** The real limit is 6.
 - **Non-usable items open an equip modal** which is not a `.screen`. Anything that
   only watches `.screen` elements gets stuck there forever.
+- **And it is not the only one.** The engine builds two more interactive layers
+  straight onto `document.body`, neither a `.screen`: `#eevee-choice-overlay`
+  (`showBranchingChoice` — Eevee, Gloom, Poliwhirl, Slowpoke and friends, a real
+  2-8 way player choice) and `#egg-overlay` (`playEggReveal`, tap to continue,
+  reached by buying an egg at the Poke Mart). Both are `await`ed, so they do not
+  merely hide a choice, they stall the run until something clicks. Screen-id
+  lists cannot fix these — see `TODO.md`. The lesson from the equip modal was
+  written down once and did not generalise; assume any new interaction is NOT a
+  `.screen` until checked.
 - **The map is SVG**: nodes have no `.click()`.
+- **Half the engine is not on `window`.** `MOVE_POOL`, `getBestMove`,
+  `getMoveForPokemon`, `TYPE_CHART`, `TYPE_ITEM_MAP` are script-global lexical
+  bindings: `typeof MOVE_POOL` is `"object"` but `window.MOVE_POOL` is
+  `undefined`. Read them with the `g()` eval helper in `bridge.js`, or you get
+  `undefined` and no error.
+- **Item effects are prose, not data.** An item is `{id, name, desc, icon}` and
+  nothing else; every magnitude is inline in the battle code keyed on the string
+  id (`heldItem.id === 'leftovers'`). There is no stat or multiplier field to
+  read. The `id` is the only stable handle, and `__pk_obs` currently drops it.
 - **Clearing localStorage makes the game re-run its tutorial every time.** We
   clear it in `INIT_SCRIPT` so no saved state leaks between runs, and the price
   is that the game greets a first-time player on every run. A human clicks the

@@ -56,6 +56,18 @@ it down the whole chain at once.
 so the five EQUIP buttons are five actions with five feature vectors. The tabular
 agent collapsed them into one `btn:equip` and could not choose *who* to equip.
 
+**It decides the team order** (feature set v2). Slot 0 leads the next battle, and
+reordering costs no turn — so it is modelled as an extra **state** in the MDP with
+reward 0, not an extra action in the existing one. Its options are "leave it" plus
+"bring slot j to the front", scored by the same q̂ and the same weights, and
+SARSA(λ)'s traces carry the credit back through the swap on their own. Available
+in about 61% of turns.
+
+Every `order:` feature is a difference against the current leader, or an
+interaction with the leave-it option. One that read the same for every option
+would cancel in the argmax — the mistake the ablation exists to find, applied
+before the fact this time.
+
 ## No neural network, on purpose
 
 Not modesty — arithmetic. An episode is ~20 transitions and a step costs ~0.5 s,
@@ -152,6 +164,35 @@ that is all you need.
 A variant that drops features and does **not** get worse is the interesting
 result, not a disappointing one: it means those features were never doing the
 work their weights suggested.
+
+### The first ablation, and why it does not answer the question
+
+```
+variant           feats   badges~   score~   vs random     t     max |w|
+full                 81      1.52     67.6   15W-10D-0L  4.18        129
+no-interactions      45      1.28     54.0   12W-11D-2L  2.87        138
+minimal              23      1.04    -16.0   12W-10D-3L  2.62   3.81e+32
+action-only          65      0.88    -29.6    8W-15D-2L  2.01   2.35e+09
+random                       0.64      3.2
+```
+
+Read the last column before the others. **The two worst variants are the two
+that diverged numerically.** Their scores measure what a broken linear model
+does, not what those features are worth.
+
+The cause is in this repo, not in the game: α is normalised **per active
+feature** (`alpha / len(x)`). Dropping groups leaves fewer active features per
+(s, a), so the effective step per feature grows — and the divergence order
+follows the active-feature count exactly. So each variant changed two things at
+once, the features and the learning rate, and an ablation that varies two things
+answers nothing.
+
+It is the first suspect named in "where to look if it stalls", below, and it
+still got missed. The rerun holds the effective step fixed across variants.
+
+One thing did come out clean: `full` reproduced the original run **bit for bit**
+across the features/ repackaging, the `FeatureSet` refactor and the move to
+`output/`. The restructure moved nothing.
 
 ## Running it
 
