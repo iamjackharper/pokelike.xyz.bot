@@ -1,18 +1,17 @@
 # Entering the contest
 
-Seven steps from a clone to a pull request. None of them is optional, and the
-two that are easy to get wrong are marked.
+Six steps from a clone to a pull request. None of them is optional, and the two
+that are easy to get wrong are marked.
 
 ---
 
-**The seven steps**
+**The six steps**
 [1 Set up](#1-set-up-once) ·
 [2 See the state](#2-look-at-what-a-bot-receives) ·
-[3 Write it](#3-write-the-file) ·
-[4 Register it](#4-register-it) ·
-[5 Watch it](#5-watch-it-play) ·
-[6 Measure it](#6-measure-it) ·
-[7 Submit](#7-submit)
+[3 Create it](#3-create-it) ·
+[4 Write it](#4-write-it) ·
+[5 Measure it](#5-measure-it) ·
+[6 Submit](#6-submit)
 
 **Then**
 [The optional hooks](#the-optional-hooks) ·
@@ -30,7 +29,7 @@ uv sync
 uv run pokelike setup          # the browser plus an offline copy of the game, ~130 MB
 ```
 
-The copy is offline on purpose: after this, nothing you do reaches the internet,
+The copy is offline on purpose: after this nothing you do reaches the internet,
 and the same seed always replays the same run.
 
 ## 2. Look at what a bot receives
@@ -53,14 +52,51 @@ of the run.
 from, and index 2 is a battle now and a catch next turn. Nothing can be decided
 by position; you look at what each entry actually is.
 
-## 3. Write the file
+It is worth watching the one at the top of the table play before you write
+anything:
 
-`src/pokelike/bot/mine.py`. The only method you must write is `choose`.
+```bash
+uv run pokelike bot --bot sarsa --seed 40003 --runs 1 -g -dd
+```
+
+`-g` draws the map beside each decision, `-dd` prints the value it gave every
+option before choosing.
+
+## 3. Create it
+
+```bash
+uv run pokelike new-bot mine
+```
+
+That writes a folder, and the folder **is** the bot:
+
+```
+bots/mine/
+├── bot.py        one class inheriting from Bot
+├── artifacts/    weights, prompts, tables — whatever yours needs
+└── README.md     one line on how it decides
+```
+
+Nothing to register anywhere. `--bot mine` finds it because the folder is there.
+
+What it writes already plays, which matters more than it sounds: measure it
+before you change a line, and when the number moves later you know it moved
+because of you.
+
+```bash
+uv run pokelike bot --bot mine --runs 5 -d
+uv run pokelike bench --bot mine --dry-run     # the real 50 seeds, recorded nowhere
+```
+
+## 4. Write it
+
+The only method you must write is `choose`. It gets the state and returns an
+index into `state["actions"]`.
 
 ```python
 from typing import Any
 
-from .base import Bot
+from pokelike.bot.base import Bot
 
 
 class MyBot(Bot):
@@ -84,74 +120,51 @@ Everything the game knows is in `state`, including things nothing on screen tell
 you: `team[i].move` is what that Pokemon actually attacks with, power and type
 included, and `offered_moves` is what the move tutor would hand each of them.
 
-## 4. Register it
+**One class per folder.** The name of the folder says which bot ran, so a file
+defining two of them is refused rather than guessed at.
 
-In [`src/pokelike/bot/__init__.py`](src/pokelike/bot/__init__.py):
-
-```python
-AVAILABLE = {
-    ...
-    "mine": ("mine", "MyBot"),
-}
-```
-
-Modules are imported only when used, so a bot that pulls in something heavy does
-not slow down anyone else.
-
-## 5. Watch it play
-
-```bash
-uv run pokelike bot --bot mine --seed 40003 --runs 1 -g -dd
-```
-
-`-g` draws the map beside each decision, with where it is on it and which nodes
-are still open. `-dd` prints your `explain()` line under each choice. Then over a
-stretch: `--runs 20 -d`.
-
-## 6. Measure it
+## 5. Measure it
 
 Against random, on the **same** seeds, paired. Runs vary enormously by luck here,
 so two separate averages mostly measure who drew the nicer maps:
 
 ```python
 from pokelike import compare
-from pokelike.bot.mine import MyBot
+from pokelike.bot import create
 
-print(compare({"mine": MyBot()}, seeds=range(25))["table"])
+print(compare({"mine": create("mine")}, seeds=range(25))["table"])
 ```
 
-Then the official benchmark, the 50 fixed seeds everyone is scored on. Try it
-without committing to anything first:
+Then the official benchmark, the 50 fixed seeds everyone is scored on:
 
 ```bash
-uv run pokelike bench --bot mine --name my-bot --dry-run     # plays 50, writes nothing
-uv run pokelike bench --bot mine --runs 5                    # a quick look, writes nothing
+uv run pokelike bench --bot mine --dry-run                       # nothing recorded
+uv run pokelike bench --bot mine --author YOUR-HANDLE --category rules
 ```
 
-When the number is one you want on the board, drop the flag:
+> **Easy to get wrong, and now it cannot be.** Only a **complete** run records a
+> result. `--runs N` is a practice run by definition — a score over 5 seeds is
+> not comparable to one over 50 — and `--dry-run` plays all 50 and records
+> nothing. Neither leaves anything behind for a stray `git add` to pick up.
 
-```bash
-uv run pokelike bench --bot mine --name my-bot --author YOUR-HANDLE --category rules
-```
+A recorded result lands in `bots/mine/result.json`, next to the code that earned
+it, with a fingerprint over both. If you then edit the bot, the table marks the
+row **⚠︎** until you measure it again: a score can never quietly describe code
+that no longer exists.
 
-Only a **complete** run writes an entry. `--runs N` is a practice run by
-definition — a score over 5 seeds is not comparable to one over 50 — so it
-prints the result and files nothing.
-
-## 7. Submit
+## 6. Submit
 
 Fork the repo on GitHub, then:
 
 ```bash
 git checkout -b my-bot
-git add leaderboard/entries/my-bot-<hash> src/pokelike/bot/
-git commit -m "Add my-bot"
+git add bots/mine
+git commit -m "Add mine"
 git push origin my-bot
 ```
 
-and open the pull request GitHub offers you. The full version, including what to
-do if your bot carries trained weights, is in
-[leaderboard/README.md](leaderboard/README.md#how-to-submit).
+and open the pull request GitHub offers you. Your whole submission is one
+folder.
 
 ---
 
@@ -165,7 +178,7 @@ costs you nothing:
 | `rearrange(state)` | who leads the next battle. Free — it does not use the turn |
 | `explain()` | one line under each decision in the log |
 | `on_start(seed)` / `on_end(state, score)` | a bot with memory across turns |
-| `artifacts()` | weights and config to archive with your submission |
+| `artifacts()` | weights and config to record beside your result |
 
 `rearrange` is worth a look. Slot 0 is the Pokemon that enters the next battle,
 so the order is a real decision, and it is kept out of `actions` because taking
@@ -176,36 +189,50 @@ real moves at every single map node.
 
 ## The rule that is not obvious
 
-> **A submission must be self-contained.** If your bot carries trained weights,
-> the state encoding has to be frozen **inside the bot file** rather than
-> imported from `experiments/`. Otherwise improving the training code silently
-> changes what every past submission meant, and old results quietly become wrong.
+> **Your folder has to stand on its own.** Everything `bot.py` needs is either in
+> the `pokelike` package or in `artifacts/` beside it. It must not import from
+> `experiments/`, and it must not import another bot.
 
-There is a mechanical reason on top of the principle: an entry archives **one
-file**, the one holding your bot's class, and hashes it for the entry id. Split
-your bot across two modules and the archive keeps an unrunnable half while the
-hash stops identifying what actually ran.
+Two reasons, and the second is the one people underestimate.
 
-[`bot/dyna_q.py`](src/pokelike/bot/dyna_q.py) is the small worked example;
-[`bot/sarsa.py`](src/pokelike/bot/sarsa.py) is the large one.
+A trained policy is only meaningful under the exact encoding it was trained with.
+If `bot.py` imported its feature code from your training scripts, improving those
+scripts would silently change what your own past score meant — and the
+fingerprint would not catch it, because the file you measured did not change.
+
+And a bot is meant to be handed around, re-run and checked by someone who has
+none of your setup. A folder that only works on the machine that made it is not
+a submission, it is a screenshot.
+
+[`bots/dyna-q/`](bots/dyna-q/) is the small worked example — an encoding frozen
+beside its weights. [`bots/sarsa/`](bots/sarsa/) is the large one, 100 feature
+definitions carried inline for exactly this reason.
 
 ---
 
 ## Where to experiment
 
 `experiments/` is a scratch area and **it is not tracked**: everything under it
-is gitignored apart from the shared `env/` and one worked `example/`. Whatever
+is gitignored apart from the shared `env/` and our own worked examples. Whatever
 you try there — training runs, sweeps, prompts, dead ends — stays on your
-machine, and a pull request that adds a bot cannot drag a training run along
-with it by accident.
+machine, and a pull request that adds a bot cannot drag a training run along with
+it by accident.
 
 ```bash
 cp -r experiments/example experiments/mine
 uv run python -m experiments.example.train --episodes 20   # the shape of one
 ```
 
-Nothing in `src/pokelike/` imports from there, which is why your bot has to be
-self-contained: see the rule above.
+That is the split, and it is the whole answer to "what do I have to reveal":
+
+**You show what your bot does. Not how you arrived at it.**
+
+Submitting a folder does reveal the bot — that is the only reason the number
+beside it means anything, since a leaderboard where the code is hidden is a list
+of claims. It reveals nothing about the sweeps, the rewards you tried, or the
+twenty runs that went nowhere.
+
+---
 
 ## What counts as a bot
 
@@ -215,4 +242,4 @@ rulebook, search over the game tree since the engine ships a battle simulator yo
 can call, something deterministic if you can find one that works.
 
 Ranked by **badges**, the game's own progress counter. The bar and the current
-standings are in [leaderboard/README.md](leaderboard/README.md).
+standings are in [bots/README.md](bots/README.md).

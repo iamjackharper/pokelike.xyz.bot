@@ -15,7 +15,7 @@ decided by its prompt, so "which prompt is better" is an empirical question with
 the same shape as any other: play both on **identical seeds** and compare them
 paired.
 
-Four strategies ship in [`bot/llm.py`](../../src/pokelike/bot/llm.py), selectable
+Four strategies ship in [`bots/llm/`](../../bots/llm/), selectable
 with `POKELIKE_LLM_STRATEGY`:
 
 | strategy | what it is told to weigh |

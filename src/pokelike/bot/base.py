@@ -34,6 +34,16 @@ class Bot(ABC):
 
     name = "bot"
 
+    def __init__(self, seed: int = 0) -> None:
+        """Every bot is built with a seed, whether or not it uses one.
+
+        Defined here so that writing a bot with no `__init__` at all — which is
+        the normal case for anything that does not need randomness — still works
+        when something builds it by name. Override it freely; a bot that needs
+        to load weights or open a client does its work here.
+        """
+        self.seed = seed
+
     @abstractmethod
     def choose(self, state: dict[str, Any]) -> int:
         """Index of the chosen action within `state["actions"]`.

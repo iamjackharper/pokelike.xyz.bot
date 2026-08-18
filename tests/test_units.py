@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import pathlib
+
 import pytest
 
 from pokelike.assets.mirror import _valid_content
-from pokelike.bot import AVAILABLE, create
+from pokelike.bot import available, create
 from pokelike.bot.base import Bot
 from pokelike.core import render
 from pokelike.stats import format_summary, record, recent, summary
@@ -35,13 +37,34 @@ def test_recognises_valid_files(data, suffix, expected):
 # ------------------------------------------------------------------ bot
 
 
-def test_registered_bots_can_be_built():
-    assert "random" in AVAILABLE
+def test_every_bot_on_disk_defines_exactly_one_bot():
+    """Each folder under `bots/` must load and define one Bot subclass.
+
+    A bot is loaded from a directory rather than imported from a registry, so
+    nothing checks it until something tries to play it. This is that check: a
+    folder that will not load is a bot nobody can run, including its author.
+
+    It stops at the CLASS on purpose. Building one is allowed to need things a
+    test does not have — the LLM bot refuses to construct without credentials,
+    which is deliberate and right.
+    """
+    from pokelike.bot.catalogue import BOTS, available as on_disk, load_class
+
+    names = on_disk()
+    assert names, "bots/ has no bots in it"
+    for name in names:
+        cls = load_class(BOTS / name / "bot.py")
+        assert issubclass(cls, Bot), f"{name} does not inherit from Bot"
+
+
+def test_the_baseline_is_always_available():
+    """`random` must build with no bots/ folder at all: `compare()` defaults to it."""
+    assert "random" in available()
     assert isinstance(create("random", seed=1), Bot)
 
 
 def test_the_sarsa_bot_freezes_exactly_the_features_it_was_trained_on():
-    """The copy in `bot/sarsa.py` must stay identical to the training code.
+    """The copy in `bots/sarsa/bot.py` must stay identical to the training code.
 
     Weights are a plain list of numbers: index 43 only means `mon_new_type`
     because `feature_names()` says so. Insert one feature on the training side
@@ -54,9 +77,12 @@ def test_the_sarsa_bot_freezes_exactly_the_features_it_was_trained_on():
     """
     from experiments.sarsa_lambda.features import feature_names as trained_on
 
-    from pokelike.bot.sarsa import feature_names as frozen
+    from pokelike.bot.catalogue import load_class
 
-    assert frozen() == trained_on()
+    frozen = load_class(pathlib.Path("bots/sarsa/bot.py")).__module__
+    import sys
+
+    assert sys.modules[frozen].feature_names() == trained_on()
 
 
 def test_unknown_bot_gives_a_useful_error():

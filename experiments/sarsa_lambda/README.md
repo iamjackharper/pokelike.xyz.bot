@@ -208,51 +208,56 @@ A variant that drops features and does **not** get worse is the interesting
 result, not a disappointing one: it means those features were never doing the
 work their weights suggested.
 
-### The ablation
+### The ablation, and why it answers less than it looks like
 
 Five feature sets, 300 episodes each, then greedy on 25 seeds training never
 touched. Every variant divides the step size by the same constant, so the only
-thing that differs between them is which features they carry.
+thing differing between them is which features they carry.
 
 ```
-variant           feats   badges~  badges+   score~   vs random      t     max |w|
-full                100      1.60        7     81.6   14W-11D-0L   3.43        105
-action-only          84      1.36        8     58.2   13W-10D-2L   2.42         74
-minimal              23      1.24        4     56.0    13W-9D-3L   3.00         85
-no-v2                81      1.20        3     66.2   14W-10D-1L   4.30        111
-no-interactions      64      1.12        3     46.8   11W-13D-1L   3.12        118
-random                       0.64        2      3.2
+variant           feats   badges~   vs random      t     max |w|
+full                100      1.60   14W-11D-0L   3.43        105
+action-only          84      1.36   13W-10D-2L   2.42         74
+minimal              23      1.24    13W-9D-3L   3.00         85
+no-v2                81      1.20   14W-10D-1L   4.30        111
+no-interactions      64      1.12   11W-13D-1L   3.12        118
+random                       0.64
 ```
 
-**The whole set wins, and it does not lose a single seed.** Everything beats
-random with t above 2, so the method works; what the table is about is which
-features earn their place.
+**Every variant beats random, and none of them beats another.** The right-hand
+column is the comparison that was actually tested, and every one of them clears
+t = 2. The ranking down the left is not:
 
-**My prediction was wrong, and this is the run that says so.** `action-only`
-drops `context` and `screen` — the groups that depend on the state and not on the
-action — on the reasoning that they add the same number to every option and
-therefore cancel in the argmax. That reasoning is correct about the argmax and
-wrong about the agent: dropping them costs 0.24 badges. They cannot change a
-choice directly, but they carry the *level* of the return, and the bootstrapped
-target is built out of that. Take them away and every backup is noisier.
+```
+paired against `full`, same 25 seeds
 
-It is written down in `features/variants.py` as the falsifier, before the run:
-*"If this LOSES, my reading of the weights is wrong and the state-only features
-are helping the bootstrapped target more than they cost."* It lost.
+  action-only       -0.24   t = -1.44
+  minimal           -0.36   t = -1.67
+  no-v2             -0.40   t = -1.41
+  no-interactions   -0.48   t = -1.60
+```
 
-**Feature count and performance are not the same axis.** `minimal`, with 23
-features, beats `no-v2` with 81 and `no-interactions` with 64. So the 36 node ×
-situation crosses are not merely unhelpful in some combinations, they are
-crowding out the few features that discriminate. The three groups `minimal`
-keeps — what the node is, what is on the Pokemon card, what lies one step
-ahead — are apparently most of the signal.
+Not one difference is distinguishable from noise. The table looks like it says
+the full set wins and reads like a result, and it is not one.
 
-**And the v2 groups do help here**, by 0.40 badges: `full` 1.60 against `no-v2`
-1.20. That sits awkwardly next to the head-to-head on the 50 standard seeds,
-where the same comparison gave +0.06 with t = 0.62. Different seeds, different
-answer, and 25 runs against 50 is not enough to settle it either way. What can be
-said is that team order, items and the move tutor are not dead weight, and that a
-single benchmark of 50 runs cannot resolve a difference this size.
+**Here is the demonstration, on the same model.** `ablation_full` scored 1.60
+badges over those 25 held-out seeds. Run on the 50 standard benchmark seeds it
+scores **1.10**. Same weights, same code, two sets of seeds, opposite
+conclusions — and the gap between those two numbers is larger than any gap in
+the table above.
+
+So what the ablation established is: the method works, all five ways of doing it
+beat random, and **25 seeds cannot tell feature sets apart on this game**. That
+is worth knowing before spending another eight hours ranking variants that way.
+
+What it would take to answer the original question is more seeds per variant —
+enough that a 0.3 badge difference clears t = 2, which at this variance is on the
+order of a hundred — or a measurement with less variance in it than badges over a
+whole run.
+
+The claim in *What happened* above, that the state-only features are dead weight
+because they cancel in the argmax, is therefore still **untested**. Cutting them
+did not measurably hurt; it did not measurably help either.
 
 ### Why the first attempt at this was thrown away
 
@@ -289,7 +294,7 @@ uv run python -m experiments.sarsa_lambda.evaluate --episodes 25 --seed0 40000
 | `--groups` | *train*: feature groups to keep, comma separated | all |
 
 `--out` deliberately does not default to `sarsa_v1.json`: that is the file
-[`bot/sarsa.py`](../../src/pokelike/bot/sarsa.py) loads, so a training run
+[`bots/sarsa/`](../../bots/sarsa/) loads, so a training run
 writing there would silently replace the policy that is on the leaderboard.
 
 ## You can read what it learned

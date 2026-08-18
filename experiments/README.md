@@ -148,26 +148,30 @@ move tutor — measured head to head on the 50 standard seeds against the same
 policy without them: +0.06 badges, t = 0.62. Adding what the agent can see is not
 the same as adding what it can *use*.
 
-**Then the ablation refuted the obvious explanation.** Five feature sets, 300
-episodes each, 25 held-out seeds, with the step size held fixed across variants:
+**Then an ablation answered less than it looked like.** Five feature sets, 300
+episodes each, 25 held-out seeds, step size held fixed across variants:
 
 ```
-full             100 feature   1.60 badges   14W-11D-0L
-action-only       84           1.36          13W-10D-2L
-minimal           23           1.24          13W-9D-3L
-no-v2             81           1.20          14W-10D-1L
-no-interactions   64           1.12          11W-13D-1L
+full             100 feature   1.60 badges   vs random  t 3.43
+action-only       84           1.36                     t 2.42
+minimal           23           1.24                     t 3.00
+no-v2             81           1.20                     t 4.30
+no-interactions   64           1.12                     t 3.12
 random                         0.64
 ```
 
-The whole set wins, and does not lose a seed. The heaviest weights in it are
-state-only — they add the same number to every option and cancel in the argmax,
-so they cannot change a choice — and cutting them anyway costs 0.24 badges. They
-carry the *level* of the return, which is what the bootstrapped target is built
-from. **Being unable to change a decision is not the same as being useless.**
+Every variant beats random and **none beats another**: paired against the full
+set, the four differences come out at t = −1.4 to −1.7. The ranking reads like a
+result and is noise.
 
-Note also that 23 features beat 81 and 64. Feature count and performance are not
-the same axis.
+The demonstration is on one model: `full` scored 1.60 over those 25 seeds and
+**1.10** over the 50 benchmark seeds. Same weights, opposite conclusion, and a
+gap wider than anything in the table.
+
+**25 seeds cannot tell feature sets apart on this game.** Worth knowing before
+spending eight hours ranking variants that way. Comparisons against random are
+fine — those are large effects — but variant against variant needs far more runs,
+or a measurement with less variance in it than badges over a whole run.
 
 **A warning worth repeating.** The FIRST attempt at that ablation put the two
 smallest sets last, and was measuring something else: their weights had diverged,

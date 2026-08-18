@@ -64,12 +64,12 @@ src/pokelike/
 │   ├── browser.py         Playwright headless, pinned seed, flattened animations
 │   ├── game.py            class Game: reset/state/step/score/reorder
 │   └── render.py          ASCII map, team, actions
-├── bot/                 WHOEVER DECIDES THE MOVES
+├── bot/                 WHAT RUNS A BOT — not the bots themselves
 │   ├── base.py            abstract Bot: only choose() is required
-│   ├── random_bot.py      the baseline
-│   ├── llm.py             self-contained: prompts + tools + HTTP
-│   ├── dyna_q.py          a trained policy; the worked example of a submission
-│   └── sarsa.py           linear SARSA(λ); currently top of the leaderboard
+│   ├── catalogue.py       finds and loads a bot from its folder in bots/
+│   └── random_bot.py      the baseline. Here rather than only in bots/random/
+│                          because compare() defaults to it, so it has to work
+│                          in a checkout with no bots/ at all
 ├── assets/
 │   ├── mirror.py          builds site/ in five phases
 │   └── server.py          serves site/ from disk
@@ -77,7 +77,8 @@ src/pokelike/
 ├── bench.py             the standard 50-seed benchmark
 ├── runner.py            play_run(): the one loop that plays a run with a bot
 ├── schema.py            what a bot receives, described from a live state
-├── leaderboard.py       submission folders, artifacts, index
+├── scaffold.py          new-bot: writes a bot folder that already plays
+├── leaderboard.py       reads bots/*/result.json, ranks, fingerprints
 └── interfaces/          how something outside drives the game
     ├── cli/main.py        a human, in a terminal
     ├── api/server.py      a program, over HTTP
@@ -96,13 +97,25 @@ experiments/             research. OURS are tracked as worked examples; anything
 
 Every experiment has the same shape: README, agent, train, evaluate, output/,
 logs/. Keep it that way when adding one.
-leaderboard/             submissions, their weights, and how to submit
+bots/                    THE BOTS. One folder each: bot.py, artifacts/,
+│                        result.json. Nothing registers them — the folder being
+│                        there is what makes `--bot <name>` work
 tests/                   golden fingerprints + unit tests
 tools/deobfuscate.py     makes the bundle readable (needs node)
 ```
 
 Nothing in `src/` may import from `experiments/`: it is a scratch area, mostly
 untracked, and the package cannot depend on files that are not in the clone.
+
+**A bot is a folder, not a module.** `bots/<name>/bot.py` is loaded by path, so
+it uses absolute imports (`from pokelike.bot.base import Bot`) and carries what
+it needs in `artifacts/` beside it. It was relative imports that made the old
+archived submissions unrunnable: we claimed they were self-contained and they
+could not be executed from where they sat.
+
+`result.json` lives in the same folder and holds a sha256 over `bot.py` and every
+artifact. `pokelike leaderboard` recomputes it on read and marks a row stale when
+they no longer match, so a score cannot describe code that has since changed.
 
 `interfaces/` and `bot/` contain no game logic: they all go through `Game`'s five
 methods. If you feel like putting a game rule in the CLI, it belongs in `core`.

@@ -25,8 +25,8 @@ import urllib.error
 import urllib.request
 from typing import Any
 
-from ..core import render
-from .base import Bot
+from pokelike.core import render
+from pokelike.bot.base import Bot
 
 # -------------------------------------------------------------------- prompts
 #
@@ -271,7 +271,7 @@ class LLMBot(Bot):
         sampling is stochastic — so the least we can do is record precisely what
         was asked of which model.
         """
-        from ..leaderboard import Artifact
+        from pokelike.leaderboard import Artifact
 
         return [
             Artifact(

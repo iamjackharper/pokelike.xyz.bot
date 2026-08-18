@@ -5,11 +5,11 @@
 
 This file is the EXAMPLE OF WHAT A SUBMISSION LOOKS LIKE, and it is deliberately
 self-contained: the state and action encoding is copied in here rather than
-imported from `training/`.
+imported from `experiments/dyna_q/`.
 
 That is not duplication by accident. A policy is only meaningful under the exact
 encoding it was trained with. If this file imported the training code, improving
-`training/common/features.py` would silently change what every previously
+the training code would silently change what every previously
 submitted policy means, and old leaderboard entries would quietly become wrong.
 Freezing the encoding next to the weights is what keeps a submission valid
 forever.
@@ -26,34 +26,26 @@ from ast import literal_eval
 from pathlib import Path
 from typing import Any
 
-from .base import Bot
+from pokelike.bot.base import Bot
 
-# Bump this whenever the encoding below changes. Tables carry the version they
-# were trained with.
-ENCODING_VERSION = 1
+# Every encoding this bot can speak. A table carries the version it was trained
+# with, and old submissions must keep working: that is the whole point of
+# freezing the encoding next to the weights, so both live here side by side.
+LATEST_ENCODING = 2
 
-REPO = Path(__file__).resolve().parents[3]
-
-# Where to look for the weights, in order:
-#   1. the POKELIKE_DYNAQ_TABLE environment variable
-#   2. the submitted weights under leaderboard/models/
-#   3. whatever the training script last produced
-# A submission ships its weights under leaderboard/models/ so it keeps working
-# even after someone retrains locally.
-TABLE_CANDIDATES = (
-    REPO / "leaderboard" / "models" / "dyna-q-v1.json",
-    REPO / "training" / "dyna_q" / "models" / "dyna_q_v1.json",
-    REPO / "training" / "dyna_q" / "models" / "q_table.json",
-)
+# Its own folder, and nothing else. A bot is self-contained: the table sits
+# beside the code that reads it. POKELIKE_DYNAQ_TABLE still overrides, which is
+# how a candidate is measured before it is promoted.
+HERE = Path(__file__).resolve().parent
+TABLE = HERE / "artifacts" / "weights.json"
 
 
-def find_table() -> Path | None:
+def find_table() -> Path:
     import os
 
     override = os.environ.get("POKELIKE_DYNAQ_TABLE")
-    if override:
-        return Path(override)
-    return next((p for p in TABLE_CANDIDATES if p.is_file()), None)
+    return Path(override) if override else TABLE
+
 
 HP_THRESHOLDS = ((0.25, 0), (0.5, 1), (0.8, 2))
 
@@ -96,10 +88,9 @@ def action_key(a: dict[str, Any]) -> str:
     return f"{a.get('layer', 'x')}:slot{a.get('idx', 0)}"
 
 
-def state_key(state: dict[str, Any]) -> tuple:
+def _base_key(state: dict[str, Any]) -> tuple:
     run = state.get("run") or {}
     team = state.get("team") or []
-    offered = tuple(sorted({action_key(a) for a in state.get("actions") or []}))
     return (
         state.get("screen"),
         min(len(team), 6),
@@ -107,8 +98,26 @@ def state_key(state: dict[str, Any]) -> tuple:
         min(run.get("map") or 0, 8),
         depth_bucket(state),
         min(run.get("badges") or 0, 8),
-        offered,
     )
+
+
+def state_key_v1(state: dict[str, Any]) -> tuple:
+    """Version 1 also keyed on which actions were on offer.
+
+    It fragmented the table badly — 563 states holding 686 state-action pairs,
+    so barely more than one action per state — which is why version 2 dropped it.
+    Kept so tables trained under v1 still play.
+    """
+    offered = tuple(sorted({action_key(a) for a in state.get("actions") or []}))
+    return _base_key(state) + (offered,)
+
+
+def state_key_v2(state: dict[str, Any]) -> tuple:
+    """Version 2: the menu is left out, since Q is keyed by action anyway."""
+    return _base_key(state)
+
+
+ENCODINGS = {1: state_key_v1, 2: state_key_v2}
 
 
 # ------------------------------------------------------------------ the bot
@@ -119,21 +128,23 @@ class DynaQBot(Bot):
 
     def __init__(self, seed: int = 0, table: str | Path | None = None) -> None:
         path = Path(table) if table else find_table()
-        if path is None or not path.is_file():
+        if not path.is_file():
             raise FileNotFoundError(
-                "no trained table found. Looked in:\n  "
-                + "\n  ".join(str(p) for p in TABLE_CANDIDATES)
-                + "\n\ntrain one:  uv run python -m training.dyna_q.train --episodes 200"
-                + "\nor point at one:  POKELIKE_DYNAQ_TABLE=/path/to/table.json"
+                f"no table at {path}.\n"
+                "It ships next to this file, so this usually means the folder was "
+                "copied without its artifacts/.\n"
+                "To play a different one:  POKELIKE_DYNAQ_TABLE=/path/to/table.json"
             )
         data = json.loads(path.read_text(encoding="utf-8"))
         version = data.get("encoding_version")
-        if version != ENCODING_VERSION:
+        if version not in ENCODINGS:
             raise ValueError(
-                f"the table was trained with encoding version {version}, this bot "
-                f"speaks version {ENCODING_VERSION}. The states no longer mean the "
-                f"same thing, so the policy would be nonsense: retrain."
+                f"the table was trained with encoding version {version}, which this "
+                f"bot does not speak (it knows {sorted(ENCODINGS)}). The states would "
+                f"not mean the same thing, so the policy would be nonsense: retrain."
             )
+        self.encoding_version = version
+        self.state_key = ENCODINGS[version]
 
         self.Q: dict[tuple, dict[str, float]] = {
             literal_eval(s): v for s, v in data["Q"].items()
@@ -142,6 +153,7 @@ class DynaQBot(Bot):
         self.table_path = path
         self.unseen = 0      # how often we fell back, worth knowing
         self.decisions = 0
+        self._last_why = ""
 
     def on_start(self, seed: int) -> None:
         self.rng = random.Random(seed)
@@ -150,6 +162,7 @@ class DynaQBot(Bot):
         """Goes into the run registry and the benchmark result."""
         return {
             "table": self.table_path.name,
+            "encoding_version": self.encoding_version,
             "states_known": len(self.Q),
             "decisions": self.decisions,
             "unseen_states": self.unseen,
@@ -162,14 +175,14 @@ class DynaQBot(Bot):
         version says what the states mean, and without the training config the
         score is a number nobody can reproduce or improve on.
         """
-        from ..leaderboard import Artifact
+        from pokelike.leaderboard import Artifact
 
         table = json.loads(self.table_path.read_text(encoding="utf-8"))
         return [
             Artifact(
                 name="weights.json",
                 kind="weights-json",
-                description=f"Q-table, {len(self.Q)} states, encoding v{ENCODING_VERSION}",
+                description=f"Q-table, {len(self.Q)} states, encoding v{self.encoding_version}",
                 path=self.table_path,
             ),
             Artifact(
@@ -178,19 +191,22 @@ class DynaQBot(Bot):
                 description="how the policy was trained",
                 data={
                     "algorithm": "tabular Dyna-Q (Sutton & Barto 8.2)",
-                    "encoding_version": ENCODING_VERSION,
+                    "encoding_version": self.encoding_version,
                     "hyperparameters": table.get("hyperparameters"),
                     "updates": table.get("updates"),
                     "states": len(self.Q),
-                    "trainer": "training/dyna_q/train.py",
+                    "trainer": "experiments/dyna_q/train.py",
                 },
             ),
         ]
 
+    def explain(self) -> str:
+        return self._last_why
+
     def choose(self, state: dict[str, Any]) -> int:
         self.decisions += 1
         actions = state["actions"]
-        s = state_key(state)
+        s = self.state_key(state)
         values = self.Q.get(s)
 
         if not values:
@@ -198,10 +214,15 @@ class DynaQBot(Bot):
             # what any tabular policy has to do outside its table, and counting
             # how often it happens tells you whether training covered enough.
             self.unseen += 1
+            self._last_why = "state never seen in training, fell back to the safe rule"
             return self._fallback(state)
 
         scored = [(values.get(action_key(a), 0.0), i) for i, a in enumerate(actions)]
         best = max(v for v, _ in scored)
+        self._last_why = "Q: " + ", ".join(
+            f"{action_key(a).split(':')[-1]}={values.get(action_key(a), 0.0):.1f}"
+            for a in actions
+        )
         return self.rng.choice([i for v, i in scored if v == best])
 
     @staticmethod

@@ -2,7 +2,7 @@
 
 
 > Write something that plays [pokelike.xyz](https://pokelike.xyz/) better than
-> mine, and put it on the [leaderboard](leaderboard/). Anyone can enter, no
+> mine, and put it in [bots/](bots/). Anyone can enter, no
 > permission needed: fork, add your bot, open a pull request.
 >
 > **What counts as a bot is deliberately wide open.** A prompt around an LLM. A
@@ -22,7 +22,7 @@
 > `choose(state) -> int`, and the rest is measuring it honestly.
 >
 > Current standings, and the command to play the leader without training
-> anything, are in [leaderboard/README.md](leaderboard/).
+> anything, are in [bots/README.md](bots/).
 >
 > The bar to beat right now is **1.36 badges**. Random gets 0.68, so it is lower
 > than it sounds.
@@ -85,7 +85,7 @@ the others.
 | | for | read it when |
 |---|---|---|
 | **[GUIDE.md](GUIDE.md)** | entering the contest | you want to write a bot and submit one. Seven steps, clone to pull request |
-| **[leaderboard/](leaderboard/)** | the standings | you want to see who is winning, play the leader without training anything, or read the submission rules in full |
+| **[bots/](bots/)** | every bot, and the standings | you want to see who is winning, play the leader without training anything, or read the rules in full |
 | **[experiments/](experiments/)** | making a bot better | you are past a first bot and want to train, sweep or compare — and to see what was already tried, including what failed |
 | **[example.ipynb](src/pokelike/interfaces/python/example.ipynb)** | driving it yourself | you would rather poke at the game in a notebook than read about it |
 | **[CLAUDE.md](CLAUDE.md)** | changing this repo | you are editing the package itself. Internals, and the pitfalls that were hit for real |
@@ -366,9 +366,23 @@ that no longer exists. `uv run pokelike schema` prints the same thing from the
 game as it is right now.
 
 
+**A bot is a folder**, and one command creates it:
+
+```bash
+uv run pokelike new-bot mine
+```
+
+```
+bots/mine/
+├── bot.py        one class inheriting from Bot
+├── artifacts/    weights, prompts, tables — whatever yours needs
+└── README.md     one line on how it decides
+```
+
 ```python
-# src/pokelike/bot/mine.py
-from .base import Bot
+# bots/mine/bot.py
+from pokelike.bot.base import Bot
+
 
 class MyBot(Bot):
     name = "mine"
@@ -381,23 +395,23 @@ class MyBot(Bot):
         return 0
 ```
 
-Register it in `AVAILABLE` inside [bot/\_\_init\_\_.py](src/pokelike/bot/__init__.py):
+Then `uv run pokelike bot --bot mine`. **Nothing is registered anywhere**: the
+folder being there is what makes the name work, so someone can hand you a bot by
+handing you a directory. A bot is loaded only when asked for, so one that pulls
+in torch does not slow down anyone else.
 
-```python
-AVAILABLE = {
-    "random": ("random_bot", "RandomBot"),
-    "llm":    ("llm", "LLMBot"),
-    "dyna_q": ("dyna_q", "DynaQBot"),
-    "sarsa":  ("sarsa", "SarsaBot"),
-    "mine":   ("mine", "MyBot"),      # <-
-}
-```
+What `new-bot` writes already plays, which matters more than it sounds: you can
+measure it before changing a line, and know later that the number moved because
+of you.
 
-then use it: `uv run pokelike bot --bot mine`. Modules are imported only when
-needed, so a bot that pulls in torch does not slow down the others.
+**The folder has to stand on its own.** Everything `bot.py` needs is either in
+this package or in `artifacts/` beside it — never an import from `experiments/`,
+never an import of another bot. A trained policy is meaningless under a different
+encoding, and a bot is meant to be handed to someone who has none of your setup.
 
-Two optional hooks for bots that need memory across turns: `on_start(seed)` and
-`on_end(state, score)`.
+Optional hooks, all safe to ignore: `on_start(seed)` and `on_end(state, score)`
+for a bot with memory, `explain()` for a line in the log, `artifacts()` for
+weights to record beside your result.
 
 #### Team order, the decision that is not a move
 
@@ -450,7 +464,7 @@ a trivial one: over the 50 standard seeds it averages 0.68 badges with a best of
 sometimes reaches a gym. Everyone has to beat it, and the first trained agent
 here did not.
 
-**`llm`** ([bot/llm.py](src/pokelike/bot/llm.py)) is self-contained: prompts,
+**`llm`** ([bots/llm/](bots/llm/)) is self-contained: prompts,
 tools, agentic loop and the HTTP call with `urllib`. Four prompt strategies ship
 with it, selectable with `POKELIKE_LLM_STRATEGY`. Each turn the model gets the
 situation and the numbered actions, may call read-only tools, and closes with
@@ -474,7 +488,7 @@ fail identically forever, and falling back on it would play the whole run on the
 backup heuristic while reporting it as an LLM result — which through `bench`
 would put an entry on the leaderboard labelled `llm` that no model ever played.
 
-**`dyna_q`** ([bot/dyna_q.py](src/pokelike/bot/dyna_q.py)) plays a policy trained
+**`dyna-q`** ([bots/dyna-q/](bots/dyna-q/)) plays a policy trained
 by tabular RL. It doubles as the worked example of what
 a leaderboard submission looks like, which is why it carries its own copy of the
 state encoding instead of importing the training code.
@@ -485,7 +499,7 @@ quietly retried: −3.8 mean score against random's 7.0 on held-out seeds, winni
 screen it learned Q values of 6.3 / 6.2 / 6.3, three slots its encoding cannot
 tell apart.
 
-**`sarsa`** ([bot/sarsa.py](src/pokelike/bot/sarsa.py)) is the answer to that, and
+**`sarsa`** ([bots/sarsa/](bots/sarsa/)) is the answer to that, and
 currently leads the leaderboard: 1.3 badges and 59.3 mean score over the 50
 standard seeds, against random's 0.68 and −3.5. Same algorithm family, same
 budget; what changed is that 100 hand-built linear features let it see what is on
@@ -537,7 +551,7 @@ model, call count, tokens spent and how many fallbacks it made.
 
 ## Submit a bot
 
-There is a [leaderboard](leaderboard/): anyone can submit a bot, of any kind.
+There is a [leaderboard](bots/): anyone can submit a bot, of any kind.
 Hand-written rules, a prompt and an LLM, a trained RL policy, a search, a mix.
 
 ```bash
@@ -552,10 +566,10 @@ a leaderboard silently compares different things.
 
 **You do not need write access.** Fork the repo, push your branch to your fork,
 and open a pull request with the result file, your bot's code, and its weights if
-it has any. [leaderboard/README.md](leaderboard/README.md) walks through the fork
+it has any. [bots/README.md](bots/README.md) walks through the fork
 and PR steps command by command, explains the categories, and covers how LLM
 entries are handled (they are not independently reproducible, and are marked as
-such). [`bot/dyna_q.py`](src/pokelike/bot/dyna_q.py) is the worked example of a
+such). [`bots/dyna-q/`](bots/dyna-q/) is the worked example of a
 submitted bot.
 
 If the git side is a hassle, open an issue and paste your result file into it

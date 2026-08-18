@@ -36,7 +36,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from .base import Bot
+from pokelike.bot.base import Bot
 
 # Bumped whenever the feature vector changes meaning: a new feature, a removed
 # one, a different order, a different scale. Weights carry the version they were
@@ -46,65 +46,19 @@ from .base import Bot
 # vector indexes an entirely different space.
 FEATURES_VERSION = 2
 
-REPO = Path(__file__).resolve().parents[3]
-
-# Where to look for the weights, in order:
-#   1. the POKELIKE_SARSA_WEIGHTS environment variable
-#   2. whatever the training script last produced locally
-#   3. the weights archived with a submitted entry
-# Point 3 is what lets anyone reproduce a leaderboard result from a fresh clone,
-# without training anything first.
-WEIGHT_CANDIDATES = (
-    REPO / "experiments" / "sarsa_lambda" / "output" / "models" / "sarsa_v2.json",
-    REPO / "experiments" / "sarsa_lambda" / "output" / "models" / "sarsa_v1.json",
-)
-SUBMITTED = REPO / "leaderboard" / "entries"
+# Its own folder, and nothing else. A bot is self-contained: the weights sit
+# beside the code that reads them, so moving the folder moves the bot, and there
+# is no lookup that can quietly hand this file somebody else's numbers.
+#
+# POKELIKE_SARSA_WEIGHTS still overrides, which is how a candidate gets measured
+# before it is promoted: train something, point at it, run the benchmark.
+HERE = Path(__file__).resolve().parent
+WEIGHTS = HERE / "artifacts" / "weights.json"
 
 
-def find_weights() -> Path | None:
+def find_weights() -> Path:
     override = os.environ.get("POKELIKE_SARSA_WEIGHTS")
-    if override:
-        return Path(override)
-    local = next((p for p in WEIGHT_CANDIDATES if p.is_file()), None)
-    if local:
-        return local
-    return best_submitted()
-
-
-def best_submitted() -> Path | None:
-    """The archived weights of whichever submission currently leads.
-
-    A fresh clone has no `output/` — it is gitignored — so this is what a friend
-    who just cloned actually plays, and it should be the best policy on the
-    board rather than whichever folder name happens to sort last. Ranked by the
-    same field the leaderboard ranks by, read from the index it already writes.
-    """
-    index = SUBMITTED.parent / "index.json"
-    ranked: list[str] = []
-    try:
-        entries = json.loads(index.read_text(encoding="utf-8")).get("entries") or []
-        ranked = [e["id"] for e in entries if e.get("id")]
-    except (json.JSONDecodeError, OSError, KeyError):
-        pass
-
-    def loadable(path: Path) -> bool:
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            return False
-        # Every trained bot archives under this name, so check it is OURS: the
-        # right shape, and a feature set this file can actually speak.
-        return bool(data.get("weights")) and data.get("encoding_version") == FEATURES_VERSION
-
-    for entry_id in ranked:                       # index order: best first
-        path = SUBMITTED / entry_id / "artifacts" / "weights.json"
-        if path.is_file() and loadable(path):
-            return path
-    # No index, or nothing in it fits: fall back to whatever is on disk.
-    for path in sorted(SUBMITTED.glob("*/artifacts/weights.json"), reverse=True):
-        if loadable(path):
-            return path
-    return None
+    return Path(override) if override else WEIGHTS
 
 
 # ---------------------------------------------- the frozen feature set, v2
@@ -556,14 +510,12 @@ class SarsaBot(Bot):
 
     def __init__(self, seed: int = 0, weights: str | Path | None = None) -> None:
         path = Path(weights) if weights else find_weights()
-        if path is None or not path.is_file():
+        if not path.is_file():
             raise FileNotFoundError(
-                "no trained weights found. Looked in:\n  "
-                + "\n  ".join(str(p) for p in WEIGHT_CANDIDATES)
-                + "\n\nThe archived weights of every submission are in "
-                + "leaderboard/entries/, and one is normally found there. If not, "
-                + "point at some you trained:\n  "
-                + "POKELIKE_SARSA_WEIGHTS=/path/to/weights.json"
+                f"no weights at {path}.\n"
+                "They ship next to this file, so this usually means the folder was "
+                "copied without its artifacts/.\n"
+                "To play a different set:  POKELIKE_SARSA_WEIGHTS=/path/to/weights.json"
             )
         data = json.loads(path.read_text(encoding="utf-8"))
         version = data.get("encoding_version")
@@ -657,7 +609,7 @@ class SarsaBot(Bot):
         version says what the numbers index, and without the training config the
         score is something nobody can reproduce or improve on.
         """
-        from ..leaderboard import Artifact
+        from pokelike.leaderboard import Artifact
 
         stored = json.loads(self.weights_path.read_text(encoding="utf-8"))
         return [

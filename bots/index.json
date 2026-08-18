@@ -1,8 +1,7 @@
 {
  "entries": [
   {
-   "id": "sarsa-lambda-v2-7f0460",
-   "bot": "sarsa-lambda-v2",
+   "bot": "sarsa",
    "author": "pierpierpy",
    "category": "rl",
    "description": "Semi-gradient SARSA(lambda), 100 linear features incl. team order, items and the move tutor (S&B 10, 12.7), 300 episodes",
@@ -15,45 +14,12 @@
    "completed": 0,
    "runs": 50,
    "game": "eceae50bbda9e32b",
+   "fingerprint": "d85f18fb544f",
+   "stale": false,
    "artifacts": 2
   },
   {
-   "id": "sarsa-lambda-linear-5fa82e",
-   "bot": "sarsa-lambda-linear",
-   "author": "pierpierpy",
-   "category": "rl",
-   "description": "Semi-gradient SARSA(lambda) with 81 hand-built linear features (S&B 10, 12.7), 300 episodes",
-   "score_mean": 59.3,
-   "score_stdev": 49.3,
-   "score_best": 195,
-   "badges_mean": 1.3,
-   "badges_best": 4,
-   "maps_mean": 0,
-   "completed": 0,
-   "runs": 50,
-   "game": "eceae50bbda9e32b",
-   "artifacts": 2
-  },
-  {
-   "id": "random-baseline-3ec0a5",
-   "bot": "random-baseline",
-   "author": "pierpierpy",
-   "category": "rules",
-   "description": "picks uniformly among the legal actions",
-   "score_mean": -3.5,
-   "score_stdev": 20.9,
-   "score_best": 65,
-   "badges_mean": 0.68,
-   "badges_best": 3,
-   "maps_mean": 0,
-   "completed": 0,
-   "runs": 50,
-   "game": "eceae50bbda9e32b",
-   "artifacts": 0
-  },
-  {
-   "id": "dyna-q-v1-2ea235",
-   "bot": "dyna-q-v1",
+   "bot": "dyna-q",
    "author": "pierpierpy",
    "category": "rl",
    "description": "tabular Dyna-Q, 90 episodes, n=30 planning steps, encoding v1",
@@ -66,11 +32,12 @@
    "completed": 0,
    "runs": 50,
    "game": "eceae50bbda9e32b",
+   "fingerprint": "6aeb11457d3c",
+   "stale": false,
    "artifacts": 2
   },
   {
-   "id": "random-baseline-v2-8d0c94",
-   "bot": "random-baseline-v2",
+   "bot": "random",
    "author": "pierpierpy",
    "category": "rules",
    "description": "Uniform over the legal actions, and over the team order too",
@@ -83,6 +50,8 @@
    "completed": 0,
    "runs": 50,
    "game": "eceae50bbda9e32b",
+   "fingerprint": "15bb569eddef",
+   "stale": false,
    "artifacts": 0
   }
  ]
