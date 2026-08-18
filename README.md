@@ -15,32 +15,32 @@ honestly.
 read-only tool, and commits to one move with a reason.*
 
 
-## Contents
+## Index
 
-**Getting started**
-[Install](#install) ·
-[Play it yourself](#play-it-yourself) ·
-[Let a bot play](#let-a-bot-play) ·
-[Watch what happens](#watch-what-happens)
+### **Getting started**
+- [Install](#install) 
+- [Play it yourself](#play-it-yourself) 
+- [Let a bot play](#let-a-bot-play) 
+- [Watch what happens](#watch-what-happens)
 
-**Understanding it**
-[How it works](#how-it-works) ·
-[The score](#the-score) ·
-[Reproducibility](#reproducibility) ·
-[Statistics](#statistics)
+### **Framework**
+- [How it works](#how-it-works) 
+- [The score](#the-score) 
+- [Reproducibility](#reproducibility) 
+- [Statistics](#statistics)
 
-**Building something**
-[Writing a bot](#writing-a-bot) ·
-[The bots that ship with it](#the-bots-that-ship-with-it) ·
-[Making a bot play better](#making-a-bot-play-better) ·
-[Submit a bot](#submit-a-bot)
+### **Bots**
+- [Writing a bot](#writing-a-bot) 
+- [The bots that ship with it](#the-bots-that-ship-with-it) 
+- [Making a bot play better](#making-a-bot-play-better) 
+- [Submit a bot](#submit-a-bot)
 
-**Reference**
-[Commands](#commands) ·
-[What a bot receives](#appendix-what-a-bot-receives) ·
-[Tests](#tests) ·
-[If a piece of the game is missing](#if-a-piece-of-the-game-is-missing) ·
-[Notes](#notes)
+### **Reference**
+- [Commands](#commands) 
+- [What a bot receives](#appendix-what-a-bot-receives) 
+- [Tests](#tests) 
+- [If a piece of the game is missing](#if-a-piece-of-the-game-is-missing) 
+- [Notes](#notes)
 
 ---
 

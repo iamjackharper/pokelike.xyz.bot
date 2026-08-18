@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import random
 import statistics
 import time
 from pathlib import Path
@@ -45,14 +46,33 @@ def train(
     out: str = "sarsa.json",
     groups: list[str] | None = None,
     quiet: bool = False,
+    checkpoint_every: int = 10,
+    resume: bool = False,
 ) -> dict:
     from tqdm import tqdm
 
     reward_fn = get_reward(reward)
     fs = FeatureSet(groups)
+    ckpt = MODELS / (Path(out).stem + ".checkpoint.json")
     agent = SarsaLambda(alpha=alpha, gamma=gamma, lam=lam, epsilon=epsilon, seed=seed0,
                         featureset=fs)
     history: list[dict] = []
+    first_episode = 0
+    if resume and ckpt.is_file():
+        saved = json.loads(ckpt.read_text(encoding="utf-8"))
+        if saved.get("feature_groups") != fs.groups:
+            raise SystemExit(
+                f"{ckpt.name} was trained on a different feature set "
+                f"({'+'.join(saved.get('feature_groups') or [])}). Resuming would "
+                f"read its weights under the wrong names: delete it or retrain."
+            )
+        agent.w = [float(v) for v in saved["w"]]
+        agent.epsilon = saved["epsilon"]
+        agent.updates = saved["updates"]
+        history = saved["history"]
+        first_episode = saved["episode"] + 1
+        print(f"resuming {out} from episode {first_episode} "
+              f"({len(history)} episodes already done)")
     started = time.monotonic()
 
     server = AssetServer(ROOT / "site", port=port)
@@ -60,10 +80,15 @@ def train(
     game = Game(url=server.url)
     game.open()
     try:
-        bar = tqdm(range(episodes), desc=(out.replace(".json", "") or "sarsa(λ)"),
+        bar = tqdm(range(first_episode, episodes), initial=first_episode,
+                   total=episodes, desc=(out.replace(".json", "") or "sarsa(λ)"),
                    unit="ep", disable=quiet)
         for ep in bar:
             seed = seed0 + ep
+            # Reseeded per episode so a resumed run replays exactly what an
+            # uninterrupted one would: the agent's own RNG breaks ties in
+            # epsilon-greedy, and it is not part of the checkpoint.
+            agent.rng = random.Random(seed)
             obs = game.reset(seed=seed)
             agent.start_episode()
 
@@ -134,6 +159,16 @@ def train(
                 "ending": obs.get("screen"),
                 "epsilon": round(agent.epsilon, 4),
             })
+            # Written every few episodes, because this machine restarts and a
+            # 90-minute run that has to start over is a run that never finishes.
+            if checkpoint_every and (ep + 1) % checkpoint_every == 0:
+                MODELS.mkdir(parents=True, exist_ok=True)
+                ckpt.write_text(json.dumps({
+                    "episode": ep, "feature_groups": fs.groups,
+                    "epsilon": agent.epsilon, "updates": agent.updates,
+                    "w": [round(v, 6) for v in agent.w], "history": history,
+                }), encoding="utf-8")
+
             w = history[-25:]
             bar.set_postfix(
                 badges=round(statistics.mean(h["badges"] for h in w), 2),
@@ -146,6 +181,7 @@ def train(
 
     elapsed = (time.monotonic() - started) / 60
     table = agent.save(MODELS / out)
+    ckpt.unlink(missing_ok=True)
     RUNS.mkdir(parents=True, exist_ok=True)
     log = RUNS / (Path(out).stem + "_history.json")
     log.write_text(json.dumps(history, indent=1), encoding="utf-8")
@@ -174,6 +210,10 @@ def main() -> int:
                    help="feature groups to keep, comma separated (default: all). "
                         "See features.GROUPS — this is what an ablation varies.")
     p.add_argument("--quiet", action="store_true", help="no progress bar (parallel runs)")
+    p.add_argument("--checkpoint-every", type=int, default=10,
+                   help="save progress every N episodes (0 disables)")
+    p.add_argument("--resume", action="store_true",
+                   help="continue from the checkpoint instead of starting over")
     a = p.parse_args()
     # Written to experiments/sarsa_lambda/logs/ by the run itself, so the log of
     # a training run is never the thing that was not kept.
@@ -182,6 +222,7 @@ def main() -> int:
             episodes=a.episodes, seed0=a.seed0, reward=a.reward, alpha=a.alpha,
             gamma=a.gamma, lam=a.lam, epsilon=a.epsilon, port=a.port, out=a.out,
             groups=a.groups.split(",") if a.groups else None, quiet=a.quiet,
+            checkpoint_every=a.checkpoint_every, resume=a.resume,
         )
     print(f"log: {path}")
     return 0
