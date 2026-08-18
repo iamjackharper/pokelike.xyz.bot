@@ -14,6 +14,34 @@ honestly.
 *An LLM playing a run, sped up. Each turn it reads the state, may call a
 read-only tool, and commits to one move with a reason.*
 
+
+## Contents
+
+**Getting started**
+[Install](#install) ·
+[Play it yourself](#play-it-yourself) ·
+[Let a bot play](#let-a-bot-play) ·
+[Watch what happens](#watch-what-happens)
+
+**Understanding it**
+[How it works](#how-it-works) ·
+[The score](#the-score) ·
+[Reproducibility](#reproducibility) ·
+[Statistics](#statistics)
+
+**Building something**
+[Writing a bot](#writing-a-bot) ·
+[The bots that ship with it](#the-bots-that-ship-with-it) ·
+[Making a bot play better](#making-a-bot-play-better) ·
+[Submit a bot](#submit-a-bot)
+
+**Reference**
+[Commands](#commands) ·
+[What a bot receives](#appendix-what-a-bot-receives) ·
+[Tests](#tests) ·
+[If a piece of the game is missing](#if-a-piece-of-the-game-is-missing) ·
+[Notes](#notes)
+
 ---
 
 ## Install
@@ -378,8 +406,9 @@ tell apart.
 **`sarsa`** ([bot/sarsa.py](src/pokelike/bot/sarsa.py)) is the answer to that, and
 currently leads the leaderboard: 1.3 badges and 59.3 mean score over the 50
 standard seeds, against random's 0.68 and −3.5. Same algorithm family, same
-budget; what changed is that 81 hand-built linear features let it see what is on
-the card. Trained by
+budget; what changed is that 100 hand-built linear features let it see what is on
+the card, what an item does, what the move tutor is offering, and who should
+lead. Trained by
 [experiments/sarsa_lambda](experiments/sarsa_lambda/) — Sutton & Barto chapter 10
 for the update, 12.7 for the traces:
 
@@ -425,30 +454,6 @@ by beating the whole League, not badges — badges are their own column.
 The `extra` column is free-form JSON for a bot's own notes: the LLM one puts its
 model, call count, tokens spent and how many fallbacks it made.
 
-## If a piece of the game is missing
-
-The local copy can have holes: some addresses the game builds on the fly
-(`"img/sprites/items/" + name + ".png"`) and cannot be found by reading the code.
-To check:
-
-```bash
-uv run pokelike mirror --phase verify
-```
-
-It plays with the network closed, lists what is missing, downloads it and checks
-again. It does not guess: the list comes from the game itself as it plays.
-
-**What happens if something is missing:** nothing, as far as the game goes.
-Images are decoration. The local server answers 404, notes it down, and the game
-shows an emoji instead of the sprite. **The run, the rules and the score do not
-change at all** — verified by deleting a sprite in use and replaying the same
-run: same steps, same ending, same score.
-
-Bots do not even notice: they read the game state, not pixels. A missing sprite
-only shows up with `--watch` or `--shots`.
-
-The only file that truly matters is the game bundle (`js/bundle.*.js`): without
-it the game does not start, and you find out immediately.
 
 ## Submit a bot
 
@@ -516,6 +521,8 @@ The regression tests replay recorded runs and compare fingerprints made only of
 engine data — screens, node types, scores — so refactoring and renaming cannot
 make them pass or fail spuriously.
 
+---
+
 ## Commands
 
 | command | what it does |
@@ -528,6 +535,33 @@ make them pass or fail spuriously.
 | `stats` | summary of recorded runs (`-d` explains the columns) |
 | `mirror --phase verify` | check the local copy is not missing anything |
 | `mirror` | rebuild the offline copy (after a game update) |
+
+---
+
+## If a piece of the game is missing
+
+The local copy can have holes: some addresses the game builds on the fly
+(`"img/sprites/items/" + name + ".png"`) and cannot be found by reading the code.
+To check:
+
+```bash
+uv run pokelike mirror --phase verify
+```
+
+It plays with the network closed, lists what is missing, downloads it and checks
+again. It does not guess: the list comes from the game itself as it plays.
+
+**What happens if something is missing:** nothing, as far as the game goes.
+Images are decoration. The local server answers 404, notes it down, and the game
+shows an emoji instead of the sprite. **The run, the rules and the score do not
+change at all** — verified by deleting a sprite in use and replaying the same
+run: same steps, same ending, same score.
+
+Bots do not even notice: they read the game state, not pixels. A missing sprite
+only shows up with `--watch` or `--shots`.
+
+The only file that truly matters is the game bundle (`js/bundle.*.js`): without
+it the game does not start, and you find out immediately.
 
 ---
 
@@ -698,6 +732,9 @@ WHAT IS NOT IN HERE
 
 ### A real observation
 
+Trimmed where a list is long, never mid-structure, so it is still valid
+JSON you can paste somewhere and read.
+
 ```json
 {
  "layer": "screen",
@@ -853,92 +890,103 @@ WHAT IS NOT IN HERE
     "visited": true,
     "revealed": true
    },
-   {
-    "id": "n2_1",
-    "kind": "battle",
-    "layer": 2,
-    "col": 1,
-    "accessible": false,
-    "visited": false,
-    "revealed": true
+   "... 19 more nodes"
+  ],
+  "edges": [
+   [
+    "n0_0",
+    "n1_0"
+   ],
+   [
+    "n0_0",
+    "n1_1"
+   ],
+   [
+    "n1_0",
+    "n2_0"
+   ],
+   [
+    "n1_0",
+    "n2_1"
+   ],
+   "... 32 more edges"
+  ],
+  "current": "n2_0"
+ },
+ "stats": {
+  "startTime": 1700000000160,
+  "battlesWon": 1,
+  "catches": 1,
+  "mapsCleared": 0,
+  "enemiesKO": 1,
+  "faintsSuffered": 1,
+  "totalDamageDealt": 26,
+  "totalDamageTaken": 21,
+  "damageHealed": 0,
+  "damageTakenPreResist": 10.5,
+  "highestLevel": 5,
+  "critHits": 0,
+  "superEffectiveHits": 1,
+  "mostDamageOneBattle": 26,
+  "highestHit": {
+   "damage": 20,
+   "by": "Psyduck",
+   "move": "Bubble",
+   "crit": false,
+   "speciesId": 54,
+   "spriteUrl": "img/sprites/pokemon/54.png"
+  },
+  "highestHp": {
+   "hp": 19,
+   "name": "Bulbasaur",
+   "speciesId": 1
+  },
+  "contrib": {
+   "1": {
+    "name": "Bulbasaur",
+    "speciesId": 1,
+    "spriteUrl": "img/sprites/pokemon/shiny/1.png",
+    "isShiny": true,
+    "damage": 6,
+    "kos": 0,
+    "attacks": 2,
+    "faints": 1,
+    "bestHit": 3
    },
-   {
-    "id": "n2_2",
-    "kind": "trainer",
-    "layer": 2,
-    "col": 2,
-    "accessible": false,
-    "visited": false,
-    "revealed": true
-   },
-   {
-    "id": "n3_0",
-    "kind": "catch",
-    "layer": 3,
-    "col": 0,
-    "accessible": true,
-    "visited": false,
-    "revealed": true
-   },
-   {
-    "id": "n3_1",
-    "kind": "catch",
-    "layer": 3,
-    "col": 1,
-    "accessible": true,
-    "visited": false,
-    "revealed": true
-   },
-   {
-    "id": "n3_2",
-    "kind": "item",
-    "layer": 3,
-    "col": 2,
-    "accessible": false,
-    "visited": false,
-    "revealed": true
-   },
-   {
-    "id": "n3_3",
-    "kind": "catch",
-    "layer": 3,
-    "col": 3,
-    "accessible": false,
-    "visited": false,
-    "revealed": true
-   },
-   {
-    "id": "n4_0",
-    "kind": "battle",
-    "layer": 4,
-    "col": 0,
-    "accessible": false,
-    "visited": false,
-    "revealed": true
-   },
-   {
-    "id": "n4_1",
-    "kind": "trainer",
-    "layer": 4,
-    "col": 1,
-    "accessible": false,
-    "visited": false,
-    "revealed": true
-   },
-   {
-    "id": "n4_2",
-    "kind": "battle",
-    "layer": 4,
-    "col": 2,
-    "accessible": false,
-    "visited": false,
-    "revealed": true
-   },
-   {
-    "id": "n5_0",
-    "kind": "catch",
-    "layer": 5,
-    "col": 0
+   "4": {
+    "name": "Psyduck",
+    "speciesId": 54,
+    "spriteUrl": "img/sprites/pokemon/54.png",
+    "isShiny": false,
+    "damage": 20,
+    "kos": 1,
+    "attacks": 1,
+    "faints": 0,
+    "bestHit": 20
+   }
+  }
+ },
+ "can_reorder": true,
+ "actions": [
+  {
+   "kind": "node",
+   "id": "n3_0",
+   "node": "catch",
+   "layer": 3,
+   "col": 0
+  },
+  {
+   "kind": "node",
+   "id": "n3_1",
+   "node": "catch",
+   "layer": 3,
+   "col": 1
+  }
+ ],
+ "steps": 5,
+ "seed": 42,
+ "done": false
+}
 ```
 
 <!-- END state-reference -->

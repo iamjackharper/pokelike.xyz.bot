@@ -12,7 +12,8 @@ experiments/
 ├── env/                 the game turned into an RL problem
 │   ├── encoding.py        observation -> state key, action -> stable key
 │   ├── rewards.py         five reward functions, selectable by name
-│   └── environment.py     TrainingEnv: reset/step in those terms
+│   ├── environment.py     TrainingEnv: reset/step in those terms
+│   └── logs.py            tee(): a run writes its own log into <experiment>/logs/
 ├── dyna_q/              tabular RL (Sutton & Barto 8.2)
 │   ├── agent.py           the algorithm
 │   ├── train.py           training script
@@ -24,7 +25,7 @@ experiments/
 │   ├── agent.py           q̂ = wᵀx, eligibility traces, the update
 │   ├── train.py evaluate.py ablation.py
 │   ├── features/          x(s,a): what the tabular encoding threw away
-│   │   ├── groups.py        the 81 features, in named groups
+│   │   ├── groups.py        the 100 features, in named groups
 │   │   └── variants.py      which groups a run carries, and what it asks
 │   └── output/            weights, histories, results (gitignored)
 └── llm/                 prompt engineering, measured

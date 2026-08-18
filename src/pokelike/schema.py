@@ -216,8 +216,37 @@ def as_markdown(obs: dict[str, Any]) -> str:
         "_`core/bridge.js`._\n\n"
         "```\n" + describe(obs) + "\n```\n\n"
         "### A real observation\n\n"
-        "```json\n" + json.dumps(obs, indent=1)[:4000] + "\n```\n"
+        "Trimmed where a list is long, never mid-structure, so it is still valid\n"
+        "JSON you can paste somewhere and read.\n\n"
+        "```json\n" + json.dumps(_trimmed(obs), indent=1) + "\n```\n"
     )
+
+
+def _trimmed(obs: dict[str, Any], keep: int = 4) -> dict[str, Any]:
+    """A shortened observation that is still valid JSON.
+
+    The previous version sliced the serialised text at 4000 characters, which cut
+    through the middle of a map node and left the block unparseable — a reference
+    sample nobody could paste anywhere. Long lists are shortened instead, with a
+    marker saying what was dropped, so every KEY a bot can read is still present
+    and the shape is intact.
+    """
+    def cut(seq: list, what: str) -> list:
+        if len(seq) <= keep:
+            return seq
+        return [*seq[:keep], f"... {len(seq) - keep} more {what}"]
+
+    out = dict(obs)
+    if isinstance(out.get("map"), dict):
+        m = dict(out["map"])
+        m["nodes"] = cut(m.get("nodes") or [], "nodes")
+        m["edges"] = cut(m.get("edges") or [], "edges")
+        out["map"] = m
+    for key, what in (("team", "team members"), ("bag", "items"),
+                      ("bag_items", "items"), ("actions", "actions")):
+        if isinstance(out.get(key), list):
+            out[key] = cut(out[key], what)
+    return out
 
 
 def capture(game, seed: int = 42, max_steps: int = 12) -> dict[str, Any]:

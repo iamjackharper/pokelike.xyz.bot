@@ -91,7 +91,7 @@ There is a mechanical reason on top of the principle: an entry archives **one
 file**, the one holding the bot's class, and hashes it for the entry id. Split a
 bot across two modules and the archive keeps an unrunnable half while the hash
 stops identifying what actually ran. [`bot/sarsa.py`](../src/pokelike/bot/sarsa.py)
-is the larger example — it carries all 81 of its feature definitions inline for
+is the larger example — it carries all 100 of its feature definitions inline for
 exactly that reason, and a test pins that frozen copy to the training code so the
 two cannot drift apart unnoticed.
 
@@ -117,6 +117,12 @@ Ranked by **badges**, the game's own progression counter. `badges~` is the mean 
 
 Rebuilt automatically whenever an entry is written, so the pull request that adds
 a submission also carries its row.
+
+**`random-baseline` above is stale and known to be.** It was measured before the
+random bot learned to reorder its team, so those numbers describe a bot that no
+longer exists: the current one is uniform over the team order as well, which is
+what makes it a fair yardstick for anything that thinks about the order. Rerun
+`pokelike bench --bot random` before comparing anything against it.
 
 ## How to submit
 

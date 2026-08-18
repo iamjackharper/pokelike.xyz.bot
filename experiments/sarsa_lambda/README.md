@@ -68,6 +68,29 @@ interaction with the leave-it option. One that read the same for every option
 would cancel in the argmax — the mistake the ablation exists to find, applied
 before the fact this time.
 
+**It can read an item and a move.** v2 also added the `item:` and `tutor:`
+groups, and both closed a place where the agent was provably choosing at random.
+The item screen used to produce three identical q-values over a Red Card, a Moon
+Stone and an Assault Vest; the move tutor produced 68.6 / 65.6 / 68.6 / 70.4 and
+the agent learned to press SKIP.
+
+`item:` reads the two things the engine actually keeps structured — the item id,
+and `TYPE_ITEM_MAP`, which turns eighteen near-identical "+40% X-type damage"
+items into one question: does this boost a type I field. It deliberately encodes
+no magnitudes: those live inline in the battle code keyed by id, so a table of
+them would have to be copied out of the bundle and would keep reporting the old
+numbers after any upstream rebalance, silently.
+
+`tutor:` compares the offer against what that Pokemon already uses. The button
+text carries neither power nor type, but the engine builds it with
+`getBestMove(..., moveTier + 1, ...)`, so asking the same question gives the
+offer with both: Bulbasaur uses Magical Leaf at 40, the tutor offers Energy Ball
+at 90.
+
+That makes 100 features, in index order: `context` 9, `node` 12, the three node
+crosses 36, `lookahead` 4, `screen` 7, `mon` 7, `slot` 3, `button` 3, `item` 7,
+`tutor` 5, `order` 7.
+
 ## No neural network, on purpose
 
 Not modesty — arithmetic. An episode is ~20 transitions and a step costs ~0.5 s,
@@ -130,8 +153,9 @@ sarsa_lambda/
 ├── evaluate.py
 ├── ablation.py
 ├── features/         THE REPRESENTATION — the part worth arguing about
-│   ├── groups.py       the 81 features, in named groups
+│   ├── groups.py       the 100 features, in named groups
 │   └── variants.py     which groups a run carries, and what it is asking
+├── logs/             what each run printed, written by the run (gitignored)
 └── output/           weights, histories, ablation results (gitignored)
 ```
 
@@ -166,6 +190,9 @@ result, not a disappointing one: it means those features were never doing the
 work their weights suggested.
 
 ### The first ablation, and why it does not answer the question
+
+Run against feature set **v1**, the 81 features, before team order, items and the
+move tutor existed. The counts below are of that set.
 
 ```
 variant           feats   badges~   score~   vs random     t     max |w|
