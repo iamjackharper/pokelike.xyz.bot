@@ -36,14 +36,18 @@ class Variant:
 STATE_ONLY = ["context", "screen"]
 ACTION_AWARE = [g for g in ALL_GROUPS if g not in STATE_ONLY]
 INTERACTIONS = ["node_deep", "node_hurt", "node_team"]
+# The three groups feature set v2 added. Measured against v1 on the standard 50
+# seeds they bought +0.06 badges, t = 0.62: nothing. Whether they are useless or
+# merely drowned out is what `no-v2` asks.
+V2_GROUPS = ["item", "tutor", "order"]
 
 
 VARIANTS: list[Variant] = [
     Variant(
         name="full",
         groups=None,
-        question="The control: the 81 features that are on the leaderboard now.",
-        expect="About 1.3 badges. Everything else is measured against this.",
+        question="The control: the 100 features of set v2, the one on the leaderboard.",
+        expect="About 1.36 badges. Everything else is measured against this.",
     ),
     Variant(
         name="action-only",
@@ -58,6 +62,21 @@ VARIANTS: list[Variant] = [
             "change a decision. If this LOSES, my reading of the weights is wrong "
             "and the state-only features are helping the bootstrapped target more "
             "than they cost."
+        ),
+    ),
+    Variant(
+        name="no-v2",
+        groups=[g for g in ALL_GROUPS if g not in V2_GROUPS],
+        question=(
+            "Do the groups v2 added — team order, items, the move tutor — earn "
+            "anything at all? Head to head on the standard seeds they bought "
+            "+0.06 badges with t = 0.62, which is nothing."
+        ),
+        expect=(
+            "No worse than full, and if it is genuinely EQUAL then those 19 "
+            "features are dead weight and should be cut rather than kept for "
+            "looking sensible. If full pulls ahead here while it did not on the "
+            "benchmark, the gain is real but too small to see in 50 runs."
         ),
     ),
     Variant(

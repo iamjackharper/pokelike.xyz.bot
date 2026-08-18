@@ -27,12 +27,12 @@ uv run pokelike bot -d --runs 1  # log every decision, for any bot
 uv run pytest                    # full suite, ~3 minutes
 uv run pytest -m "not slow"      # fast tests only, no browser
 
-uv run pokelike bench --bot random --runs 10   # the standard benchmark, 50 seeds
+uv run pokelike bench --bot random             # the standard benchmark, 50 seeds
+uv run pokelike bench --bot random --dry-run   # ... without writing an entry
 
-uv run python -m experiments.sarsa_lambda.train --episodes 300      # train a policy
-uv run python -m experiments.sarsa_lambda.evaluate --seed0 40000    # vs random, paired
-uv run python -m experiments.sarsa_lambda.ablation --workers 4      # feature variants,
-uv run python -m experiments.sarsa_lambda.ablation --list           # trained in parallel
+uv run python -m experiments.example.train --episodes 20            # the shape of one
+uv run python -m experiments.sarsa_lambda.train --episodes 300      # the real thing
+uv run python -m experiments.sarsa_lambda.ablation --list           # feature variants
 ```
 
 ## Architecture
@@ -61,15 +61,29 @@ src/pokelike/
 ├── leaderboard.py       submission folders, artifacts, index
 └── interfaces/          how something outside drives the game
     ├── cli/main.py        a human, in a terminal
-    └── api/server.py      a program, over HTTP
-experiments/             attempts at a better bot, outside the package
-├── env/                   the game as an RL problem: environment, rewards, encoding
-├── dyna_q/                tabular RL on that MDP: agent, train, evaluate
+    ├── api/server.py      a program, over HTTP
+    └── python/            a script, a notebook or the REPL
+        ├── driver.py        session(), open_game(), play(), compare()
+        └── example.ipynb    the cell-by-cell walkthrough
+experiments/             research. OURS are tracked as worked examples; anything
+│                        else anyone creates here is gitignored, as are all
+│                        output/ and logs/ folders
+├── env/                   the game as an RL problem: environment, rewards,
+│                          encoding, tee() for per-experiment logs
+├── example/               the smallest complete experiment
+├── dyna_q/                tabular RL. LOST to random, and kept for that
+├── sarsa_lambda/          linear function approximation. The one that worked
 └── llm/                   prompt strategies compared on identical seeds
+
+Every experiment has the same shape: README, agent, train, evaluate, output/,
+logs/. Keep it that way when adding one.
 leaderboard/             submissions, their weights, and how to submit
 tests/                   golden fingerprints + unit tests
 tools/deobfuscate.py     makes the bundle readable (needs node)
 ```
+
+Nothing in `src/` may import from `experiments/`: it is a scratch area, mostly
+untracked, and the package cannot depend on files that are not in the clone.
 
 `interfaces/` and `bot/` contain no game logic: they all go through `Game`'s five
 methods. If you feel like putting a game rule in the CLI, it belongs in `core`.
@@ -144,6 +158,13 @@ All of these were hit for real. Worth rereading before changing anything:
 - **The sync API is bound to its creating thread**, so `api/server.py` is
   single-threaded by necessity: `serve_forever()` must run on the thread that owns
   the game, or you get `greenlet.error: Cannot switch to a different thread`.
+- **Playwright's sync API refuses to start inside a running asyncio loop**, which
+  is exactly what Jupyter keeps open — it checks `loop.is_running()` and raises
+  `It looks like you are using Playwright Sync API inside the asyncio loop`, so
+  `nest_asyncio` does not help. `interfaces/python/driver.py` does not fight the
+  loop, it leaves it: when one is running, the game is built and driven on a
+  plain thread that has none. Every call is marshalled to that one thread,
+  because of the constraint above.
 - **`maxTeamSize` is a high-water mark, not a limit.** The real limit is 6.
 - **Non-usable items open an equip modal** which is not a `.screen`. Anything that
   only watches `.screen` elements gets stuck there forever.
@@ -255,6 +276,11 @@ are not obvious and matter:
   encoding inside the bot file rather than importing `experiments/env/encoding.py`,
   so improving the training code cannot silently change what past submissions
   mean. `bot/dyna_q.py` is the worked example.
+- **Only a complete benchmark writes an entry.** `--runs N` and `--dry-run` both
+  print the result and file nothing: a score over N seeds is not comparable to
+  one over 50, so it is not a submission. It used to write one regardless, which
+  meant a `--runs 5` sanity check left a real entry for the next `git add` to
+  pick up.
 - **The benchmark records the game bundle's sha256.** Scores from before and
   after an upstream game update are not comparable, and without the hash a
   leaderboard mixes them silently.

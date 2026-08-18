@@ -55,6 +55,7 @@ REPO = Path(__file__).resolve().parents[3]
 # Point 3 is what lets anyone reproduce a leaderboard result from a fresh clone,
 # without training anything first.
 WEIGHT_CANDIDATES = (
+    REPO / "experiments" / "sarsa_lambda" / "output" / "models" / "sarsa_v2.json",
     REPO / "experiments" / "sarsa_lambda" / "output" / "models" / "sarsa_v1.json",
 )
 SUBMITTED = REPO / "leaderboard" / "entries"
@@ -67,13 +68,42 @@ def find_weights() -> Path | None:
     local = next((p for p in WEIGHT_CANDIDATES if p.is_file()), None)
     if local:
         return local
-    archived = sorted(SUBMITTED.glob("*/artifacts/weights.json"))
-    for path in reversed(archived):
+    return best_submitted()
+
+
+def best_submitted() -> Path | None:
+    """The archived weights of whichever submission currently leads.
+
+    A fresh clone has no `output/` — it is gitignored — so this is what a friend
+    who just cloned actually plays, and it should be the best policy on the
+    board rather than whichever folder name happens to sort last. Ranked by the
+    same field the leaderboard ranks by, read from the index it already writes.
+    """
+    index = SUBMITTED.parent / "index.json"
+    ranked: list[str] = []
+    try:
+        entries = json.loads(index.read_text(encoding="utf-8")).get("entries") or []
+        ranked = [e["id"] for e in entries if e.get("id")]
+    except (json.JSONDecodeError, OSError, KeyError):
+        pass
+
+    def loadable(path: Path) -> bool:
         try:
-            if json.loads(path.read_text(encoding="utf-8")).get("weights"):
-                return path
+            data = json.loads(path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
-            continue
+            return False
+        # Every trained bot archives under this name, so check it is OURS: the
+        # right shape, and a feature set this file can actually speak.
+        return bool(data.get("weights")) and data.get("encoding_version") == FEATURES_VERSION
+
+    for entry_id in ranked:                       # index order: best first
+        path = SUBMITTED / entry_id / "artifacts" / "weights.json"
+        if path.is_file() and loadable(path):
+            return path
+    # No index, or nothing in it fits: fall back to whatever is on disk.
+    for path in sorted(SUBMITTED.glob("*/artifacts/weights.json"), reverse=True):
+        if loadable(path):
+            return path
     return None
 
 
@@ -530,8 +560,10 @@ class SarsaBot(Bot):
             raise FileNotFoundError(
                 "no trained weights found. Looked in:\n  "
                 + "\n  ".join(str(p) for p in WEIGHT_CANDIDATES)
-                + "\n\ntrain some:  uv run python -m experiments.sarsa_lambda.train --episodes 300"
-                + "\nor point at some:  POKELIKE_SARSA_WEIGHTS=/path/to/weights.json"
+                + "\n\nThe archived weights of every submission are in "
+                + "leaderboard/entries/, and one is normally found there. If not, "
+                + "point at some you trained:\n  "
+                + "POKELIKE_SARSA_WEIGHTS=/path/to/weights.json"
             )
         data = json.loads(path.read_text(encoding="utf-8"))
         version = data.get("encoding_version")

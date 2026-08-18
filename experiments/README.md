@@ -1,193 +1,160 @@
 # experiments
 
-Attempts at making a bot play well. Not all of them are training: teaching a
-policy with Reinforcement Learning and finding a better prompt for an LLM are
-both ways of improving a player, and neither is more legitimate than the other.
+**Yours is not tracked. Ours are, to be read.**
 
-This folder sits outside the `pokelike` package on purpose. The package is the
-environment (mirroring, browser, game rules); this is the research on top of it.
+Anything you create under `experiments/` is gitignored, so what you try stays on
+your machine and a pull request that adds a bot cannot drag six training runs
+along with it. The folders below are ours and are checked in on purpose: they are
+worked examples, and the point of them is that you can read what was actually
+done rather than a description of it.
 
 ```
 experiments/
-├── env/                 the game turned into an RL problem
-│   ├── encoding.py        observation -> state key, action -> stable key
-│   ├── rewards.py         five reward functions, selectable by name
-│   ├── environment.py     TrainingEnv: reset/step in those terms
-│   └── logs.py            tee(): a run writes its own log into <experiment>/logs/
-├── dyna_q/              tabular RL (Sutton & Barto 8.2)
-│   ├── agent.py           the algorithm
-│   ├── train.py           training script
-│   ├── evaluate.py        trained vs random, on the same seeds
-│   ├── reward_study.py    same algorithm, three rewards, one metric
-│   ├── models/            saved tables (gitignored)
-│   └── runs/              histories (gitignored)
-├── sarsa_lambda/        linear function approximation (S&B 10 and 12.7)
-│   ├── agent.py           q̂ = wᵀx, eligibility traces, the update
-│   ├── train.py evaluate.py ablation.py
-│   ├── features/          x(s,a): what the tabular encoding threw away
-│   │   ├── groups.py        the 100 features, in named groups
-│   │   └── variants.py      which groups a run carries, and what it asks
-│   └── output/            weights, histories, results (gitignored)
-└── llm/                 prompt engineering, measured
-    └── compare.py         strategies played head to head on identical seeds
+├── env/            the game stated as an RL problem. Shared by all of them.
+├── example/        the smallest complete experiment. Start here.
+├── dyna_q/         tabular RL. It lost, and is kept because of that.
+├── sarsa_lambda/   linear function approximation. The one that worked.
+├── llm/            comparing prompts, which is not learning at all.
+└── <yours>/        ignored.
 ```
 
-`env/` was `common/` and then `mdp/`. `common/` was a lie: the LLM experiment reads the
-raw observation and imports none of it. What lives there is the Reinforcement
-Learning formulation of the game, and nothing else needs it.
+Every one of them has the same shape, so moving between them costs nothing:
 
-Run everything from the repo root, as modules:
+```
+<experiment>/
+├── README.md    what it asks, and what happened
+├── agent.py     the thing being learned, if anything is
+├── train.py     the loop
+├── evaluate.py  against random, on held-out seeds, paired
+├── output/      weights and histories        (ignored)
+└── logs/        what each run printed        (ignored)
+```
+
+Copy the one closest to your idea into `experiments/mine/` and work there.
+
+## What you have to show, and what you do not
+
+Submitting a bot **does** reveal the bot: an entry archives the file that ran and
+hashes it, and that is the only reason the number beside it means anything. A
+leaderboard where the code is hidden is a list of claims.
+
+Submitting does **not** reveal how you got there. The sweeps, the rewards you
+tried, the prompts you threw away, the twenty runs that went nowhere — that is
+research, it lives here, and it stays yours.
+
+You have to show what your bot does. Not how you arrived at it.
+
+---
+
+## What the area is for
+
+A bot is one method: given the state, say which move to take. Everything that
+goes into *deciding what that method should do* belongs here — training a policy,
+comparing prompts, sweeping hyperparameters, measuring whether an idea helps.
+
+Nothing in `src/pokelike/` imports anything from here, and that is a rule rather
+than an accident. The package is the environment; this is the research on top of
+it. A submitted bot has to stand on its own, so if yours carries trained weights
+the state encoding is frozen **inside the bot file** rather than imported from
+here — otherwise improving your training code would silently change what your
+own past results meant. See [GUIDE.md](../GUIDE.md).
+
+## `env/` — the game as an RL problem
+
+The part every experiment shares, whatever it is doing.
+
+| file | what it holds |
+|---|---|
+| `environment.py` | `TrainingEnv`: reset and step in RL terms |
+| `rewards.py` | five reward functions, selectable by name |
+| `encoding.py` | observation to a discrete state key, for tabular methods |
+| `logs.py` | `tee()`: a run writes its own log into `<experiment>/logs/` |
+
+**An MDP** — a Markov Decision Process — is the standard way of stating a problem
+so Reinforcement Learning applies to it: states, the actions available in each,
+and a reward. That is all `env/` is.
+
+**Reward matters more than the algorithm here**, which is why it is a registry
+rather than one function:
 
 ```bash
-uv run python -m experiments.dyna_q.train --episodes 200 --reward progress
-uv run python -m experiments.dyna_q.evaluate --episodes 30
-uv run python -m experiments.llm.compare --strategies survivor,explorer --seeds 5
-
-uv run python -m experiments.sarsa_lambda.train --episodes 300
-uv run python -m experiments.sarsa_lambda.evaluate --episodes 25 --seed0 40000
-uv run python -m experiments.sarsa_lambda.ablation --list           # the questions
-uv run python -m experiments.sarsa_lambda.ablation --workers 4      # answer them at once
+uv run python -m experiments.example.train --reward badges
 ```
 
-The last one is the only command here that is not one run: it trains several
-feature sets **at the same time**, one process and one browser each. A single run
-is about 100 minutes, which is the price at which you test two ideas and then
-start blaming the step size instead.
+| reward | signal |
+|---|---|
+| `game` | the engine's own score |
+| `badges` | the game's progress counter, and what the leaderboard ranks by |
+| `progress` | badges, plus credit for getting deeper into a map |
+| `survival` | staying alive; dense, and easy to learn the wrong lesson from |
+| `composite` | a weighted mix |
 
-Whatever the experiment, the yardstick is the same: **badges**, measured by the
-standard benchmark. The training reward is the signal you learn from; badges and
-the game's score are the independent measurement of whether it worked.
+Careful with `game`. The engine's score formula was written for the Battle Tower
+and two of its six terms never fire in Story mode, leaving `5·KO − 10·faints` —
+a number that rewards fighting rather than getting further. It is why a run with
+three badges can score −5.
 
-## The problem, stated as an MDP
-
-An **MDP**, a Markov Decision Process, is the standard way of stating a problem
-so that Reinforcement Learning can be applied to it: a set of states, the actions
-available in each, and a reward. Writing the game down in those terms is exactly
-what `env/` contains.
-
-**State.** The full observation is a dict with a team, a bag and a map graph.
-Far too large for a table, so `env/encoding.py` compresses it to a tuple:
-screen, team size, worst HP bucket, map index, depth on the map, badges.
-
-Version 1 also keyed on the set of actions on offer, on the theory that one cell
-should not mix turns offering different options. The numbers said the theory was
-wrong: 90 episodes gave 563 states holding 686 state-action pairs, about 1.2
-actions per state, so the agent almost never got to compare two moves in the same
-situation — the one thing a Q-table is for. **Version 2 dropped it**, which
-collapsed those to 244 states and let `Q(s, "node:catch")` accumulate across every
-map turn that offered a catch.
-
-**Actions.** Between 2 and 7 per turn, and they change every turn. Crucially
-they are *not* stable by position: index 2 is a battle now and a catch next turn.
-
-The tabular agent handles that by keying actions on what they are (`node:catch`,
-`btn:skip`), which is what makes `Q(s, a)` accumulate meaningfully — and is also
-one of its ceilings, since all five EQUIP buttons collapse into one `btn:equip`
-and it cannot choose *who* to equip. `sarsa_lambda/` takes the other road: it
-drives by index and describes each action with its own feature vector, so five
-buttons are five vectors.
-
-There is one more action that is not in that list at all. **Team order**: slot 0
-leads the next battle, so the order is a decision, but reordering does not consume
-the turn. It reaches a bot through `Bot.rearrange()` rather than through
-`state["actions"]`, because a full team would otherwise add fifteen swap pairs
-beside the real moves at every map node.
-
-**Reward.** Selectable, from a registry in `env/rewards.py`, because here the
-choice of reward matters more than the choice of algorithm and that claim is
-worth testing rather than asserting.
+## `example/` — the shape, with nothing clever in it
 
 ```bash
-uv run python -m experiments.dyna_q.train --reward progress --episodes 200
+uv run python -m experiments.example.train --episodes 20
 ```
 
-| reward | signal | density |
-|---|---|---|
-| `game` | the engine's own weights, verbatim | medium |
-| `badges` | +100 a badge, −10 a faint | very sparse |
-| `progress` | badges, plus payment per layer descended | dense |
-| `survival` | +1 per step, −50 a faint | densest |
-| `composite` | progress plus damage efficiency | dense |
+It learns one number per node kind: how much that kind of node seems to be
+worth. No state at all, so it will not beat much. It is here for the loop —
+play, score, update, save — which is what every experiment in this project has
+been, with something better in the middle.
 
-`game` is kept as the honest baseline, but be careful with it: the engine's
-formula was written for the Battle Tower, and in Story mode `mapsCleared` never
-increments (it only happens inside `bumpEndlessCounters()`) while `winBonus`
-essentially never fires. What survives is `5·KO − 10·faints`, which says nothing
-about getting further and does not mention badges at all. That is why a run with
-three badges can score −5, and why `progress` is the default.
+---
 
-**Episode.** One run, from picking a starter to game over. Typically 12–35
-decisions.
+## What was learned here
 
-## What makes this environment awkward
+The code for each is in its own folder with its own README. This is the short
+version, in the order it happened.
 
-Worth knowing before you pick an algorithm.
+**Tabular Dyna-Q lost to random.** 400 episodes, a state key of six numbers:
+−3.8 mean score against random's 7.0 on held-out seeds, winning 6 of 20. Its own
+decision log said why before the evaluation did:
 
-**It is slow.** About 0.7 s per step, since every step drives a real browser. A
-200-episode run takes roughly an hour. This is the single biggest constraint and
-it is why Dyna-Q is the first thing here: planning steps cost nothing.
+```
+    1 | starter-screen
+      | [0] Bulbasaur Lv5  [1] Charmander Lv5  [2] Squirtle Lv5
+      |    Q: slot0=6.3, slot1=6.2, slot2=6.3
+```
 
-**Rewards are sparse and delayed.** Most turns return 0. The interesting signals
-(clearing a map, losing a Pokemon) arrive several decisions after the choice
-that caused them.
+Three values within a rounding error, because the encoding showed it three
+indistinguishable slots where a player sees a Grass starter, a Fire one and a
+Water one with different stats. **No number of episodes fixes that: the
+information never reaches the table.**
 
-**It is stochastic.** Battles roll damage, so the same state and action do not
-always lead to the same place. The seed pins a whole run, not a single
-transition.
+**Linear SARSA(λ) with hand-built features won**, on the same reward, the same
+environment and the same protocol: 15 wins, 10 draws, no losses over 25 held-out
+seeds, +0.88 badges per run, t = 4.18. The change was the representation, not
+the algorithm.
 
-**The action set is state-dependent.** Any `max_a` has to range over the legal
-actions only.
+**And then more features bought nothing.** Nineteen more — team order, items, the
+move tutor — measured head to head on the 50 standard seeds against the same
+policy without them: +0.06 badges, t = 0.62. Adding what the agent can see is not
+the same as adding what it can *use*.
 
-## Comparing fairly
+**A warning worth repeating.** In an early ablation the two variants with the
+fewest features diverged, to 10⁹ and 10³². The step size was normalised per
+active feature, so dropping a group silently multiplied the effective learning
+rate by up to 7.5. Each run differed in two ways and the comparison answered
+neither. If you ablate a feature set, hold the effective step fixed across the
+variants.
 
-Runs vary enormously by luck. Comparing two policies on different seeds mostly
-measures which one got the nicer maps, so `evaluate.py` runs both on **the same
-seeds** and reports the head-to-head. Use held-out seeds well away from the
-training range, or you are grading on the training set.
+## Measuring anything
 
-**Rank by badges, not by score.** Badges are the game's own progression counter
-in Story mode; the score formula, for the reasons above, rewards fighting rather
-than advancing.
+Against the same seeds, paired. Runs vary enormously by luck here, so two
+separate averages mostly measure who drew the nicer maps:
 
-The baseline to beat is the random bot: 0.68 badges on average over the 50
-benchmark seeds, dead in 17 moves.
+```python
+from pokelike import compare
+from pokelike.bot.mine import MyBot
 
-## Adding another experiment
+print(compare({"mine": MyBot()}, seeds=range(25))["table"])
+```
 
-Copy the shape of `dyna_q/` for an algorithm: a folder with `agent.py`,
-`train.py`, `evaluate.py`, `models/`, `runs/`. Reuse `env/` so everything learns on the same
-encoding and the same rewards, otherwise comparing them means nothing.
-
-For anything that is not training — a new prompt family, a hand-written
-heuristic, a search — copy the shape of `llm/` instead: a script that runs the
-variants head to head on identical seeds and reports the paired difference.
-
-Reasonable next steps, in rough order of effort:
-
-**What has been tried, and how it went.** Tabular Dyna-Q, given 400 episodes and
-encoding v2, lost to random on 20 held-out seeds: −3.8 mean score against 7.0,
-winning 6 of 20. Its own decision log explains it — on the starter screen it
-learns Q values of 6.3 / 6.2 / 6.3, three slots it has no way to tell apart. The
-limit is the representation, not the algorithm, which is what `sarsa_lambda/`
-exists to test.
-
-SARSA(λ) with linear features tested it and the answer was yes. On 25 held-out
-seeds, paired against random on the same seeds: **15 wins, 10 draws, no losses**,
-+0.88 badges per run, t = 4.18. On the 50 official benchmark seeds it leads the
-leaderboard with 1.3 badges and 59.3 mean score, against random's 0.68 and −3.5.
-Same environment, same reward, same protocol Dyna-Q lost under. See
-[`sarsa_lambda/README.md`](sarsa_lambda/README.md).
-
-- **Dyna-Q+** (Sutton & Barto 8.3) — adds an exploration bonus for state-action
-  pairs not tried in a while. Cheap to add on top of what is here.
-- **Prioritised sweeping** (8.4) — spend the planning budget where the value is
-  changing most, instead of sampling uniformly. Should help a lot given how
-  expensive real steps are.
-- **n-step SARSA** (Chapter 7) — better suited to delayed rewards than one-step
-  backups.
-- **Linear function approximation** (Chapter 9) — the honest fix for the state
-  space, instead of hand-tuning the buckets in `env/encoding.py`.
-
-If you change `env/encoding.py`, bump `ENCODING_VERSION` there. Saved tables
-are keyed by encoded states, so an old table under a new encoding is not just
-stale, it is meaningless — and loading it silently would be worse than an error.
+It reports wins, draws, losses and a t. With this much variance, a difference in
+means on its own says very little.

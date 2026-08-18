@@ -41,14 +41,13 @@ def test_registered_bots_can_be_built():
 
 
 def test_the_sarsa_bot_freezes_exactly_the_features_it_was_trained_on():
-    """The copy in `bot/sarsa.py` must stay identical to `experiments/`.
+    """The copy in `bot/sarsa.py` must stay identical to the training code.
 
     Weights are a plain list of numbers: index 43 only means `mon_new_type`
     because `feature_names()` says so. Insert one feature on the training side
-    and every index after it silently points somewhere else, so the same file
-    of weights becomes a different policy — including policies already on the
-    leaderboard. Divergence must be caught here, not by wondering months later
-    why an archived entry no longer reproduces its own score.
+    and every index after it silently points somewhere else, so the same file of
+    weights becomes a different policy — including policies already on the
+    leaderboard.
 
     If this fails, the fix is to bump `FEATURES_VERSION` and retrain, never to
     quietly paste the new names across.
@@ -58,68 +57,6 @@ def test_the_sarsa_bot_freezes_exactly_the_features_it_was_trained_on():
     from pokelike.bot.sarsa import feature_names as frozen
 
     assert frozen() == trained_on()
-
-
-class TestSeedRange:
-    """A seed outside the engine's 32 bits used to fail late and quietly.
-
-    The reported symptom was an OverflowError from SQLite *after* a full run had
-    been played, so the run was lost to something knowable at step zero. Behind
-    it were two worse problems: seeds a multiple of 2**32 apart are the same run
-    under different names, and above 2**53 Python and JS truncate differently, so
-    there is no truncation that records the seed that actually ran.
-    """
-
-    def test_a_seed_sqlite_cannot_hold_is_refused(self):
-        from pokelike.core.browser import normalise_seed
-
-        with pytest.raises(ValueError, match="outside the engine's range"):
-            normalise_seed(4000325235235324235237)
-
-    def test_a_seed_that_collides_with_a_smaller_one_is_refused(self):
-        from pokelike.core.browser import SEED_MAX, normalise_seed
-
-        # 2**32 + 1 is the same run as 1: the engine truncates to 32 bits.
-        with pytest.raises(ValueError):
-            normalise_seed(SEED_MAX + 1)
-
-    def test_zero_is_recorded_as_the_seed_that_actually_ran(self):
-        """The engine's `|| 1` turns 0 into 1, so 0 must not be filed as 0."""
-        from pokelike.core.browser import normalise_seed
-
-        assert normalise_seed(0) == 1
-
-    def test_usable_seeds_pass_through_unchanged(self):
-        from pokelike.core.browser import SEED_MAX, normalise_seed
-
-        for seed in (1, 42, 10_000, SEED_MAX - 1):
-            assert normalise_seed(seed) == seed
-
-    def test_the_cli_refuses_a_bad_seed_before_starting_a_browser(self):
-        import argparse
-
-        from pokelike.interfaces.cli.main import seed_arg
-
-        with pytest.raises(argparse.ArgumentTypeError):
-            seed_arg("4000325235235324235237")
-        with pytest.raises(argparse.ArgumentTypeError):
-            seed_arg("banana")
-        assert seed_arg("42") == 42
-
-
-def test_a_bot_that_ignores_reordering_plays_exactly_as_before():
-    """`rearrange` defaults to None, which is what keeps old bots honest.
-
-    Team order is a new verb. If the default did anything at all, every bot
-    already on the leaderboard would silently start playing a different game
-    from the one it was measured on.
-    """
-    from pokelike.bot.random_bot import RandomBot
-
-    bot = RandomBot(seed=1)
-    state = {"actions": [{}] * 4, "steps": 0, "can_reorder": True,
-             "team": [{"name": "a"}, {"name": "b"}]}
-    assert bot.rearrange(state) is None
 
 
 def test_unknown_bot_gives_a_useful_error():

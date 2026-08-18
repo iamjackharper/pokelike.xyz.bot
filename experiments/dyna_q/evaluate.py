@@ -23,7 +23,8 @@ from experiments.env.environment import TrainingEnv
 from .agent import DynaQ
 
 HERE = Path(__file__).parent
-MODELS = HERE / "models"
+OUT = HERE / "output"
+MODELS = OUT / "models"
 
 
 def _available(models: Path) -> str:

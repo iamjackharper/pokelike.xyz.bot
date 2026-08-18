@@ -25,8 +25,9 @@ from experiments.env.environment import TrainingEnv
 from .agent import DynaQ
 
 HERE = Path(__file__).parent
-MODELS = HERE / "models"
-RUNS = HERE / "runs"
+OUT = HERE / "output"
+MODELS = OUT / "models"
+RUNS = OUT / "runs"
 
 
 def train(

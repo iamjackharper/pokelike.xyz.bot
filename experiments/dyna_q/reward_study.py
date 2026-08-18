@@ -36,8 +36,9 @@ from experiments.env import TrainingEnv
 from .agent import DynaQ
 
 HERE = Path(__file__).parent
-MODELS = HERE / "models"
-RUNS = HERE / "runs"
+OUT = HERE / "output"
+MODELS = OUT / "models"
+RUNS = OUT / "runs"
 
 REWARDS = ["game", "progress", "survival"]
 

@@ -120,6 +120,24 @@ Ranked by **badges**, the game's own progression counter. `badges~` is the mean 
 Rebuilt automatically whenever an entry is written, so the pull request that adds
 a submission also carries its row.
 
+### Play the current leader
+
+Nothing to download or train. The weights of every submission are archived here,
+so a fresh clone already has them:
+
+```bash
+uv run pokelike bot --bot sarsa --seed 40003 --runs 1 -g -dd
+```
+
+`-g` draws the map beside each decision, with where it is on it; `-dd` prints the
+q value it gave every option before choosing. Drop both for a plain run, and use
+`--runs 20` to watch it over a stretch.
+
+`--bot sarsa` loads whichever submission currently **leads the table above**,
+read from `index.json` — not a hardcoded file, so it follows the leaderboard
+rather than needing to be updated when someone takes the top spot. A locally
+trained model of your own wins over it if `POKELIKE_SARSA_WEIGHTS` points at one.
+
 **`random-baseline` above is stale and known to be.** It was measured before the
 random bot learned to reorder its team, so those numbers describe a bot that no
 longer exists: the current one is uniform over the team order as well, which is
@@ -127,6 +145,9 @@ what makes it a fair yardstick for anything that thinks about the order. Rerun
 `pokelike bench --bot random` before comparing anything against it.
 
 ## How to submit
+
+New here? [GUIDE.md](../GUIDE.md) walks the whole thing end to end, from clone to
+pull request. What follows is the submission half on its own.
 
 **1. Fork.** Press *Fork* at the top right of the GitHub page. You now have your
 own copy you can push to freely.
@@ -156,10 +177,10 @@ It plays the 50 standard seeds, builds your entry folder, and prints the exact
 git commands to finish. A full benchmark takes about 15 minutes for a fast bot;
 use `--runs 10` while developing, but submit the full 50.
 
-There is no dry run: `bench` always writes an entry folder and rebuilds the
-index, whatever `--runs` says. A 10-seed result is a real entry on your disk,
-recorded as 10 runs — so delete it before opening a pull request, or the
-comparison it lands next to is not one.
+Neither writes an entry. `--runs N` is a practice run by definition, since a
+score over 10 seeds is not comparable to one over 50, and `--dry-run` plays all
+50 and files nothing. An entry appears only when a complete benchmark has
+actually been played, so nothing lands in `entries/` by accident.
 
 **4. Commit, push, open the PR.** The command tells you what to `git add`. GitHub
 will offer to open the pull request from your new branch.

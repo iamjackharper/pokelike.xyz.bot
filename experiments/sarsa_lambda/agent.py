@@ -76,7 +76,18 @@ class SarsaLambda:
         epsilon_decay: float = 0.99,
         seed: int = 0,
         featureset: FeatureSet | None = None,
+        alpha_norm: float | None = None,
     ) -> None:
+        # What to divide the step size by. None means "the number of features
+        # active right now", which is the sane default for a single run and is
+        # WRONG for comparing feature sets: fewer groups means fewer active
+        # features means a LARGER step per feature, so an ablation that drops a
+        # group also raises the learning rate and answers a different question.
+        #
+        # Measured on this game: the full set activates 9.0 features per (s, a),
+        # action-only 3.0, minimal 1.2 — a 7.5x spread. The first ablation duly
+        # diverged in exactly that order.
+        self.alpha_norm = alpha_norm
         # Which vector this agent speaks. Defaults to the full set, so nothing
         # that existed before this parameter changes behaviour.
         self.fs = featureset or FeatureSet()
@@ -142,9 +153,10 @@ class SarsaLambda:
         if x_next is not None:
             delta += self.gamma * self.q(x_next)
 
-        # Normalising by the number of active features keeps the effective step
-        # size stable as features are added or removed.
-        step = self.alpha / max(1, len(x))
+        # Normalised so the effective step is stable as features are added or
+        # removed. `alpha_norm` pins it to a constant shared across variants,
+        # which is what makes an ablation vary one thing.
+        step = self.alpha / (self.alpha_norm or max(1, len(x)))
         for i in range(self.fs.n):
             if self.z[i]:
                 self.w[i] += step * delta * self.z[i]
@@ -167,7 +179,7 @@ class SarsaLambda:
             "algorithm": "semi-gradient SARSA(lambda), linear (S&B ch. 10 and 12.7)",
             "hyperparameters": {
                 "alpha": self.alpha, "gamma": self.gamma, "lambda": self.lam,
-                "epsilon": self.epsilon,
+                "epsilon": self.epsilon, "alpha_norm": self.alpha_norm,
             },
             "updates": self.updates,
             # Named so the learned policy can be read rather than only run.
@@ -205,6 +217,7 @@ class SarsaLambda:
         return {
             "features": self.fs.n,
             "groups": "+".join(self.fs.groups),
+            "alpha_norm": self.alpha_norm,
             "nonzero_weights": len(live),
             "updates": self.updates,
             "epsilon": round(self.epsilon, 4),
