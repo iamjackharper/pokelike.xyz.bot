@@ -67,6 +67,23 @@
    "runs": 50,
    "game": "eceae50bbda9e32b",
    "artifacts": 2
+  },
+  {
+   "id": "random-baseline-v2-8d0c94",
+   "bot": "random-baseline-v2",
+   "author": "pierpierpy",
+   "category": "rules",
+   "description": "Uniform over the legal actions, and over the team order too",
+   "score_mean": -9.5,
+   "score_stdev": 22.1,
+   "score_best": 45,
+   "badges_mean": 0.56,
+   "badges_best": 2,
+   "maps_mean": 0,
+   "completed": 0,
+   "runs": 50,
+   "game": "eceae50bbda9e32b",
+   "artifacts": 0
   }
  ]
 }

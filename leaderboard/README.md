@@ -111,6 +111,7 @@ fighting rather than getting further.
 | 2 | **sarsa-lambda-linear** | pierpierpy | rl | 50 | **1.3** | 4 | 59.3 | 195 | `eceae50b` |
 | 3 | **random-baseline** | pierpierpy | rules | 50 | **0.68** | 3 | -3.5 | 65 | `eceae50b` |
 | 4 | **dyna-q-v1** | pierpierpy | rl | 50 | **0.62** | 3 | 4.9 | 85 | `eceae50b` |
+| 5 | **random-baseline-v2** | pierpierpy | rules | 50 | **0.56** | 2 | -9.5 | 45 | `eceae50b` |
 
 Ranked by **badges**, the game's own progression counter. `badges~` is the mean over the standard 50 seeds and `badges+` the best single run. `game` is the sha256 prefix of the game bundle that was played: results under different hashes are not comparable.
 

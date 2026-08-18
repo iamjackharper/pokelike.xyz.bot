@@ -1,6 +1,5 @@
-# pokelike.xyz.bot
+# 🏆 POKELIKE.XYZ BOT COMPETITION IS [OPEN]!!!
 
-> ## 🏆 The bot contest is open
 >
 > Write something that plays [pokelike.xyz](https://pokelike.xyz/) better than
 > mine, and put it on the [leaderboard](leaderboard/). Anyone can enter, no
@@ -24,6 +23,8 @@
 >
 > The bar to beat right now is **1.36 badges**. Random gets 0.68, so it is lower
 > than it sounds.
+
+# pokelike.xyz.bot
 
 Play [pokelike.xyz](https://pokelike.xyz/) — a Pokémon roguelike — from the
 command line, from Python, or over an HTTP API. No windows, no internet, and a
