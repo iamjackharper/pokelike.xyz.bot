@@ -11,8 +11,14 @@ honestly.
 
 ![An LLM playing a run](img/llm_playthrough.gif)
 
-*An LLM playing a run, sped up. Each turn it reads the state, may call a
-read-only tool, and commits to one move with a reason.*
+*An LLM playing a run. Each turn it reads the state, may call a read-only tool,
+and commits to one move with a reason.*
+
+![The map, and where the bot is on it](img/llm_battle.gif)
+
+*`pokelike bot -g` draws the map beside each decision: where you are, where you
+may still go, and where you have already been. Choosing a node closes every
+other one on its layer forever.*
 
 
 ## Index
