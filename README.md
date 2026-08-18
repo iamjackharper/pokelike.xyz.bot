@@ -657,7 +657,7 @@ two bots on the same games rather than on luck.
 ## Tests
 
 ```bash
-uv run pytest              # the whole suite (~3 minutes)
+uv run pytest              # the whole suite (~1 minute)
 uv run pytest -m "not slow"   # only the fast ones, no browser needed
 ```
 

@@ -240,8 +240,11 @@
   // by a poller, and paced with a real timeout so a click never lands in the
   // middle of the redraw the previous one caused.
   window.__pk_settle = async (timeoutMs) => {
-    const started = performance.now();
-    while (performance.now() - started < timeoutMs) {
+    // __pk_realNow, not performance.now: the page clock is virtual and jumps
+    // ahead on every read, so this budget would be spent in a few hundred
+    // iterations instead of ninety seconds.
+    const started = window.__pk_realNow();
+    while (window.__pk_realNow() - started < timeoutMs) {
       const r = window.__pk_pump();
       if (r.ready) return true;
       // Pace only after actually clicking, so the click never lands on top of

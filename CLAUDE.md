@@ -43,7 +43,7 @@ uv run pokelike bot --runs 5     # the random bot
 uv run pokelike stats -d         # summary, with the columns explained
 uv run pokelike schema           # what a bot receives (--markdown regenerates it in README.md)
 uv run pokelike bot -d --runs 1  # log every decision, for any bot
-uv run pytest                    # full suite, ~3 minutes
+uv run pytest                    # full suite, ~1 minute
 uv run pytest -m "not slow"      # fast tests only, no browser
 
 uv run pokelike bench --bot random             # the standard benchmark, 50 seeds
@@ -259,6 +259,11 @@ All of these were hit for real. Worth rereading before changing anything:
   offered as actions, and actions are applied by dispatching an event on the
   element rather than clicking a coordinate, so they never intercepted anything
   either.
+- **`INIT_SCRIPT` is substituted with `str.replace`, not `%`.** It is full of
+  prose, and a comment mentioning a percentage made `INIT_SCRIPT % cfg` raise
+  "not enough arguments for format string" from a line nowhere near the change.
+  The scaffold's bot templates had the same problem for the same reason — an LLM
+  bot template is full of JSON — and both now use plain substitution.
 - **Seeds are 32-bit.** `(cfg.seed >>> 0) || 1`, so seed 0 is seed 1 and seed
   N is seed N + 2**32. `normalise_seed` rejects anything outside the range
   rather than truncating, because above 2**53 Python's `& 0xFFFFFFFF` and JS's
@@ -309,8 +314,19 @@ everything else.
 
 The run seed is `Date.now() ^ (Math.random() * 2**32)` and everything flows from
 the engine's PRNG seeded with it. `browser.py` pins **both** in a script that runs
-before the bundle, and caps `setTimeout` at 1 ms to flatten animations. Same seed
-+ same actions = same run, score included.
+before the bundle, caps `setTimeout` at 1 ms, and runs `performance.now()` on a
+virtual clock so animations resolve at once rather than in real time — see
+[Performance](#performance) for why that last one is what actually mattered.
+Same seed + same actions = same run, score included.
+
+Three clocks, three different reasons, and mixing them up breaks something
+different each time:
+
+| | what it does | why |
+|---|---|---|
+| `Date.now` | frozen, +16 ms a read | the run seed is drawn from it, and the score's time bonus |
+| `performance.now` | virtual, +`tick` ms a read | the engine paces animations off it |
+| `__pk_realNow` | the true one | `__pk_settle` has to measure a real timeout budget |
 
 A fresh browser context per run: reusing the page would stack another init script,
 and another reseed, on every reset.
@@ -329,8 +345,26 @@ Regenerating it to make a red test go green defeats the point.
 
 ## Performance
 
-~1.5 decisions per second, ~14 s per run with a fast policy. Runs are independent:
+~6 decisions per second, ~4 s per run with a fast policy. Runs are independent:
 to go faster, launch more processes, not more threads.
+
+**Most of that came from one line, and the reason it was hidden is worth
+knowing.** A headless run used to spend 79% of its wall clock inside
+`__pk_settle`, and 98.6% of that on the battle screen — waiting for an animation
+whose outcome the engine had already decided. Capping `setTimeout` to 1 ms did
+not help, and neither did routing timers or `requestAnimationFrame` through a
+`MessageChannel` to dodge the browser's 4 ms clamp on nested timers: all three
+were measured, and all three bought 3-6%. The engine does not pace the battle by
+counting ticks, it **asks what time it is** and works out how far along it should
+be. So the clock is what had to move: `performance.now()` now jumps `tick` ms on
+every read (`Session.tick`, 64 by default), and an 800 ms battle collapses to
+about 180. 4.4x on a run, 7x on the test suite, with every golden fingerprint
+unchanged.
+
+`__pk_realNow` is the true clock, kept for anything that must measure real
+elapsed time — `__pk_settle`'s own timeout budget, which would otherwise spend
+ninety seconds in a few hundred reads. `--watch` sets `tick` to 0: a person
+watching wants to see the battle.
 
 The LLM bot is far slower (one or more HTTP calls per decision) and burns roughly
 30k tokens per run.

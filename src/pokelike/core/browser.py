@@ -22,9 +22,14 @@ BRIDGE = Path(__file__).with_name("bridge.js")
 # The run seed is `Date.now() ^ (Math.random() * 2**32)` and everything a run
 # generates (map layout, encounters, item offers) flows from the engine's PRNG
 # seeded with it. Making a run reproducible therefore means pinning both.
+# Substituted with str.replace, not `%`: this script is full of prose, and a
+# comment mentioning a percentage made `INIT_SCRIPT % cfg` raise "not enough
+# arguments for format string" from a line nowhere near the change.
+CFG_MARK = "__PK_CFG_JSON__"
+
 INIT_SCRIPT = """
 (() => {
-  const cfg = %s;
+  const cfg = __PK_CFG_JSON__;
   let s = (cfg.seed >>> 0) || 1;
   Math.random = function () {
     s ^= s << 13; s >>>= 0; s ^= s >> 17; s ^= s << 5; s >>>= 0;
@@ -38,6 +43,28 @@ INIT_SCRIPT = """
   window.__pk_realTimeout = st;
   window.setTimeout = (fn, d, ...a) => st(fn, Math.min(Number(d) || 0, cfg.max_delay), ...a);
   window.requestAnimationFrame = (fn) => st(() => fn(performance.now()), 0);
+
+  // The clock the ANIMATIONS read, and the reason capping timers was not enough.
+  //
+  // The engine plays a battle out over roughly 800 ms, and it paces that on
+  // elapsed time rather than on a number of ticks: it asks what time it is and
+  // works out how far along it should be. Capping setTimeout to 1 ms only makes
+  // it ask more often; the answer still walks at wall-clock speed, so we sat
+  // watching an animation whose outcome was already decided. Measured: 79% of a
+  // headless run was that wait, and 98.6% of it on the battle screen.
+  //
+  // Moving the clock forward by `tick` on every read collapses it. `__pk_realNow`
+  // keeps a true one for anything that must measure real elapsed time -- the
+  // settle loop's own timeout budget, which would otherwise burn 90 seconds in
+  // a few hundred reads.
+  //
+  // tick = 0 leaves the clock alone, which is what --watch does: a person
+  // watching wants to see the battle.
+  window.__pk_realNow = performance.now.bind(performance);
+  if (cfg.tick > 0) {
+    let vnow = window.__pk_realNow();
+    performance.now = () => (vnow += cfg.tick);
+  }
   try { localStorage.clear(); } catch (e) {}
 })();
 """
@@ -138,6 +165,13 @@ class Session:
     url: str
     watch: bool = False
     max_delay: int = 1
+    # Milliseconds the virtual clock jumps on every `performance.now()` read.
+    # 64 -- four frames -- was measured as the knee: 4.4x faster than a real
+    # clock, while an 800 ms battle animation still gets sampled a dozen times.
+    # Going coarser bought another 5% and samples an animation three times,
+    # which is a poor trade against the chance of stepping over a state the
+    # engine acts on. 0 turns it off.
+    tick: int = 64
     # Sprites are decoration: a bot reads the game state, never pixels. Skipping
     # them removes a few hundred decodes and layout passes per run. Off by
     # default, because --watch and --shots obviously do want them.
@@ -164,7 +198,12 @@ class Session:
         page.route("**/*", self._filter)
 
         page.add_init_script(
-            INIT_SCRIPT % json.dumps({"seed": seed, "max_delay": self.max_delay})
+            INIT_SCRIPT.replace(CFG_MARK, json.dumps({
+                "seed": seed,
+                "max_delay": self.max_delay,
+                # A person watching wants to see the battle, not its conclusion.
+                "tick": 0 if self.watch else self.tick,
+            }))
         )
         page.goto(self.url, wait_until="domcontentloaded")
         # Wait for the engine to exist rather than for a fixed 1.5 s. On a fast
