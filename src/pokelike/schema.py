@@ -32,6 +32,19 @@ FIELDS = {
     "map": "the whole board: nodes, edges, where you stand",
     "stats": "the engine's cumulative counters, updated after every battle",
     "actions": "THE LEGAL MOVES. choose() returns an index into this list",
+    "bag_items": ("the bag with ids: [{id, name, desc, usable}]. `bag` is the same "
+                  "list as bare names. The id is the handle that matters — item "
+                  "effects are not structured anywhere in the engine, so the id is "
+                  "what every effect in the battle code is keyed on"),
+    "offered_moves": ("what the move tutor WOULD offer each team member, by index: "
+                      "{name, power, type, special}. Computed with the engine's own "
+                      "getBestMove, the same call it builds the tutor button from — "
+                      "so the offer can be compared against `team[i].move` instead of "
+                      "guessed at from a name"),
+    "type_items": ("the engine's type -> held-item table, 18 entries "
+                   "(Fire -> charcoal). Collapses eighteen nearly identical "
+                   "'+40% X-type damage' items into one question: does this boost a "
+                   "type I actually field"),
     "can_reorder": ("whether the team can be reordered right now. Slot 0 leads the "
                     "next battle, so the order is a decision — but a FREE one, which "
                     "is why it is not in `actions`: see Bot.rearrange / Game.reorder"),
@@ -58,6 +71,11 @@ TEAM_FIELDS = {
     "max_hp": "maximum HP. hp/max_hp is what tells you if it is in danger",
     "types": "list of types, e.g. ['Grass', 'Poison'] — this decides battles",
     "base_stats": "hp, atk, def, speed, special, spdef",
+    "item_id": ("the held item's id, e.g. 'leftovers'. The name is for reading, the "
+                "id is for deciding: every effect in the battle code is keyed on it"),
+    "item_desc": "the held item's effect, as the English sentence the engine wrote",
+    "move": ("what this Pokemon attacks with: {name, power, type, special}, from the "
+             "engine's own getMoveForPokemon. Not derivable from anything on screen"),
     "item": "held item name, or null",
     "shiny": "whether it is shiny (worth points at the end)",
     "move_tier": "which tier of moves it knows",
@@ -76,6 +94,11 @@ NODE_KINDS = {
     "catch": "adds a Pokemon to your team",
     "battle": "one wild Pokemon",
     "trainer": "1 Pokemon on map 0, 2 on maps 1-2, 3 from map 3 onwards",
+    "item_id": ("the held item's id, e.g. 'leftovers'. The name is for reading, the "
+                "id is for deciding: every effect in the battle code is keyed on it"),
+    "item_desc": "the held item's effect, as the English sentence the engine wrote",
+    "move": ("what this Pokemon attacks with: {name, power, type, special}, from the "
+             "engine's own getMoveForPokemon. Not derivable from anything on screen"),
     "item": "pick one of three items",
     "pokecenter": "restores HP",
     "question": "unknown until you enter it (shown as `unknown` in logs)",

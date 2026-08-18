@@ -41,7 +41,10 @@ from .base import Bot
 # Bumped whenever the feature vector changes meaning: a new feature, a removed
 # one, a different order, a different scale. Weights carry the version they were
 # trained under, and refusing to load a mismatch is the whole safeguard.
-FEATURES_VERSION = 1
+#
+# 2 added three groups — team order, items, and the move tutor — so a v1 weight
+# vector indexes an entirely different space.
+FEATURES_VERSION = 2
 
 REPO = Path(__file__).resolve().parents[3]
 
@@ -74,7 +77,11 @@ def find_weights() -> Path | None:
     return None
 
 
-# ------------------------------------------------- the frozen feature set, v1
+# ---------------------------------------------- the frozen feature set, v2
+#
+# Copied MECHANICALLY from experiments/sarsa_lambda/features/groups.py, never
+# transcribed by hand, and pinned to it by a test. Hand-copying is how two
+# feature sets drift apart while both look right.
 
 TYPES = {
     "NORMAL", "FIRE", "WATER", "ELECTRIC", "GRASS", "ICE", "FIGHTING", "POISON",
@@ -82,6 +89,7 @@ TYPES = {
     "STEEL", "FAIRY",
 }
 
+# Node kinds worth a feature of their own. Anything rarer falls into `other`.
 NODE_KINDS = [
     "catch", "battle", "trainer", "item", "pokecenter", "question",
     "move_tutor", "trade", "boss", "pokemart", "shiny", "other",
@@ -103,7 +111,7 @@ RE_DEF = re.compile(r"\bDEF\s+(\d+)")
 def parse_pokemon(label: str) -> dict[str, Any]:
     """Pull what matters out of a Pokemon card's text.
 
-    The catch screen renders 'Psyduck Lv. 4 WATER SP.A 10 SPE 9 HP 18 DEF 8'.
+    The catch screen renders 'Psyduck Lv. 4 WATER SP.A 10 SPE 9 HP 18 DEF 8 ...'.
     All of it is on screen and none of it reached the tabular agent.
     """
     up = label.upper()
@@ -147,43 +155,124 @@ def _leads_to(state: dict[str, Any], node_id: str) -> list[str]:
     return [by_id[t]["kind"] for f, t in m.get("edges", []) if f == node_id and t in by_id]
 
 
-def feature_names() -> list[str]:
+# The vector, split into named groups so a variant can switch one off and the
+# rest keep their meaning. GROUP ORDER IS THE INDEX ORDER and must not be
+# reshuffled: a weight vector is a plain list, and `w[43]` means `mon_new_type`
+# only because this list says so.
+#
+# The groups exist because of what the first trained policy turned out to look
+# like. Its heaviest weights were all in `context` — features that depend on the
+# state but not on the action, so they shift every option by the same amount and
+# CANCEL in the argmax. They fit the level of the return, not the choice. That is
+# a hypothesis you can only test by taking them away, which is what this is for.
+GROUPS: dict[str, list[str]] = {
+    # State only. Cannot discriminate between actions, by construction.
+    "context": ["bias", "team_size", "min_hp", "mean_hp", "map_index", "depth",
+                "badges", "any_fainted", "n_actions"],
+    # Which kind of node this move leads to.
+    "node": [f"node:{k}" for k in NODE_KINDS],
+    # The same, crossed with the situation: 36 features earning their keep or not.
+    "node_deep": [f"node:{k}*deep" for k in NODE_KINDS],
+    "node_hurt": [f"node:{k}*hurt" for k in NODE_KINDS],
+    "node_team": [f"node:{k}*small_team" for k in NODE_KINDS],
+    # One step of lookahead past the node.
+    "lookahead": ["leads_to_heal", "leads_to_catch", "leads_to_boss", "leads_dead_end"],
+    # Which screen the choice is on. State only as well.
+    "screen": [f"screen:{s}" for s in SCREENS],
+    # What is actually on the card: the part the tabular agent could not see.
+    "mon": ["mon_new_type", "mon_level_rel", "mon_power", "mon_bulk", "mon_atk",
+            "mon_shiny", "mon_best_stats"],
+    # Which team member a slot-shaped screen is pointing at.
+    "slot": ["equip_on_strongest", "equip_on_weakest", "swap_out_weakest"],
+    "button": ["is_skip", "is_cancel", "is_bag"],
+    # Team order. A separate decision, not one of the game's actions: slot 0
+    # leads the next battle but reordering does not consume the turn. The
+    # options are "leave it" plus "bring slot j to the front".
+    #
+    # Every feature here is written as a DIFFERENCE against the current leader,
+    # or as an interaction with `noop`. A feature that reads the same for the
+    # leave-it option and for every swap would add the same number to all of
+    # them and cancel in the argmax — which is exactly the mistake the ablation
+    # was built to catch.
+    # Items. Until now there were none at all, which is why the item screen
+    # produced three identical q-values: the agent was choosing at random among
+    # a Red Card, a Moon Stone and an Assault Vest.
+    #
+    # Effects are not structured data anywhere — an item is {id, name, desc,
+    # icon} and every magnitude is inline in the battle code, keyed on the
+    # string id. So these read the two things that ARE structured: the id, and
+    # TYPE_ITEM_MAP, the engine's own type -> item table, which collapses
+    # eighteen near-identical "+40% X-type damage" items into one question.
+    "item": [
+        "item:matches_my_type",   # boosts a type someone on my team actually is
+        "item:matches_lead_type",
+        "item:is_evolution",      # moon stone and friends: a permanent upgrade
+        "item:is_healing",
+        "item:is_defensive",
+        "item:is_offensive",
+        "item:already_held",      # we are carrying one of these already
+    ],
+    # The move tutor. It offers a replacement move for a specific team member,
+    # and the engine can be asked what that member currently uses, with power
+    # and type. Before this the agent saw two names and guessed: on seed 40003
+    # it took SKIP over three offers scoring 68.6 / 65.6 / 68.6 / 70.4.
+    "tutor": [
+        "tutor:power_gain",       # offered power minus what they use now
+        "tutor:is_upgrade",
+        "tutor:on_lead",
+        "tutor:on_strongest",
+        "tutor:same_type",        # STAB: matches the recipient's own type
+    ],
+    "order": [
+        "order:noop",              # the leave-it option itself
+        "order:hp_gain",           # candidate HP frac minus the leader's
+        "order:swap_when_lead_hurt",
+        "order:cand_level_rel",
+        "order:cand_is_strongest",
+        "order:cand_new_type",     # covers a type the current leader does not
+        "order:cand_fainted",      # promoting a corpse
+    ],
+}
+
+ALL_GROUPS = list(GROUPS)
+
+
+def feature_names(groups: list[str] | None = None) -> list[str]:
     """The vector's index order, named.
 
-    A trained weight vector can be read and argued with, which is most of the
-    point of using a linear model here.
+    Explicit names are most of the point of a linear model: a trained weight
+    vector can be read and argued with. With no argument this is the full set,
+    which must stay byte-identical to what shipped — `bot/sarsa.py` freezes a
+    copy of it, and a test holds the two side by side.
     """
-    names = [
-        "bias", "team_size", "min_hp", "mean_hp", "map_index", "depth",
-        "badges", "any_fainted", "n_actions",
-    ]
-    names += [f"node:{k}" for k in NODE_KINDS]
-    names += [f"node:{k}*deep" for k in NODE_KINDS]
-    names += [f"node:{k}*hurt" for k in NODE_KINDS]
-    names += [f"node:{k}*small_team" for k in NODE_KINDS]
-    names += ["leads_to_heal", "leads_to_catch", "leads_to_boss", "leads_dead_end"]
-    names += [f"screen:{s}" for s in SCREENS]
-    names += [
-        "mon_new_type", "mon_level_rel", "mon_power", "mon_bulk", "mon_atk",
-        "mon_shiny", "mon_best_stats",
-        "equip_on_strongest", "equip_on_weakest", "swap_out_weakest",
-        "is_skip", "is_cancel", "is_bag",
-    ]
-    return names
+    for g in (groups or []):
+        if g not in GROUPS:
+            raise KeyError(f"unknown feature group '{g}' — have: {', '.join(ALL_GROUPS)}")
+    chosen = ALL_GROUPS if groups is None else [g for g in ALL_GROUPS if g in groups]
+    return [n for g in chosen for n in GROUPS[g]]
 
 
 N_FEATURES = len(feature_names())
-_NAME_INDEX = {n: i for i, n in enumerate(feature_names())}
 
 
-def features(state: dict[str, Any], action: dict[str, Any]) -> dict[int, float]:
-    """Sparse x(s, a): index -> value, non-zero entries only."""
-    names = _NAME_INDEX
+def features(state: dict[str, Any], action: dict[str, Any],
+             index: dict[str, int] | None = None) -> dict[int, float]:
+    """Sparse x(s, a): index -> value. Only non-zero entries.
+
+    `index` is a name -> position map, so a variant with some groups switched off
+    computes the same quantities and simply drops the ones it does not carry.
+    The alternative — a separate function per variant — is how two feature sets
+    silently stop meaning the same thing.
+    """
+    names = _NAME_INDEX if index is None else index
     x: dict[int, float] = {}
 
     def put(name: str, value: float = 1.0) -> None:
-        if value:
-            x[names[name]] = value
+        # A name the variant left out is skipped, not an error: that is what
+        # switching a group off means.
+        i = names.get(name)
+        if value and i is not None:
+            x[i] = value
 
     run = state.get("run") or {}
     team = state.get("team") or []
@@ -202,6 +291,30 @@ def features(state: dict[str, Any], action: dict[str, Any]) -> dict[int, float]:
     put("badges", min(run.get("badges") or 0, 8) / 8)
     put("any_fainted", 1.0 if run.get("anyone_fainted") else 0.0)
     put("n_actions", len(state.get("actions") or []) / 7)
+
+    if action.get("kind") == "reorder":
+        # `b is None` is the leave-it option. Everything else brings slot b to
+        # the front, so the features describe b relative to whoever leads now.
+        b = action.get("b")
+        if b is None or not team:
+            put("order:noop")
+            return x
+        lead, cand = team[0], team[b] if b < len(team) else team[0]
+        frac = lambda p: (p["hp"] / p["max_hp"]) if p.get("max_hp") else 0.0
+        levels = [p["level"] for p in team] or [1]
+        atks = [p.get("base_stats", {}).get("atk", 0) for p in team]
+
+        put("order:hp_gain", frac(cand) - frac(lead))
+        put("order:swap_when_lead_hurt", 1.0 - frac(lead))
+        put("order:cand_level_rel",
+            min(2.0, cand["level"] / max(1, sum(levels) / len(levels))) / 2)
+        put("order:cand_is_strongest",
+            1.0 if atks and atks[b] >= max(atks) else 0.0)
+        lead_types = {t.upper() for t in (lead.get("types") or [])}
+        put("order:cand_new_type",
+            1.0 if any(t.upper() not in lead_types for t in (cand.get("types") or [])) else 0.0)
+        put("order:cand_fainted", 1.0 if cand["hp"] == 0 else 0.0)
+        return x
 
     if action.get("kind") == "node":
         kind = action["node"] if action["node"] in NODE_KINDS else "other"
@@ -226,6 +339,11 @@ def features(state: dict[str, Any], action: dict[str, Any]) -> dict[int, float]:
     put("is_cancel", 1.0 if "cancel" in low else 0.0)
     put("is_bag", 1.0 if "keep in bag" in low else 0.0)
 
+    if screen == "item-screen":
+        _item_features(put, state, action)
+    elif "→" in label or "->" in label:
+        _tutor_features(put, state, action, label)
+
     if screen in ("catch-screen", "starter-screen"):
         mon = parse_pokemon(label)
         if mon["types"]:
@@ -237,6 +355,7 @@ def features(state: dict[str, Any], action: dict[str, Any]) -> dict[int, float]:
         put("mon_bulk", min(mon["hp"], 40) / 40)
         put("mon_atk", min(mon["atk"], 40) / 40)
         put("mon_shiny", 1.0 if mon["shiny"] else 0.0)
+        # Which of the options on offer is objectively the beefiest.
         rivals = [parse_pokemon(o.get("label") or "") for o in state["actions"]]
         totals = [r["hp"] + r["atk"] + r["def"] for r in rivals]
         mine = mon["hp"] + mon["atk"] + mon["def"]
@@ -259,6 +378,144 @@ def features(state: dict[str, Any], action: dict[str, Any]) -> dict[int, float]:
             if screen == "swap-screen":
                 put("swap_out_weakest", 1.0 if idx == weakest else 0.0)
     return x
+
+
+_NAME_INDEX = {n: i for i, n in enumerate(feature_names())}
+
+
+class FeatureSet:
+    """One variant of the vector: which groups are in, and their index order.
+
+    Carrying the group list around with the weights is what keeps an ablation
+    honest. Weights are saved by NAME, so loading them into a different set would
+    otherwise zero-fill the missing ones and quietly produce a policy nobody
+    trained.
+    """
+
+    def __init__(self, groups: list[str] | None = None) -> None:
+        self.groups = list(ALL_GROUPS if groups is None else
+                           [g for g in ALL_GROUPS if g in groups])
+        self.names = feature_names(self.groups)
+        self.index = {n: i for i, n in enumerate(self.names)}
+        self.n = len(self.names)
+
+    def of(self, state: dict[str, Any], action: dict[str, Any]) -> dict[int, float]:
+        return features(state, action, self.index)
+
+    def __repr__(self) -> str:
+        return f"FeatureSet({self.n} features, groups={'+'.join(self.groups)})"
+
+
+def reorder_options(state: dict[str, Any]) -> list[dict[str, Any]]:
+    """The team-order decision, as a list of actions scored like any other.
+
+    Always leads with the leave-it option, so "do nothing" competes on the same
+    footing instead of being a special case in the caller. Empty when there is
+    nothing to decide, which the caller reads as "skip this decision point".
+
+    Only slot 0 is a target: what matters is who LEADS, and offering all fifteen
+    pairs of a full team would spend the sample budget on distinctions that do
+    not pay.
+    """
+    team = state.get("team") or []
+    if not state.get("can_reorder") or len(team) < 2:
+        return []
+    return [{"kind": "reorder", "b": None}] + [
+        {"kind": "reorder", "b": j} for j in range(1, len(team))
+    ]
+
+
+# Effect kinds, keyed on the item id, because the engine keeps no structured
+# effect field: an item is {id, name, desc, icon} and the numbers live inline in
+# the battle code. Only the COARSE kind is encoded here, never a magnitude — a
+# magnitude table would have to be copied out of the bundle and would keep
+# reporting the old value after any upstream rebalance, silently. See TODO.md.
+EVOLUTION_ITEMS = {"moon_stone", "fire_stone", "water_stone", "thunder_stone",
+                   "leaf_stone", "sun_stone", "dusk_stone", "shiny_stone",
+                   "dawn_stone", "ice_stone", "rare_candy"}
+HEALING_ITEMS = {"leftovers", "shell_bell", "sitrus_berry", "oran_berry",
+                 "sacred_ash", "black_sludge"}
+DEFENSIVE_ITEMS = {"assault_vest", "eviolite", "red_card", "rocky_helmet",
+                   "focus_sash", "leftovers", "shell_bell"}
+OFFENSIVE_ITEMS = {"choice_band", "choice_specs", "choice_scarf", "life_orb",
+                   "expert_belt", "muscle_band", "wise_glasses", "quick_claw",
+                   "scope_lens", "razor_claw"}
+
+
+def _item_id(action: dict[str, Any]) -> str:
+    """Best available handle on which item a button is offering.
+
+    The label is prose the engine wrote ("Choice Scarf +50% Speed"), so the name
+    is turned into the id shape the engine itself uses. Not free of risk, but the
+    only alternative is matching the description sentence, which is worse.
+    """
+    label = (action.get("label") or "").strip().lower()
+    words = re.split(r"[^a-z]+", label)
+    return "_".join(w for w in words[:2] if w)
+
+
+def _item_features(put, state: dict[str, Any], action: dict[str, Any]) -> None:
+    item = _item_id(action)
+    team = state.get("team") or []
+    type_items = state.get("type_items") or {}
+    # TYPE_ITEM_MAP is Pokemon type -> item id, so invert it: this item boosts
+    # this type. The single structured item fact the engine gives away.
+    boosts = {v: k.upper() for k, v in type_items.items()}
+    boosted = boosts.get(item)
+
+    if boosted and team:
+        put("item:matches_my_type",
+            1.0 if any(boosted in {t.upper() for t in (p.get("types") or [])}
+                       for p in team) else 0.0)
+        put("item:matches_lead_type",
+            1.0 if boosted in {t.upper() for t in (team[0].get("types") or [])} else 0.0)
+
+    put("item:is_evolution", 1.0 if item in EVOLUTION_ITEMS else 0.0)
+    put("item:is_healing", 1.0 if item in HEALING_ITEMS else 0.0)
+    put("item:is_defensive", 1.0 if item in DEFENSIVE_ITEMS else 0.0)
+    put("item:is_offensive", 1.0 if item in OFFENSIVE_ITEMS else 0.0)
+    held = {p.get("item_id") for p in team} | {
+        (b or {}).get("id") for b in (state.get("bag_items") or [])
+    }
+    put("item:already_held", 1.0 if item in held else 0.0)
+
+
+def _tutor_features(put, state: dict[str, Any], action: dict[str, Any],
+                    label: str) -> None:
+    """Judge the offer instead of guessing at its name.
+
+    The label carries the offered move and who receives it. What it does NOT
+    carry is power or type — and the agent used to have no way to tell a 130-power
+    upgrade from a sidegrade, which is how it learned to take SKIP. `move` on each
+    team member is the engine's own answer for what they use now, so the offer can
+    be compared against it.
+    """
+    team = state.get("team") or []
+    if not team:
+        return
+    # "→ SURF:Wartortle Lv35" / "→ SURF — WARTORTLE LV35 • ..."
+    who = None
+    for i, p in enumerate(team):
+        if p["name"].lower() in label.lower():
+            who = i
+            break
+    if who is None:
+        return
+    mon = team[who]
+    current = (mon.get("move") or {})
+    offered = (state.get("offered_moves") or {}).get(str(who)) or {}
+    cur_pw, new_pw = current.get("power") or 0, offered.get("power") or 0
+
+    if new_pw or cur_pw:
+        put("tutor:power_gain", max(-1.0, min(1.0, (new_pw - cur_pw) / 60)))
+        put("tutor:is_upgrade", 1.0 if new_pw > cur_pw else 0.0)
+    put("tutor:on_lead", 1.0 if who == 0 else 0.0)
+    atks = [p.get("base_stats", {}).get("atk", 0) for p in team]
+    put("tutor:on_strongest", 1.0 if atks and atks[who] >= max(atks) else 0.0)
+    if offered.get("type"):
+        put("tutor:same_type",
+            1.0 if offered["type"].upper() in {t.upper() for t in (mon.get("types") or [])}
+            else 0.0)
 
 
 # ------------------------------------------------------------------- the bot
@@ -321,6 +578,28 @@ class SarsaBot(Bot):
             return str(action.get("node") or "node")
         label = (action.get("label") or "").strip().split("\n")[0]
         return (label[:14] or f"slot{index}").lower()
+
+    def rearrange(self, state: dict[str, Any]) -> tuple[int, int] | None:
+        """Who should lead the next battle, scored by the same weights.
+
+        Team order is a decision the game does not put in `state["actions"]`,
+        because taking it costs no turn. It is trained as an extra state in the
+        MDP with reward 0, so the very same q-hat ranks "leave it" against each
+        candidate — no second model, no separate rule.
+        """
+        options = reorder_options(state)
+        if not options:
+            return None
+        values = [self.q(features(state, o)) for o in options]
+        best = max(values)
+        i = self.rng.choice([k for k, v in enumerate(values) if v == best])
+        b = options[i]["b"]
+        if b is None:
+            return None
+        team = state.get("team") or []
+        self._last_why = (f"lead: {team[b]['name'] if b < len(team) else b} "
+                          f"({values[i]:.1f}) over staying ({values[0]:.1f})")
+        return (0, b)
 
     def explain(self) -> str:
         return self._last_why

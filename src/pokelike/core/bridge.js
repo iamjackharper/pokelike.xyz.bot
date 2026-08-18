@@ -34,11 +34,40 @@
     'item-screen': '#item-choices',
     'passive-screen': '#passive-choices',
     'swap-screen': '#swap-choices',
+    // The branching-evolution overlay keeps its options in their own container,
+    // same as the screens do.
+    'eevee-choice-overlay': '#eevee-choices',
   };
 
   const NOISE = /run-menu|btn-shop|pokechain|settings|typechart|pokedex|achievements|credits|patch/i;
 
+  // Interactive layers the engine builds straight onto document.body, which are
+  // NOT `.screen` elements and therefore invisible to anything that only walks
+  // `.screen`. The item-equip modal was the first of these we hit; it was fixed
+  // by name, and the lesson did not generalise — `#eevee-choice-overlay` (a real
+  // 2-8 way evolution choice) and `#egg-overlay` are the same trap. Both are
+  // `await`ed by the engine, so they do not merely hide a choice, they stall the
+  // run until something clicks.
+  //
+  // Matched by SHAPE rather than by id, so the next one is caught too: a visible
+  // element sitting directly under <body>, painted over the page. The named
+  // exclusions are the decorative layers that are not interactive.
+  const OVERLAY_SKIP = /weather|maint|typechart|^sl-/;
+
+  const overlays = () => [...document.body.children].filter((e) => {
+    const id = e.id || '';
+    const cls = typeof e.className === 'string' ? e.className : '';
+    if (!/overlay/.test(id + ' ' + cls) || OVERLAY_SKIP.test(id + ' ' + cls)) return false;
+    if (!shown(e)) return false;
+    const cs = getComputedStyle(e);
+    return cs.position === 'fixed' || cs.position === 'absolute';
+  });
+
   window.__pk_layer = () => {
+    // Overlays sit on top of everything, so they are read first: whatever screen
+    // is behind one is not what the player is being asked about.
+    const ov = overlays()[0];
+    if (ov) return { kind: 'overlay', id: ov.id || 'overlay' };
     for (const id of CFG.modals) {
       if (shown(document.getElementById(id))) return { kind: 'modal', id };
     }
@@ -52,12 +81,26 @@
   const choiceElements = () => {
     const L = window.__pk_layer();
     if (L.kind === 'screen' && L.id === 'map-screen') return { L, nodes: true };
-    const sel = L.kind === 'modal' ? '#' + L.id : (CONTAINERS[L.id] || '#' + L.id);
+    const sel = (L.kind === 'modal' || L.kind === 'overlay')
+      ? (CONTAINERS[L.id] || '#' + L.id)
+      : (CONTAINERS[L.id] || '#' + L.id);
     const root = document.querySelector(sel) || document.getElementById(L.id);
     if (!root) return { L, els: [] };
-    const els = [...root.querySelectorAll(
+    let els = [...root.querySelectorAll(
       '.poke-card, .choice-card, .trainer-card, .item-card, .equip-pokemon-row button, button'
     )].filter((e) => shown(e) && !e.disabled && !NOISE.test(e.id + ' ' + e.className));
+
+    // Nothing matched, but the layer is one the player is expected to act on.
+    // The engine does not always build options out of buttons or known classes:
+    // the evolution overlay's options are bare `div`s created with inline
+    // styles, and the elite-prep bag is a row of `span.item-badge`. Selecting by
+    // tag or class would miss both, so fall back to the container's own visible
+    // children — whatever the engine chose to make them out of.
+    if (!els.length && (L.kind === 'overlay' || L.kind === 'modal')) {
+      els = [...root.children].filter(
+        (e) => shown(e) && !NOISE.test(e.id + ' ' + (typeof e.className === 'string' ? e.className : ''))
+      );
+    }
     return { L, els };
   };
 
@@ -114,6 +157,13 @@
     const L = window.__pk_layer();
     if (L.kind === 'screen' && CFG.terminal.includes(L.id)) return 'terminal';
     if (L.kind === 'modal') return 'decision';
+    // An overlay is a decision only if it actually offers a choice. The egg
+    // reveal offers none — it just waits for a tap — so it is transient and
+    // __pk_advance dismisses it. Deciding by what is on it rather than by its
+    // id is what makes an unknown overlay behave sensibly instead of hanging.
+    if (L.kind === 'overlay') {
+      return window.__pk_choices().length > 1 ? 'decision' : 'transient';
+    }
     return CFG.decision.includes(L.id) ? 'decision' : 'transient';
   };
 
@@ -125,6 +175,17 @@
       if (b && getComputedStyle(b).display !== 'none' && !b.disabled) { b.click(); return id; }
     }
     const L = window.__pk_layer();
+    // A click-to-continue overlay has no button to press: the handler is on the
+    // layer itself, so dismissing it means clicking the layer.
+    if (L.kind === 'overlay') {
+      const el = overlays()[0];
+      if (el) {
+        const one = [...el.querySelectorAll('button')].filter((b) => shown(b) && !b.disabled);
+        (one.length === 1 ? one[0] : el)
+          .dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+        return L.id;
+      }
+    }
     const root = document.getElementById(L.id);
     if (!root) return null;
     const btns = [...root.querySelectorAll('button')]
@@ -236,6 +297,26 @@
     return true;
   };
 
+  // The engine's move table and its own move chooser. These are script-global
+  // lexical bindings, NOT properties of window: `typeof MOVE_POOL` is 'object'
+  // while `window.MOVE_POOL` is undefined, and reading the latter gives no error
+  // at all, just silence. That is what `g()` is for.
+  const moveOf = (mon) => {
+    try {
+      const f = g('getMoveForPokemon');
+      const m = f && f(mon);
+      return m ? { name: m.name, power: m.power, type: m.type, special: !!m.isSpecial } : null;
+    } catch (e) { return null; }
+  };
+
+  // Pokemon type -> the held item that boosts it (Fire -> charcoal, ...). The
+  // one genuinely structured item table the engine exposes: it turns eighteen
+  // near-identical "+40% X-type damage" items into one question, "does this
+  // match a type I actually field".
+  window.__pk_type_items = () => {
+    try { return { ...g('TYPE_ITEM_MAP') }; } catch (e) { return null; }
+  };
+
   window.__pk_obs = () => {
     const st = g('state');
     const L = window.__pk_layer();
@@ -251,9 +332,40 @@
         uid: p._uid, species_id: p.speciesId, name: p.name, level: p.level,
         hp: p.currentHp, max_hp: p.maxHp, types: p.types, base_stats: p.baseStats,
         move_tier: p.moveTier, item: p.heldItem ? p.heldItem.name : null,
+        // The id, not just the name. Every effect in the battle code is keyed on
+        // it (heldItem.id === 'leftovers'), and there is no stat or multiplier
+        // field anywhere to read instead — so the id is the only stable handle
+        // on what an item actually does. `desc` is the English sentence.
+        item_id: p.heldItem ? p.heldItem.id : null,
+        item_desc: p.heldItem ? p.heldItem.desc : null,
+        // The engine's own answer to "what move would this Pokemon use", with
+        // power and type. Not derivable from the label, and the move tutor's
+        // offer is exactly a comparison against it.
+        move: moveOf(p),
         mega_stone: p.megaStone ? p.megaStone.name : null, shiny: !!p.isShiny,
       }));
       o.bag = (st.items || []).map((i) => i && (i.name || i.id));
+      // What the move tutor WOULD offer each member. Not guesswork: the engine
+      // builds the tutor's button label with exactly this call
+      // (doMoveTutorNode -> getBestMove(..., moveTier + 1, ...)), so asking it
+      // ourselves gives the offered move with its power and type, which the
+      // label does not carry.
+      o.offered_moves = {};
+      try {
+        const best = g('getBestMove');
+        if (best) {
+          (st.team || []).forEach((p, i) => {
+            const m = best(p.types, p.baseStats, p.speciesId, (p.moveTier || 0) + 1, p.heldItem);
+            if (m) o.offered_moves[i] = {
+              name: m.name, power: m.power, type: m.type, special: !!m.isSpecial,
+            };
+          });
+        }
+      } catch (e) { /* older bundle: features fall back to zero */ }
+      o.type_items = window.__pk_type_items();
+      o.bag_items = (st.items || []).map((i) => i && ({
+        id: i.id, name: i.name, desc: i.desc, usable: !!i.usable,
+      }));
       if (st.map) {
         o.map = {
           nodes: Object.values(st.map.nodes).map((n) => ({

@@ -302,6 +302,28 @@ Ignoring it is the default, so a bot without it plays exactly as before. From
 Python it is `Game.reorder(a, b)`, from the terminal `w 0 2` while playing, and
 over HTTP `POST /reorder`.
 
+#### What the state carries that is not obvious
+
+Three things the engine knows and a bot would otherwise have to guess at. All of
+them are in the appendix below; they are called out here because each one was a
+place where a trained agent was provably choosing at random.
+
+**`team[].move`** — what that Pokemon actually attacks with, `{name, power, type,
+special}`, straight from the engine's own `getMoveForPokemon`. **`offered_moves`**
+is the same question for the move tutor: what it *would* hand each member. The
+tutor's button text carries neither power nor type, so without these an agent
+cannot tell a 40-power move being replaced by a 90-power one from a sidegrade —
+and one duly learned to press SKIP.
+
+**`team[].item_id`** and **`bag_items[].id`** — the id, not just the display name.
+Item effects are not structured anywhere in the engine: an item is
+`{id, name, desc, icon}` and every magnitude lives inline in the battle code,
+keyed on that string. The id is the only stable handle on what an item does.
+
+**`type_items`** — the engine's own type → item table, 18 entries
+(Fire → `charcoal`). It collapses eighteen nearly identical "+40% X-type damage"
+items into one answerable question: does this boost a type I actually field.
+
 ### The bots that ship with it
 
 **`random`** picks uniformly among the legal actions. It is the baseline, and not
@@ -540,10 +562,12 @@ TOP LEVEL
 ------------------------------------------------------------------------------
   actions      THE LEGAL MOVES. choose() returns an index into this list
   bag          item names you are carrying
+  bag_items    the bag with ids: [{id, name, desc, usable}]. `bag` is the same list as bare names. The id is the handle that matters — item effects are not structured anywhere in the engine, so the id is what every effect in the battle code is keyed on
   can_reorder  whether the team can be reordered right now. Slot 0 leads the next battle, so the order is a decision — but a FREE one, which is why it is not in `actions`: see Bot.rearrange / Game.reorder
   done         True when the run is over
   layer        'screen' or 'modal' — modals are choices too, not decoration
   map          the whole board: nodes, edges, where you stand
+  offered_moves what the move tutor WOULD offer each team member, by index: {name, power, type, special}. Computed with the engine's own getBestMove, the same call it builds the tutor button from — so the offer can be compared against `team[i].move` instead of guessed at from a name
   prompt       what the screen is ASKING. Read it: on the swap screen the same list of your team means 'choose one to release', not 'choose a lead'
   run          run-wide facts: map index, badges, whether anyone has fainted
   screen       which screen you are on: map-screen, catch-screen, item-equip-modal, ...
@@ -551,6 +575,7 @@ TOP LEVEL
   stats        the engine's cumulative counters, updated after every battle
   steps        how many decisions this run has taken
   team         your Pokemon, in order. Everything about them
+  type_items   the engine's type -> held-item table, 18 entries (Fire -> charcoal). Collapses eighteen nearly identical '+40% X-type damage' items into one question: does this boost a type I actually field
 
 ------------------------------------------------------------------------------
 state['actions']  —  THE ONLY THING YOU MUST UNDERSTAND
@@ -575,6 +600,9 @@ state['actions']  —  THE ONLY THING YOU MUST UNDERSTAND
     catch        adds a Pokemon to your team
     battle       one wild Pokemon
     trainer      1 Pokemon on map 0, 2 on maps 1-2, 3 from map 3 onwards
+    item_id      the held item's id, e.g. 'leftovers'. The name is for reading, the id is for deciding: every effect in the battle code is keyed on it
+    item_desc    the held item's effect, as the English sentence the engine wrote
+    move         what this Pokemon attacks with: {name, power, type, special}, from the engine's own getMoveForPokemon. Not derivable from anything on screen
     item         pick one of three items
     pokecenter   restores HP
     question     unknown until you enter it (shown as `unknown` in logs)
@@ -603,9 +631,12 @@ state['team'][i]
   base_stats     hp, atk, def, speed, special, spdef
   hp             current HP
   item           held item name, or null
+  item_desc      the held item's effect, as the English sentence the engine wrote
+  item_id        the held item's id, e.g. 'leftovers'. The name is for reading, the id is for deciding: every effect in the battle code is keyed on it
   level          current level
   max_hp         maximum HP. hp/max_hp is what tells you if it is in danger
   mega_stone     held mega stone, or null
+  move           what this Pokemon attacks with: {name, power, type, special}, from the engine's own getMoveForPokemon. Not derivable from anything on screen
   move_tier      which tier of moves it knows
   name           species name, e.g. 'Bulbasaur'
   shiny          whether it is shiny (worth points at the end)
@@ -700,6 +731,14 @@ WHAT IS NOT IN HERE
    },
    "move_tier": 0,
    "item": null,
+   "item_id": null,
+   "item_desc": null,
+   "move": {
+    "name": "Magical Leaf",
+    "power": 40,
+    "type": "Grass",
+    "special": true
+   },
    "mega_stone": null,
    "shiny": true
   },
@@ -723,11 +762,54 @@ WHAT IS NOT IN HERE
    },
    "move_tier": 0,
    "item": null,
+   "item_id": null,
+   "item_desc": null,
+   "move": {
+    "name": "Bubble",
+    "power": 50,
+    "type": "Water",
+    "special": true
+   },
    "mega_stone": null,
    "shiny": false
   }
  ],
  "bag": [],
+ "offered_moves": {
+  "0": {
+   "name": "Energy Ball",
+   "power": 90,
+   "type": "Grass",
+   "special": true
+  },
+  "1": {
+   "name": "Surf",
+   "power": 80,
+   "type": "Water",
+   "special": true
+  }
+ },
+ "type_items": {
+  "Flying": "sharp_beak",
+  "Fire": "charcoal",
+  "Water": "mystic_water",
+  "Electric": "magnet",
+  "Grass": "miracle_seed",
+  "Psychic": "twisted_spoon",
+  "Ground": "soft_sand",
+  "Rock": "hard_stone",
+  "Dragon": "dragon_fang",
+  "Poison": "poison_barb",
+  "Ghost": "spell_tag",
+  "Normal": "silk_scarf",
+  "Steel": "metal_coat",
+  "Dark": "black_glasses",
+  "Fairy": "pixie_plate",
+  "Ice": "never_melt_ice",
+  "Fighting": "black_belt",
+  "Bug": "silver_powder"
+ },
+ "bag_items": [],
  "map": {
   "nodes": [
    {
@@ -851,68 +933,7 @@ WHAT IS NOT IN HERE
     "id": "n5_0",
     "kind": "catch",
     "layer": 5,
-    "col": 0,
-    "accessible": false,
-    "visited": false,
-    "revealed": true
-   },
-   {
-    "id": "n5_1",
-    "kind": "move_tutor",
-    "layer": 5,
-    "col": 1,
-    "accessible": false,
-    "visited": false,
-    "revealed": true
-   },
-   {
-    "id": "n5_2",
-    "kind": "trade",
-    "layer": 5,
-    "col": 2,
-    "accessible": false,
-    "visited": false,
-    "revealed": true
-   },
-   {
-    "id": "n5_3",
-    "kind": "catch",
-    "layer": 5,
-    "col": 3,
-    "accessible": false,
-    "visited": false,
-    "revealed": true
-   },
-   {
-    "id": "n6_0",
-    "kind": "trainer",
-    "layer": 6,
-    "col": 0,
-    "accessible": false,
-    "visited": false,
-    "revealed": true
-   },
-   {
-    "id": "n6_1",
-    "kind": "trainer",
-    "layer": 6,
-    "col": 1,
-    "accessible": false,
-    "visited": false,
-    "revealed": true
-   },
-   {
-    "id": "n6_2",
-    "kind": "catch",
-    "layer": 6,
-    "col": 2,
-    "accessible": false,
-    "visited": false,
-    "revealed": true
-   },
-   {
-    "id": "n7_0",
-    
+    "col": 0
 ```
 
 <!-- END state-reference -->

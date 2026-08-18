@@ -139,6 +139,35 @@ GROUPS: dict[str, list[str]] = {
     # leave-it option and for every swap would add the same number to all of
     # them and cancel in the argmax — which is exactly the mistake the ablation
     # was built to catch.
+    # Items. Until now there were none at all, which is why the item screen
+    # produced three identical q-values: the agent was choosing at random among
+    # a Red Card, a Moon Stone and an Assault Vest.
+    #
+    # Effects are not structured data anywhere — an item is {id, name, desc,
+    # icon} and every magnitude is inline in the battle code, keyed on the
+    # string id. So these read the two things that ARE structured: the id, and
+    # TYPE_ITEM_MAP, the engine's own type -> item table, which collapses
+    # eighteen near-identical "+40% X-type damage" items into one question.
+    "item": [
+        "item:matches_my_type",   # boosts a type someone on my team actually is
+        "item:matches_lead_type",
+        "item:is_evolution",      # moon stone and friends: a permanent upgrade
+        "item:is_healing",
+        "item:is_defensive",
+        "item:is_offensive",
+        "item:already_held",      # we are carrying one of these already
+    ],
+    # The move tutor. It offers a replacement move for a specific team member,
+    # and the engine can be asked what that member currently uses, with power
+    # and type. Before this the agent saw two names and guessed: on seed 40003
+    # it took SKIP over three offers scoring 68.6 / 65.6 / 68.6 / 70.4.
+    "tutor": [
+        "tutor:power_gain",       # offered power minus what they use now
+        "tutor:is_upgrade",
+        "tutor:on_lead",
+        "tutor:on_strongest",
+        "tutor:same_type",        # STAB: matches the recipient's own type
+    ],
     "order": [
         "order:noop",              # the leave-it option itself
         "order:hp_gain",           # candidate HP frac minus the leader's
@@ -255,6 +284,11 @@ def features(state: dict[str, Any], action: dict[str, Any],
     put("is_cancel", 1.0 if "cancel" in low else 0.0)
     put("is_bag", 1.0 if "keep in bag" in low else 0.0)
 
+    if screen == "item-screen":
+        _item_features(put, state, action)
+    elif "→" in label or "->" in label:
+        _tutor_features(put, state, action, label)
+
     if screen in ("catch-screen", "starter-screen"):
         mon = parse_pokemon(label)
         if mon["types"]:
@@ -334,3 +368,96 @@ def reorder_options(state: dict[str, Any]) -> list[dict[str, Any]]:
     return [{"kind": "reorder", "b": None}] + [
         {"kind": "reorder", "b": j} for j in range(1, len(team))
     ]
+
+
+# Effect kinds, keyed on the item id, because the engine keeps no structured
+# effect field: an item is {id, name, desc, icon} and the numbers live inline in
+# the battle code. Only the COARSE kind is encoded here, never a magnitude — a
+# magnitude table would have to be copied out of the bundle and would keep
+# reporting the old value after any upstream rebalance, silently. See TODO.md.
+EVOLUTION_ITEMS = {"moon_stone", "fire_stone", "water_stone", "thunder_stone",
+                   "leaf_stone", "sun_stone", "dusk_stone", "shiny_stone",
+                   "dawn_stone", "ice_stone", "rare_candy"}
+HEALING_ITEMS = {"leftovers", "shell_bell", "sitrus_berry", "oran_berry",
+                 "sacred_ash", "black_sludge"}
+DEFENSIVE_ITEMS = {"assault_vest", "eviolite", "red_card", "rocky_helmet",
+                   "focus_sash", "leftovers", "shell_bell"}
+OFFENSIVE_ITEMS = {"choice_band", "choice_specs", "choice_scarf", "life_orb",
+                   "expert_belt", "muscle_band", "wise_glasses", "quick_claw",
+                   "scope_lens", "razor_claw"}
+
+
+def _item_id(action: dict[str, Any]) -> str:
+    """Best available handle on which item a button is offering.
+
+    The label is prose the engine wrote ("Choice Scarf +50% Speed"), so the name
+    is turned into the id shape the engine itself uses. Not free of risk, but the
+    only alternative is matching the description sentence, which is worse.
+    """
+    label = (action.get("label") or "").strip().lower()
+    words = re.split(r"[^a-z]+", label)
+    return "_".join(w for w in words[:2] if w)
+
+
+def _item_features(put, state: dict[str, Any], action: dict[str, Any]) -> None:
+    item = _item_id(action)
+    team = state.get("team") or []
+    type_items = state.get("type_items") or {}
+    # TYPE_ITEM_MAP is Pokemon type -> item id, so invert it: this item boosts
+    # this type. The single structured item fact the engine gives away.
+    boosts = {v: k.upper() for k, v in type_items.items()}
+    boosted = boosts.get(item)
+
+    if boosted and team:
+        put("item:matches_my_type",
+            1.0 if any(boosted in {t.upper() for t in (p.get("types") or [])}
+                       for p in team) else 0.0)
+        put("item:matches_lead_type",
+            1.0 if boosted in {t.upper() for t in (team[0].get("types") or [])} else 0.0)
+
+    put("item:is_evolution", 1.0 if item in EVOLUTION_ITEMS else 0.0)
+    put("item:is_healing", 1.0 if item in HEALING_ITEMS else 0.0)
+    put("item:is_defensive", 1.0 if item in DEFENSIVE_ITEMS else 0.0)
+    put("item:is_offensive", 1.0 if item in OFFENSIVE_ITEMS else 0.0)
+    held = {p.get("item_id") for p in team} | {
+        (b or {}).get("id") for b in (state.get("bag_items") or [])
+    }
+    put("item:already_held", 1.0 if item in held else 0.0)
+
+
+def _tutor_features(put, state: dict[str, Any], action: dict[str, Any],
+                    label: str) -> None:
+    """Judge the offer instead of guessing at its name.
+
+    The label carries the offered move and who receives it. What it does NOT
+    carry is power or type — and the agent used to have no way to tell a 130-power
+    upgrade from a sidegrade, which is how it learned to take SKIP. `move` on each
+    team member is the engine's own answer for what they use now, so the offer can
+    be compared against it.
+    """
+    team = state.get("team") or []
+    if not team:
+        return
+    # "→ SURF:Wartortle Lv35" / "→ SURF — WARTORTLE LV35 • ..."
+    who = None
+    for i, p in enumerate(team):
+        if p["name"].lower() in label.lower():
+            who = i
+            break
+    if who is None:
+        return
+    mon = team[who]
+    current = (mon.get("move") or {})
+    offered = (state.get("offered_moves") or {}).get(str(who)) or {}
+    cur_pw, new_pw = current.get("power") or 0, offered.get("power") or 0
+
+    if new_pw or cur_pw:
+        put("tutor:power_gain", max(-1.0, min(1.0, (new_pw - cur_pw) / 60)))
+        put("tutor:is_upgrade", 1.0 if new_pw > cur_pw else 0.0)
+    put("tutor:on_lead", 1.0 if who == 0 else 0.0)
+    atks = [p.get("base_stats", {}).get("atk", 0) for p in team]
+    put("tutor:on_strongest", 1.0 if atks and atks[who] >= max(atks) else 0.0)
+    if offered.get("type"):
+        put("tutor:same_type",
+            1.0 if offered["type"].upper() in {t.upper() for t in (mon.get("types") or [])}
+            else 0.0)
