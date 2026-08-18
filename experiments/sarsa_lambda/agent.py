@@ -58,7 +58,11 @@ from typing import Any
 
 from .features import ALL_GROUPS, FeatureSet
 
-ENCODING_VERSION = 1
+# 2 added the team-order decision and the features that describe it, so a v1
+# weight vector indexes a different space. Refused on load rather than
+# zero-filled: silently reading old weights under a new feature set produces a
+# policy nobody trained.
+ENCODING_VERSION = 2
 
 
 class SarsaLambda:
@@ -93,13 +97,21 @@ class SarsaLambda:
     def q(self, x: dict[int, float]) -> float:
         return sum(self.w[i] * v for i, v in x.items())
 
-    def all_features(self, state: dict[str, Any]) -> list[dict[int, float]]:
-        return [self.fs.of(state, a) for a in state["actions"]]
+    def all_features(self, state: dict[str, Any],
+                     actions: list[dict] | None = None) -> list[dict[int, float]]:
+        return [self.fs.of(state, a) for a in (state["actions"] if actions is None else actions)]
 
     # ----------------------------------------------------------------- policy
 
-    def choose(self, state: dict[str, Any], greedy: bool = False) -> int:
-        xs = self.all_features(state)
+    def choose(self, state: dict[str, Any], greedy: bool = False,
+               actions: list[dict] | None = None) -> int:
+        """Index of the chosen action, over `state["actions"]` or an explicit list.
+
+        The explicit list is what makes team order learnable with the same q̂:
+        reordering is a decision the game does not put in `actions`, so its
+        options are built separately and scored by the very same weights.
+        """
+        xs = self.all_features(state, actions)
         if not greedy and self.rng.random() < self.epsilon:
             return self.rng.randrange(len(xs))
         values = [self.q(x) for x in xs]

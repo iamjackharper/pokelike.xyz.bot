@@ -20,12 +20,13 @@ from .groups import (
     FeatureSet,
     feature_names,
     features,
+    reorder_options,
     parse_pokemon,
 )
 from .variants import VARIANTS, BY_NAME, Variant, describe
 
 __all__ = [
     "ALL_GROUPS", "GROUPS", "N_FEATURES", "NODE_KINDS", "SCREENS",
-    "FeatureSet", "feature_names", "features", "parse_pokemon",
+    "FeatureSet", "feature_names", "features", "parse_pokemon", "reorder_options",
     "VARIANTS", "BY_NAME", "Variant", "describe",
 ]

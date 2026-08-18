@@ -22,7 +22,7 @@ from pokelike.assets import AssetServer
 from pokelike.core.game import Game
 
 from .agent import SarsaLambda
-from .features import FeatureSet
+from .features import FeatureSet, reorder_options
 
 ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).parent
@@ -66,27 +66,57 @@ def train(
             obs = game.reset(seed=seed)
             agent.start_episode()
 
-            action = agent.choose(obs)
-            x = fs.of(obs, obs["actions"][action])
+            # Two kinds of decision alternate. Reordering the team does not
+            # consume a game turn, so it is a decision point of its own with
+            # reward 0 — an extra state in the MDP rather than an extra action
+            # in it. SARSA(lambda) then handles the credit by itself: the trace
+            # carries the eventual reward back through the swap that helped.
             total = 0.0
+            phase = "reorder"
+
+            def pending(o, ph):
+                """Options at this decision point, or [] if there is nothing to decide."""
+                return reorder_options(o) if ph == "reorder" else (o.get("actions") or [])
+
+            def settle_phase(o, ph):
+                """Skip a decision point that offers nothing. Only reorder can be empty."""
+                acts = pending(o, ph)
+                if not acts and ph == "reorder":
+                    ph = "action"
+                    acts = pending(o, ph)
+                return ph, acts
+
+            phase, acts = settle_phase(obs, phase)
+            i = agent.choose(obs, actions=acts)
+            x = fs.of(obs, acts[i])
 
             while True:
                 before = obs
-                obs = game.step(action)
-                done = bool(obs.get("done")) or game.steps >= max_steps or not obs.get("actions")
-
-                # At game over the engine wipes `state`, so reward against the
-                # last live snapshot or every run ends with a phantom collapse.
-                after = obs if obs.get("run") else (game.last_alive or before)
-                r = reward_fn(before, after, done, obs.get("screen") == "win-screen")
+                if phase == "reorder":
+                    b = acts[i]["b"]
+                    if b is not None:
+                        obs = game.reorder(0, b)
+                    r, done = 0.0, False        # free: no turn spent, no reward
+                    phase = "action"
+                else:
+                    obs = game.step(i)
+                    done = (bool(obs.get("done")) or game.steps >= max_steps
+                            or not obs.get("actions"))
+                    # At game over the engine wipes `state`, so reward against
+                    # the last live snapshot or every run ends with a phantom
+                    # collapse.
+                    after = obs if obs.get("run") else (game.last_alive or before)
+                    r = reward_fn(before, after, done, obs.get("screen") == "win-screen")
+                    phase = "reorder"
                 total += r
 
                 if done:
                     agent.update(x, r, None)
                     break
 
-                action = agent.choose(obs)
-                x_next = fs.of(obs, obs["actions"][action])
+                phase, acts = settle_phase(obs, phase)
+                i = agent.choose(obs, actions=acts)
+                x_next = fs.of(obs, acts[i])
                 agent.update(x, r, x_next)
                 x = x_next
 

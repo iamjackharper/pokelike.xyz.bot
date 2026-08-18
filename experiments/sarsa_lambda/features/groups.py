@@ -130,6 +130,24 @@ GROUPS: dict[str, list[str]] = {
     # Which team member a slot-shaped screen is pointing at.
     "slot": ["equip_on_strongest", "equip_on_weakest", "swap_out_weakest"],
     "button": ["is_skip", "is_cancel", "is_bag"],
+    # Team order. A separate decision, not one of the game's actions: slot 0
+    # leads the next battle but reordering does not consume the turn. The
+    # options are "leave it" plus "bring slot j to the front".
+    #
+    # Every feature here is written as a DIFFERENCE against the current leader,
+    # or as an interaction with `noop`. A feature that reads the same for the
+    # leave-it option and for every swap would add the same number to all of
+    # them and cancel in the argmax — which is exactly the mistake the ablation
+    # was built to catch.
+    "order": [
+        "order:noop",              # the leave-it option itself
+        "order:hp_gain",           # candidate HP frac minus the leader's
+        "order:swap_when_lead_hurt",
+        "order:cand_level_rel",
+        "order:cand_is_strongest",
+        "order:cand_new_type",     # covers a type the current leader does not
+        "order:cand_fainted",      # promoting a corpse
+    ],
 }
 
 ALL_GROUPS = list(GROUPS)
@@ -189,6 +207,30 @@ def features(state: dict[str, Any], action: dict[str, Any],
     put("badges", min(run.get("badges") or 0, 8) / 8)
     put("any_fainted", 1.0 if run.get("anyone_fainted") else 0.0)
     put("n_actions", len(state.get("actions") or []) / 7)
+
+    if action.get("kind") == "reorder":
+        # `b is None` is the leave-it option. Everything else brings slot b to
+        # the front, so the features describe b relative to whoever leads now.
+        b = action.get("b")
+        if b is None or not team:
+            put("order:noop")
+            return x
+        lead, cand = team[0], team[b] if b < len(team) else team[0]
+        frac = lambda p: (p["hp"] / p["max_hp"]) if p.get("max_hp") else 0.0
+        levels = [p["level"] for p in team] or [1]
+        atks = [p.get("base_stats", {}).get("atk", 0) for p in team]
+
+        put("order:hp_gain", frac(cand) - frac(lead))
+        put("order:swap_when_lead_hurt", 1.0 - frac(lead))
+        put("order:cand_level_rel",
+            min(2.0, cand["level"] / max(1, sum(levels) / len(levels))) / 2)
+        put("order:cand_is_strongest",
+            1.0 if atks and atks[b] >= max(atks) else 0.0)
+        lead_types = {t.upper() for t in (lead.get("types") or [])}
+        put("order:cand_new_type",
+            1.0 if any(t.upper() not in lead_types for t in (cand.get("types") or [])) else 0.0)
+        put("order:cand_fainted", 1.0 if cand["hp"] == 0 else 0.0)
+        return x
 
     if action.get("kind") == "node":
         kind = action["node"] if action["node"] in NODE_KINDS else "other"
@@ -273,3 +315,22 @@ class FeatureSet:
 
     def __repr__(self) -> str:
         return f"FeatureSet({self.n} features, groups={'+'.join(self.groups)})"
+
+
+def reorder_options(state: dict[str, Any]) -> list[dict[str, Any]]:
+    """The team-order decision, as a list of actions scored like any other.
+
+    Always leads with the leave-it option, so "do nothing" competes on the same
+    footing instead of being a special case in the caller. Empty when there is
+    nothing to decide, which the caller reads as "skip this decision point".
+
+    Only slot 0 is a target: what matters is who LEADS, and offering all fifteen
+    pairs of a full team would spend the sample budget on distinctions that do
+    not pay.
+    """
+    team = state.get("team") or []
+    if not state.get("can_reorder") or len(team) < 2:
+        return []
+    return [{"kind": "reorder", "b": None}] + [
+        {"kind": "reorder", "b": j} for j in range(1, len(team))
+    ]
