@@ -1,9 +1,9 @@
 {
- "bot": "sarsa-lambda-linear",
+ "bot": "sarsa-v1",
  "author": "pierpierpy",
  "category": "rl",
- "description": "Semi-gradient SARSA(lambda) with 81 hand-built linear features (S&B 10, 12.7), 300 episodes",
- "submitted_at": "2026-08-17T21:40:45+00:00",
+ "description": "",
+ "submitted_at": "2026-08-18T19:41:31+00:00",
  "pokelike_version": "0.1.0",
  "game": {
   "file": "bundle.eceae50bbd.js",
@@ -577,14 +577,13 @@
   }
  ],
  "notes": {
-  "weights": "sarsa_v1.json",
+  "weights": "weights.json",
   "features_version": 1,
   "n_features": 81,
   "training_updates": 5988,
   "decisions": 978
  },
- "id": "sarsa-lambda-linear-5fa82e",
- "bot_source_file": "sarsa.py",
+ "fingerprint": "f5df329f5ddaa2242f0aaeaeceeebf8b4be08d0ccca2c6916b7252ed2e77f597",
  "artifacts": [
   {
    "name": "weights.json",
