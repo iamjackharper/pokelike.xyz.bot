@@ -120,6 +120,25 @@ Ranked by **badges**, the game's own progression counter. `badges~` is the mean 
 Rebuilt automatically whenever an entry is written, so the pull request that adds
 a submission also carries its row.
 
+### Play the current leader
+
+Nothing to download or train. The weights of every submission are archived here,
+so a fresh clone already has them:
+
+```bash
+uv run pokelike bot --bot sarsa --seed 40003 --runs 1 -g -dd
+```
+
+`-g` draws the map beside each decision, with where it is on it; `-dd` prints the
+q value it gave every option before choosing. Drop both for a plain run, and use
+`--runs 20` to watch it over a stretch.
+
+`--bot sarsa` loads whichever submission currently **leads the table above**,
+read from `index.json` — not a hardcoded file, so it follows the leaderboard
+rather than needing to be updated when someone takes the top spot. A locally
+trained model in `experiments/sarsa_lambda/output/models/` wins over it if you
+have one, and `POKELIKE_SARSA_WEIGHTS=/path/to/weights.json` beats everything.
+
 **`random-baseline` above is stale and known to be.** It was measured before the
 random bot learned to reorder its team, so those numbers describe a bot that no
 longer exists: the current one is uniform over the team order as well, which is
