@@ -77,6 +77,23 @@ other one on its layer forever.*
 - [If a piece of the game is missing](#if-a-piece-of-the-game-is-missing) 
 - [Notes](#notes)
 
+### **The other documents**
+
+This file is the tour. Each of these answers one question, and does not repeat
+the others.
+
+| | for | read it when |
+|---|---|---|
+| **[GUIDE.md](GUIDE.md)** | entering the contest | you want to write a bot and submit one. Seven steps, clone to pull request |
+| **[leaderboard/](leaderboard/)** | the standings | you want to see who is winning, play the leader without training anything, or read the submission rules in full |
+| **[experiments/](experiments/)** | making a bot better | you are past a first bot and want to train, sweep or compare — and to see what was already tried, including what failed |
+| **[example.ipynb](src/pokelike/interfaces/python/example.ipynb)** | driving it yourself | you would rather poke at the game in a notebook than read about it |
+| **[CLAUDE.md](CLAUDE.md)** | changing this repo | you are editing the package itself. Internals, and the pitfalls that were hit for real |
+
+The [appendix](#appendix-what-a-bot-receives) at the end is generated from a live
+observation rather than written, so it cannot describe a game that no longer
+exists.
+
 ---
 
 ## Install

@@ -1,5 +1,18 @@
 # Dyna-Q
 
+**Contents**
+[The algorithm](#the-algorithm) ·
+[Why this algorithm first](#why-this-algorithm-first) ·
+[Two departures from the book](#two-departures-from-the-book)
+
+[Running it](#running-it) ·
+[Where to look when tuning](#where-to-look-when-tuning)
+
+[Results so far](#results-so-far) ·
+[Then it was given more, and it got worse](#then-it-was-given-more-and-it-got-worse)
+
+---
+
 Sutton & Barto, 2nd edition, **Chapter 8** "Planning and Learning with Tabular
 Methods", **section 8.2** "Dyna: Integrated Planning, Acting, and Learning".
 

@@ -7,6 +7,25 @@ it is installed and how it is used — everything you need to guide a user. This
 file only adds what someone *changing* the code needs: internals, pitfalls, and
 the reasoning behind decisions that look odd.
 
+**Orientation**
+[What this is](#what-this-is) ·
+[Commands](#commands) ·
+[Architecture](#architecture)
+
+**How it works**
+[Talking to the game](#talking-to-the-game) ·
+[Scoring](#scoring) ·
+[Reproducibility](#reproducibility) ·
+[Performance](#performance)
+
+**Before you change anything**
+[Real pitfalls](#real-pitfalls) ·
+[Tests](#tests) ·
+[Submissions](#submissions) ·
+[Secrets](#secrets)
+
+---
+
 ## What this is
 
 An environment for letting bots play [pokelike.xyz](https://pokelike.xyz/), a

@@ -6,6 +6,21 @@ SARSA(λ) form.
 
     q̂(s, a, w) = wᵀ x(s, a)
 
+**Contents**
+[Why, after Dyna-Q](#why-after-dyna-q) ·
+[What changes](#what-changes) ·
+[No neural network, on purpose](#no-neural-network-on-purpose)
+
+[What happened](#what-happened) ·
+[Which features actually decide anything](#which-features-actually-decide-anything) ·
+[You can read what it learned](#you-can-read-what-it-learned)
+
+[Layout](#layout) ·
+[Running it](#running-it) ·
+[Where to look if it stalls](#where-to-look-if-it-stalls)
+
+---
+
 ## Why, after Dyna-Q
 
 Tabular Dyna-Q was given a fair run: 400 episodes, encoding v2, 50 planning
