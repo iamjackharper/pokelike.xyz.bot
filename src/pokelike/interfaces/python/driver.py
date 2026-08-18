@@ -98,11 +98,26 @@ class _Worker:
             except BaseException as e:  # noqa: BLE001 — handed back to the caller
                 fut.set_exception(e)
 
-    def run(self, fn, *args, **kwargs):
-        """Runs `fn` on the owning thread and returns its result here."""
+    def run(self, fn, *args, timeout: float = 180.0, **kwargs):
+        """Runs `fn` on the owning thread and returns its result here.
+
+        With a timeout, because without one anything that goes wrong on the
+        other thread is an indefinite wait: in a notebook that reads as a cell
+        that never finishes and a kernel you end up interrupting, which says
+        nothing about what actually happened.
+        """
+        if not self._thread.is_alive():
+            raise RuntimeError("the game thread is gone; open a new game")
         fut: concurrent.futures.Future = concurrent.futures.Future()
         self._calls.put((fn, args, kwargs, fut))
-        return fut.result()
+        try:
+            return fut.result(timeout=timeout)
+        except concurrent.futures.TimeoutError:
+            raise TimeoutError(
+                f"{getattr(fn, '__name__', fn)} did not finish within {timeout:.0f}s "
+                f"on the game thread. The browser is usually the reason: check that "
+                f"`uv run pokelike bot --bot random --runs 1` works from a terminal."
+            ) from None
 
     def stop(self) -> None:
         self._calls.put(None)
