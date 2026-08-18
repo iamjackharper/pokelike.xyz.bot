@@ -148,12 +148,34 @@ move tutor — measured head to head on the 50 standard seeds against the same
 policy without them: +0.06 badges, t = 0.62. Adding what the agent can see is not
 the same as adding what it can *use*.
 
-**A warning worth repeating.** In an early ablation the two variants with the
-fewest features diverged, to 10⁹ and 10³². The step size was normalised per
-active feature, so dropping a group silently multiplied the effective learning
-rate by up to 7.5. Each run differed in two ways and the comparison answered
-neither. If you ablate a feature set, hold the effective step fixed across the
-variants.
+**Then the ablation refuted the obvious explanation.** Five feature sets, 300
+episodes each, 25 held-out seeds, with the step size held fixed across variants:
+
+```
+full             100 feature   1.60 badges   14W-11D-0L
+action-only       84           1.36          13W-10D-2L
+minimal           23           1.24          13W-9D-3L
+no-v2             81           1.20          14W-10D-1L
+no-interactions   64           1.12          11W-13D-1L
+random                         0.64
+```
+
+The whole set wins, and does not lose a seed. The heaviest weights in it are
+state-only — they add the same number to every option and cancel in the argmax,
+so they cannot change a choice — and cutting them anyway costs 0.24 badges. They
+carry the *level* of the return, which is what the bootstrapped target is built
+from. **Being unable to change a decision is not the same as being useless.**
+
+Note also that 23 features beat 81 and 64. Feature count and performance are not
+the same axis.
+
+**A warning worth repeating.** The FIRST attempt at that ablation put the two
+smallest sets last, and was measuring something else: their weights had diverged,
+to 10⁹ and 10³². The step size was normalised per active feature, and the number
+of active features is a property of the feature set — the full set activates 9.0
+per (s, a), the smallest 1.2. So dropping a group silently multiplied the
+learning rate by up to 7.5, each run differed in two ways, and the comparison
+answered neither. **If you ablate a feature set, hold the effective step fixed.**
 
 ## Measuring anything
 
