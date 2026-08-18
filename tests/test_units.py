@@ -169,6 +169,41 @@ def test_a_bot_is_measured_where_it_lives(tmp_path):
         create(str(tmp_path / "empty"))
 
 
+def test_a_trained_net_and_the_bot_that_plays_it_agree():
+    """The shipped forward pass must match the one that produced the weights.
+
+    A net is fitted with numpy and played by a bot written in plain Python, so
+    that a submission needs no numeric dependency. Two implementations of the
+    same arithmetic is exactly the kind of split that drifts without saying so:
+    the bot would keep playing, just a different policy from the one measured.
+
+    Skipped where numpy is absent — it belongs to the experiments group, not to
+    the package.
+    """
+    numpy = pytest.importorskip("numpy")
+
+    from experiments.drrn.agent import QNet, densify
+
+    from pokelike.bot.catalogue import load_class
+
+    net = QNet(24, (8, 8), seed=3)
+    weights = pathlib.Path("experiments/drrn/artifacts/weights.json")
+    if not weights.is_file():
+        pytest.skip("no trained net on disk")
+    net = QNet.load(weights)
+    bot = load_class(pathlib.Path("experiments/drrn/bot.py"))(seed=0)
+
+    rng = numpy.random.default_rng(0)
+    worst = 0.0
+    for _ in range(50):
+        k = int(rng.integers(1, 12))
+        idx = rng.choice(net.n_in, size=k, replace=False)
+        sparse = {int(i): float(v) for i, v in zip(idx, rng.normal(0, 1, k))}
+        a = float(net.forward(densify(sparse, net.n_in)[None, :])[0])
+        worst = max(worst, abs(a - bot.q(sparse)))
+    assert worst < 1e-9, f"numpy and the bot disagree by {worst:.2e}"
+
+
 def test_the_two_sarsas_are_two_different_policies():
     """v1 and v2 exist side by side to be compared, so they must differ.
 

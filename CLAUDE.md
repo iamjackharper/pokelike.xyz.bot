@@ -98,7 +98,7 @@ experiments/             research. OURS are tracked as worked examples; anything
 ├── env/                   the game as an RL problem: environment, rewards,
 │                          encoding, tee() for per-experiment logs
 ├── example/               the smallest complete experiment
-├── dyna_q/                tabular RL. LOST to random, and kept for that
+├── dyna-q/                tabular RL. LOST to random, and kept for that
 ├── sarsa/                 linear function approximation. The one that worked
 └── llm/                   prompt strategies compared on identical seeds
 
@@ -109,11 +109,12 @@ Do not add per-experiment evaluation scripts with their own seed sets: a seed
 set picked during development mis-ranks models (the same weights score 1.60 on
 one such set and 1.10 on the official 50).
 
-**An experiment is named after the bot it produces** — `dyna_q/` → `dyna-q/`,
-`sarsa/` → `sarsa-v1/` and `sarsa-v2/`, `llm/` → `llm-*/`. The separator differs
-because an experiment is a package run with `-m`, so `experiments.dyna_q` has to
-be an identifier, while a bot is a directory loaded by path. `--bot dyna_q`
-resolves anyway: `slugify` normalises before looking anything up.
+**An experiment is named after the bot it produces** — `dyna-q/` → `dyna-q/`,
+`sarsa/` → `sarsa-v1/` and `sarsa-v2/`, `llm/` → `llm-*/`. Hyphens work in a
+folder name despite not being valid identifiers: `-m` takes a string and goes
+through the path finder, so `python -m experiments.dyna-q.train` runs and the
+relative imports inside it resolve. Only `import experiments.dyna-q` in source
+is impossible, and nothing needs to write that.
 
 The one thing NOT renamed with the folder is `trainer:` inside an already
 recorded `artifacts/config.json`. It says `experiments/sarsa_lambda/train.py`
@@ -185,7 +186,7 @@ at most one line through the optional `explain()` hook.
 `bot/` is deliberately not under `interfaces/`. The interfaces are entry points —
 something outside drives the game through them. A bot is an extension point: you
 write one, and the interfaces run it. Filing the concrete bots (random, llm,
-dyna_q) under `interfaces/` would blur that.
+dyna-q) under `interfaces/` would blur that.
 
 ## Talking to the game
 

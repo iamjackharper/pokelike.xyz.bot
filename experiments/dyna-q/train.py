@@ -1,6 +1,6 @@
 """Training loop for Dyna-Q.
 
-    uv run python -m experiments.dyna_q.train --episodes 200
+    uv run python -m experiments.dyna-q.train --episodes 200
 
 Each episode is one run of the game, from the starter to game over. The loop is
 the algorithm box of Sutton & Barto section 8.2, with the planning phase run

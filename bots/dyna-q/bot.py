@@ -1,11 +1,11 @@
 """A trained Dyna-Q policy, playing greedily.
 
-    pokelike bot --bot dyna_q --runs 5
-    pokelike bench --bot dyna_q --category rl --name my-dyna-q
+    pokelike bot --bot dyna-q --runs 5
+    pokelike bench --bot dyna-q --category rl
 
 This file is the EXAMPLE OF WHAT A SUBMISSION LOOKS LIKE, and it is deliberately
 self-contained: the state and action encoding is copied in here rather than
-imported from `experiments/dyna_q/`.
+imported from `experiments/dyna-q/`.
 
 That is not duplication by accident. A policy is only meaningful under the exact
 encoding it was trained with. If this file imported the training code, improving
@@ -124,7 +124,7 @@ ENCODINGS = {1: state_key_v1, 2: state_key_v2}
 
 
 class DynaQBot(Bot):
-    name = "dyna_q"
+    name = "dyna-q"
 
     def __init__(self, seed: int = 0, table: str | Path | None = None) -> None:
         path = Path(table) if table else find_table()
@@ -195,7 +195,7 @@ class DynaQBot(Bot):
                     "hyperparameters": table.get("hyperparameters"),
                     "updates": table.get("updates"),
                     "states": len(self.Q),
-                    "trainer": "experiments/dyna_q/train.py",
+                    "trainer": "experiments/dyna-q/train.py",
                 },
             ),
         ]
