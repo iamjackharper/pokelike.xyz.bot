@@ -85,6 +85,120 @@ def test_the_sarsa_bot_freezes_exactly_the_features_it_was_trained_on():
     assert sys.modules[frozen].feature_names() == trained_on()
 
 
+# Every branch of `features()`, as states rather than as names: a map node with
+# its crosses and its lookahead, both Pokemon cards, the item screen, the two
+# screens that list the team and mean opposite things, and a tutor offer. Built
+# by hand because this has to stay a fast test — no browser, no game copy.
+def _pin_states():
+    def mon(uid, name, level, hp, max_hp, types, atk, item=None, move=None):
+        return {
+            "uid": uid, "species_id": uid, "name": name, "level": level,
+            "hp": hp, "max_hp": max_hp, "types": types,
+            "base_stats": {"hp": 45, "atk": atk, "def": 49, "speed": 45,
+                           "special": 65, "spdef": 65},
+            "move_tier": 0, "item": item, "item_id": item, "item_desc": None,
+            "move": move or {"name": "Tackle", "power": 40, "type": types[0],
+                             "special": False},
+            "mega_stone": None, "shiny": False,
+        }
+
+    def board(current):
+        return {
+            "nodes": [
+                {"id": "n0_0", "kind": "start", "layer": 0, "col": 0},
+                {"id": "n1_0", "kind": "catch", "layer": 1, "col": 0},
+                {"id": "n1_1", "kind": "trainer", "layer": 1, "col": 1},
+                {"id": "n2_0", "kind": "pokecenter", "layer": 2, "col": 0},
+                {"id": "n2_1", "kind": "boss", "layer": 2, "col": 1},
+            ],
+            "edges": [["n0_0", "n1_0"], ["n0_0", "n1_1"],
+                      ["n1_0", "n2_0"], ["n1_1", "n2_1"]],
+            "current": current,
+        }
+
+    base = {
+        "screen": "map-screen",
+        "run": {"map": 2, "badges": 1, "anyone_fainted": True},
+        "team": [mon(1, "Bulbasaur", 7, 10, 23, ["Grass", "Poison"], 49, "leftovers"),
+                 mon(2, "Charmander", 9, 22, 22, ["Fire"], 62, None,
+                     {"name": "Ember", "power": 40, "type": "Fire", "special": True}),
+                 mon(3, "Psyduck", 5, 0, 18, ["Water"], 52)],
+        "bag_items": [{"id": "potion", "name": "Potion"}],
+        "offered_moves": {"0": {"name": "Energy Ball", "power": 90,
+                                "type": "Grass", "special": True}},
+        "type_items": {"Fire": "charcoal", "Water": "mystic_water",
+                       "Grass": "miracle_seed", "Normal": "silk_scarf"},
+        "map": board("n0_0"), "can_reorder": True, "steps": 5,
+        "actions": [{"kind": "node", "id": "n1_0", "node": "catch", "layer": 1, "col": 0},
+                    {"kind": "node", "id": "n1_1", "node": "trainer", "layer": 1, "col": 1}],
+    }
+
+    def buttons(screen, labels):
+        return [{"kind": "element", "idx": i, "label": text, "layer": screen}
+                for i, text in enumerate(labels)]
+
+    screens = {
+        "catch-screen": ["Psyduck Lv. 4 WATER SP.A 10 SPE 9 HP 18 DEF 8 50 PWR",
+                         "Onix Lv. 6 ROCK GROUND ATK 45 HP 35 DEF 60 40 PWR", "SKIP"],
+        "starter-screen": ["Bulbasaur Lv. 5 GRASS POISON HP 19 ATK 12 DEF 12 40 PWR",
+                           "Charmander Lv. 5 FIRE HP 18 ATK 13 DEF 10 40 PWR ★",
+                           "Squirtle Lv. 5 WATER HP 20 ATK 11 DEF 14 40 PWR"],
+        "item-screen": ["Charcoal +40% Fire damage", "Moon Stone evolves",
+                        "Leftovers heals", "Choice Band +50% ATK", "Keep in bag"],
+        "item-equip-modal": ["Bulbasaur", "Charmander", "Psyduck", "Cancel"],
+        "swap-screen": ["Bulbasaur", "Charmander", "Psyduck"],
+        "move-tutor-screen": ["→ ENERGY BALL : Bulbasaur Lv7", "SKIP"],
+        "trainer-screen": ["FIGHT"],
+    }
+
+    out = [base, {**base, "map": board("n1_1")}]
+    out += [{**base, "screen": s, "actions": buttons(s, labels)}
+            for s, labels in screens.items()]
+    # A team of one and nothing decided yet: every `or []` fallback at once.
+    out.append({"screen": "map-screen", "run": {}, "team": [],
+                "actions": base["actions"], "map": board("n0_0"),
+                "can_reorder": False})
+    return out
+
+
+@pytest.mark.parametrize("frozen_bot", ["bots/sarsa-v2/bot.py",
+                                        "experiments/drrn/bot.py"])
+def test_a_frozen_feature_copy_computes_the_same_vector(frozen_bot):
+    """The copies must agree on the NUMBERS, not only on the names.
+
+    The test above compares `feature_names()`, which catches an inserted or
+    reordered feature and misses a changed one: rescale `mon_power` by 100 on one
+    side and both lists still match while every weight that reads it means
+    something else.
+
+    It matters most for `experiments/drrn/`, where the two halves of one
+    experiment sit on opposite sides of the copy — `collect.py` and `train.py`
+    import the training features, `bot.py` carries the frozen ones — so a drift
+    fits one feature map and benchmarks another. Both sides keep 100 features and
+    nothing raises: the only symptom is a benchmark number that means nothing.
+    """
+    import sys
+
+    from experiments.sarsa.features import groups as trained_on
+
+    from pokelike.bot.catalogue import load_class
+
+    frozen = sys.modules[load_class(pathlib.Path(frozen_bot)).__module__]
+    assert frozen.feature_names() == trained_on.feature_names()
+
+    compared = 0
+    for state in _pin_states():
+        options = trained_on.reorder_options(state)
+        assert options == frozen.reorder_options(state), "the reorder options differ"
+        for action in [*state["actions"], *options]:
+            assert frozen.features(state, action) == trained_on.features(state, action), (
+                f"{frozen_bot} computes a different vector on "
+                f"{state.get('screen')} for {action}"
+            )
+            compared += 1
+    assert compared > 40, "the sweep stopped covering the branches it was built for"
+
+
 def test_new_bot_writes_something_that_loads(tmp_path):
     """Both templates, because they break differently.
 
@@ -167,6 +281,41 @@ def test_a_bot_is_measured_where_it_lives(tmp_path):
     assert create(str(tmp_path / "bot.py")).name == "mine"
     with pytest.raises(KeyError):
         create(str(tmp_path / "empty"))
+
+
+def test_a_trained_net_and_the_bot_that_plays_it_agree():
+    """The shipped forward pass must match the one that produced the weights.
+
+    A net is fitted with numpy and played by a bot written in plain Python, so
+    that a submission needs no numeric dependency. Two implementations of the
+    same arithmetic is exactly the kind of split that drifts without saying so:
+    the bot would keep playing, just a different policy from the one measured.
+
+    Skipped where numpy is absent — it belongs to the experiments group, not to
+    the package.
+    """
+    numpy = pytest.importorskip("numpy")
+
+    from experiments.drrn.agent import QNet, densify
+
+    from pokelike.bot.catalogue import load_class
+
+    net = QNet(24, (8, 8), seed=3)
+    weights = pathlib.Path("experiments/drrn/artifacts/weights.json")
+    if not weights.is_file():
+        pytest.skip("no trained net on disk")
+    net = QNet.load(weights)
+    bot = load_class(pathlib.Path("experiments/drrn/bot.py"))(seed=0)
+
+    rng = numpy.random.default_rng(0)
+    worst = 0.0
+    for _ in range(50):
+        k = int(rng.integers(1, 12))
+        idx = rng.choice(net.n_in, size=k, replace=False)
+        sparse = {int(i): float(v) for i, v in zip(idx, rng.normal(0, 1, k))}
+        a = float(net.forward(densify(sparse, net.n_in)[None, :])[0])
+        worst = max(worst, abs(a - bot.q(sparse)))
+    assert worst < 1e-9, f"numpy and the bot disagree by {worst:.2e}"
 
 
 def test_the_two_sarsas_are_two_different_policies():

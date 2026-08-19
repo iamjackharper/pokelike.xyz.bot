@@ -29,10 +29,15 @@ experiments/*
 !experiments/__init__.py
 !experiments/env/
 !experiments/example/
-!experiments/dyna_q/
+!experiments/dyna-q/
 !experiments/llm/
-!experiments/sarsa_lambda/
+!experiments/sarsa/
+!experiments/drrn/
 
-# ...and never what a run produces, for any of them.
+# ...and never what a run produces, for any of them. `artifacts/` is in the
+# list because an experiment's bot.py is a CANDIDATE: its weights are training
+# output, and they only become something to commit when the bot earns a folder
+# under bots/ and is measured there.
 experiments/*/output/
 experiments/*/logs/
+experiments/*/artifacts/

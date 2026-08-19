@@ -11,6 +11,11 @@ dependencies = ["playwright>=1.55", "tqdm>=4.66"]
 
 [dependency-groups]
 dev = ["pytest>=8.0"]
+# The notebook's kernel. Declared rather than installed by hand, because
+# `uv sync` prunes whatever the lockfile does not mention — installing it
+# outside uv means the next sync silently removes it and the notebook stops
+# starting.
+notebook = ["ipykernel>=6.29"]
 
 [project.scripts]
 pokelike = "pokelike.interfaces.cli.main:main"

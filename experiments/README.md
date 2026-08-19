@@ -12,18 +12,20 @@ done rather than a description of it.
 experiments/          research                 bots/          what it produced
 ├── env/       the problem, shared by all      —
 ├── example/   the smallest complete one       —              start here
-├── dyna_q/    tabular RL. It lost             dyna-q/        kept because it lost
+├── dyna-q/    tabular RL. It lost             dyna-q/        kept because it lost
 ├── sarsa/     linear FA. The one that worked  sarsa-v1/ -v2/ 81 and 100 features
 ├── llm/       comparing prompts               llm-*/         one harness, six bots
 └── <yours>/   ignored, and yours              <yours>/
 ```
 
 **An experiment is named after the bot it produces**, so you never have to work
-out which folder trained what. The separator differs and that is Python, not
-taste: an experiment is a package you run with `-m`, so `experiments.dyna_q`
-must be a valid identifier, while a bot is a directory loaded by path and can be
-`dyna-q`. `--bot dyna_q` works anyway — names are normalised before they are
-looked up, so you can type either.
+out which folder trained what — `dyna-q/` trains `bots/dyna-q/`, `sarsa/` trains
+both `sarsa-v*`, `llm/` compares the `llm-*` bots.
+
+Hyphens are fine in a folder name even though they are not valid in an
+identifier: `-m` takes a string and resolves it through the path finder, so
+`python -m experiments.dyna-q.train` runs and the relative imports inside it
+work. What you cannot write is `import experiments.dyna-q` in source.
 
 Every one of them has the same shape, so moving between them costs nothing:
 
