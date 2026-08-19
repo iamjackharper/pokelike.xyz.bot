@@ -128,7 +128,32 @@ class Game:
             except Exception as e:  # noqa: BLE001
                 self.score_hook = {"ok": False, "reason": str(e)[:200]}
 
-        return self._settle()
+        obs = self._settle()
+
+        # A new run starts at zero, always: measured, a fresh reset lands on the
+        # trainer screen with no badges and no team. So if there are badges here,
+        # the click into Story mode did not take and we are still standing in the
+        # PREVIOUS run.
+        #
+        # That used to pass silently, and it is the worst kind of silence: the
+        # caller plays on, the old run continues, and every badge it earns is
+        # filed under this seed. One benchmark row came out at 66 steps, 114 KOs
+        # and 8 badges -- about three runs fused into one -- and it could not be
+        # reproduced afterwards, which is exactly what an unrepeatable hiccup
+        # looks like once it has been written down as a result.
+        #
+        # Loud is the only safe behaviour: a run that began mid-game is not this
+        # seed's run, and a score built from it describes nothing.
+        run = obs.get("run") or {}
+        if run.get("badges") or len(obs.get("team") or []) > 1:
+            raise RuntimeError(
+                f"reset(seed={seed}) did not start a new run: it reports "
+                f"{run.get('badges')} badges and a team of "
+                f"{len(obs.get('team') or [])} on {obs.get('screen')}. The run in "
+                "progress is the previous one, so nothing measured from here would "
+                "belong to this seed."
+            )
+        return obs
 
     # ------------------------------------------------------------ observation
 

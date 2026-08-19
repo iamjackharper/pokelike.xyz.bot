@@ -123,11 +123,30 @@
   // Where a button sits in a row carrying the context, we label it with that.
   const ROW_SELECTOR = '.equip-pokemon-row, .swap-choice, .poke-card';
 
+  // Sprite fallbacks are not game data, and they must not reach a bot.
+  //
+  // When an image fails to load the engine writes a pictograph in its place --
+  // "🤍 Silk Scarf" for an item whose icon is missing. Whether it is there
+  // depends on a 404 coming back, so the SAME decision reads two different ways
+  // depending on timing, and differently again on a machine whose copy of site/
+  // has different holes. `mirror --phase verify` exists because copies do differ.
+  //
+  // That made runs unrepeatable. A bot reading labels -- which the linear feature
+  // sets do -- gets a different vector, picks a different option, and the run
+  // walks off from there. It cost a benchmark row of 8 badges that could never be
+  // reproduced, and it is why README's claim that a missing sprite cannot change
+  // a run was not true.
+  //
+  // Astral-plane pictographs only (U+1F000 and up), so a shiny's ★ survives: that
+  // one IS the engine telling us something about the run.
+  const PICTOGRAPH = /[\u{1F000}-\u{1FAFF}\u{FE0F}]/gu;
+  const clean = (s) => s.replace(PICTOGRAPH, '').replace(/\s+/g, ' ').trim();
+
   const labelFor = (e) => {
-    const own = (e.innerText || '').replace(/\s+/g, ' ').trim();
+    const own = clean(e.innerText || '');
     const row = e.closest && e.closest(ROW_SELECTOR);
     if (row && row !== e) {
-      const context = (row.innerText || '').replace(/\s+/g, ' ').trim();
+      const context = clean(row.innerText || '');
       // "Squirtle Lv5 — empty — EQUIP" says which button this is; "EQUIP" does not.
       if (context && context !== own) return `${own} — ${context}`.slice(0, 160);
     }

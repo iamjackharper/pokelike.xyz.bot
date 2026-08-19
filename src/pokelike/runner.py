@@ -87,8 +87,15 @@ def play_run(
     obs = game.reset(seed=seed)
     bot.on_start(seed)
     trace: list[dict[str, Any]] = []
+    # `_settle` gives up after 90 seconds and flags the state rather than raising,
+    # because one wedged turn should not throw away the runs already played. But
+    # nothing read the flag, so a run that spent a minute and a half stuck looked
+    # exactly like a run that ended. Carried out with the result instead.
+    stalled = False
 
     while not obs.get("done") and obs.get("actions") and game.steps < max_steps:
+        if obs.get("stalled"):
+            stalled = True
         if on_step:
             on_step(obs, game.steps)
 
@@ -151,6 +158,7 @@ def play_run(
         "kos": breakdown.get("enemiesKO", 0),
         "faints": breakdown.get("faints", 0),
         "ending": obs.get("screen"),
+        "stalled": stalled or bool(obs.get("stalled")),
         "team": alive.get("team") or [],
         "final_state": obs,
         "score_detail": score,

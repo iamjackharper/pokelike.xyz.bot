@@ -92,7 +92,8 @@ def run_benchmark(
         # The heavy fields (final state, full team) are for callers who want
         # them; a result file keeps one compact row per run.
         row = {k: full[k] for k in
-               ("seed", "steps", "score", "badges", "maps", "kos", "faints", "ending")}
+               ("seed", "steps", "score", "badges", "maps", "kos", "faints", "ending",
+                "stalled")}
         runs.append(row)
         done = [r["score"] for r in runs if r["score"] is not None]
         bar.set_postfix(score=row["score"],
