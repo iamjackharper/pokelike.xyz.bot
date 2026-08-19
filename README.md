@@ -2,7 +2,7 @@
 
 ![A trained policy playing a run](img/reinforcement_learning.gif)
 
-*A trained reinforcement-learning policy playing*
+*A trained reinforcement-learning policy playing (apparently the bot learned to take squirtle and just use it over and over again LOL)*
 
 Play [pokelike.xyz](https://pokelike.xyz/) — a Pokémon roguelike — from the
 command line, from Python, or over an HTTP API. No windows, no internet.
