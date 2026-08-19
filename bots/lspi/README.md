@@ -16,9 +16,9 @@ uv run pokelike bench --bot lspi --dry-run
 | | |
 |---|---|
 | how it works | `q̂(s,a) = wᵀx(s,a)`, w solved exactly each policy-iteration round rather than nudged by gradient steps |
-| what it scored | **1.44 badges** mean, best single run 8, over the official 50 seeds |
-| what was tried and dropped | three ways of reusing real transitions harder via extra gradient steps (true online traces + per-episode λ-return replay, cross-episode experience replay buffer) — all measured worse than plain accumulating-trace SARSA(λ), see `experiments/rl_sample_efficient/README.md` |
+| what it scored | see the standings in [bots/README.md](../README.md) — generated from `result.json`, so it cannot go stale |
+| what was tried and dropped | three ways of reusing real transitions harder via extra gradient steps (true online traces + per-episode λ-return replay, cross-episode experience replay buffer) — all measured worse than plain accumulating-trace SARSA(λ) |
 
-Trained by `experiments/lspi/train.py` (not shipped — research folder, see
-that experiment's README for the full derivation, the numerical-stability fix
-that mattered, and the measurements against the SARSA(λ) baseline).
+Trained by the author's own research folder, which is not part of the submission:
+`experiments/` is a scratch area and what you try there stays yours. The bot, its
+weights and its result are the whole of what a submission has to show.

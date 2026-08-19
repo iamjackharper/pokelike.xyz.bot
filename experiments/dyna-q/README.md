@@ -177,8 +177,7 @@ So the diagnosis in the previous section — attack the algorithm — was the wr
 call. The limit was the representation. [`sarsa/`](../sarsa/) is
 that hypothesis tested: same reward, same environment, same held-out protocol,
 81 linear features instead of a table (100 since). It won 15 of 25 with no
-losses, and now
-leads the leaderboard.
+losses, and the trained rows it produced are near the top of the standings.
 
 The tabular version is kept because a Q-table is the clearest thing to read when
 you want to know what an agent believes, and because a negative result you can

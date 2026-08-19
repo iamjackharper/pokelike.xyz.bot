@@ -129,6 +129,8 @@ bots/                    THE BOTS. One folder each: bot.py, artifacts/,
 ├── dyna-q/                tabular RL. LOST to random, and kept for that
 ├── sarsa-v1/ sarsa-v2/    81 and 100 features. Both kept: the difference
 │                          between them is what either result is evidence about
+├── lspi/                  a contributed entry. sarsa-v2's features, weights
+│                          solved as a fixed point instead of stepped toward
 ├── llm-baseline/ llm-survivor/ llm-explorer/ llm-analyst/
 │                          one shared harness, four prompts. ~30 lines each
 ├── llm-raw/               llm-survivor's prompt, reading the raw state dict.
@@ -233,6 +235,25 @@ release.
 Constraints that do not announce themselves. Worth rereading before changing
 anything:
 
+- **A label must not carry a sprite fallback.** When an image fails to load the
+  engine writes a pictograph in its place — "🤍 Silk Scarf" for an item whose icon
+  is missing from `site/`, and holes are allowed there. Whether it is present
+  depends on a 404 coming back, so the same decision read two ways depending on
+  timing, and differently again on a machine with different holes. That is not
+  cosmetic: the linear feature sets PARSE labels, so a different label is a
+  different vector, a different argmax, and from there a different run. It cost
+  five of fifty benchmark rows their reproducibility. `labelFor` strips
+  astral-plane pictographs; a shiny's ★ stays, because that one is engine data.
+  Anything new that reads label text inherits this, so check it stays stripped.
+- **A failed reset used to be silent.** Two blind 300 ms sleeps clicked into Story
+  mode, and if a click did not land the caller played on — in the PREVIOUS run,
+  whose badges were then filed under the new seed. `reset` now waits for a
+  positive signal and then checks the invariant: a fresh run is the trainer screen
+  with no badges and no team. It raises rather than returning something plausible.
+- **`load_images=False` is not benchmark-safe.** Blocking images changes element
+  sizes, and whether an option counts as available is decided by
+  `getBoundingClientRect`, so the option list itself moves: measured, 3 of 15 runs
+  differ. It is a speed knob for looking at things, never for measuring them.
 - **The site does not answer 404 for missing files**: it returns `index.html` with
   status 200. Without checking magic bytes the mirror fills with HTML dressed as
   `.png`. See `SIGNATURES` in `assets/mirror.py`.
@@ -383,8 +404,18 @@ Regenerating it to make a red test go green defeats the point.
 
 ## Performance
 
-~6 decisions per second, ~4 s per run with a fast policy. Runs are independent:
-to go faster, launch more processes, not more threads.
+~3 s per run with a fast policy, a few milliseconds of that ours. Runs are
+independent: to go faster, launch more processes, not more threads — and measured
+on 22 cores, eight collectors is the knee, twelve buy 7%.
+
+**Wait for the game to react; never sleep a guessed interval.** Three fixed sleeps
+were once 43% of a run: 70 ms after every action for something that happens in
+0.4 ms, and two 300 ms waits for a menu that appears in 17 ms. They could not
+simply be shortened, because what the 70 ms really bought was that `_settle` did
+not read the screen before the engine had left it and hand back a stale state.
+`__pk_apply` returns a signature of the decision it acted on and
+`__pk_await_change` waits for the engine to leave it — safe to poll because it
+only reads, unlike `__pk_pump`.
 
 **The virtual clock is what makes that speed, and capping timers is not
 enough.** The engine paces a battle by asking what time it is and working out

@@ -129,16 +129,18 @@ been, with something better in the middle.
 ## Findings
 
 Each folder's README has the detail. The results that shape how things are done
-here:
+here. The numbers below are what a run measured at the time, kept as evidence;
+for where anything currently stands, read the generated standings in
+[bots/README.md](../bots/README.md) rather than this list.
 
-**A tabular state key cannot see what decides this game.** `dyna-q` scores 0.62
+**A tabular state key cannot see what decides this game.** `dyna-q` scored 0.62
 badges on the benchmark against random's 0.56. On the starter screen its
 learned values are 6.3 / 6.2 / 6.3 across three starters its six-number
 encoding cannot tell apart: the information never reaches the table, so more
 episodes do not change it.
 
 **The representation is what beats random, not the algorithm.** `sarsa-v1` and
-`sarsa-v2` score 1.30 and 1.36 with the same algorithm family, reward and
+`sarsa-v2` scored 1.30 and 1.36 with the same algorithm family, reward and
 budget as `dyna-q`. The difference between them and it is the feature vector.
 
 **Feature-set differences sit below the noise floor.** Five variants, 23 to 100
@@ -149,6 +151,22 @@ beats another (|t| below 1.7). The 0.06 badges between `sarsa-v1` and
 **Seed sets picked during development rank models wrongly.** One set of weights
 scores 1.60 on the 25 seeds it was selected on and 1.10 on the official 50.
 This is why there is exactly one measurement (below).
+
+**A result you cannot replay is not a measurement.** An option's label carried a
+pictograph the game substitutes when a sprite is missing from `site/`, and the
+linear feature sets parse labels — so whether a 404 had come back decided a
+feature vector, an argmax, and from there the whole run. Five of one entry's fifty
+rows stopped reproducing, one of them by five badges. Before believing any number,
+run the benchmark twice and check it agrees with itself; if the two disagree the
+environment is the problem, not the policy.
+
+**Fifty seeds cannot resolve what these experiments keep producing.** Badges vary
+run to run with a standard deviation near 0.7, so fifty runs carry a standard
+error near 0.1 and two bots need roughly 0.3 badges between them to be told apart.
+Most differences measured here are smaller than that. Four hundred seeds costs
+about ten minutes and resolves ~0.1, which is the difference between ranking
+policies and ranking luck — use the official 50 for submission and a wider block
+for deciding what actually helped.
 
 **Training runs being compared must share `--alpha-norm`.** The default step
 normalisation divides by the number of active features, which is a property of

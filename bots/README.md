@@ -36,9 +36,10 @@ Ranked by **badges**, the game's own progress counter. `badges~` is the mean ove
 Rebuilt whenever a benchmark is recorded, so the pull request that adds a bot
 also carries its row.
 
-### Play the one at the top
+### Play any of them
 
-Nothing to download or train. Every bot ships with its weights:
+Nothing to download or train. Every bot ships with its weights, so pick a name
+out of the table above:
 
 ```bash
 uv run pokelike bot --bot sarsa-v2 --seed 40003 --runs 1 -g -dd
@@ -141,6 +142,15 @@ every artifact. `pokelike leaderboard` recomputes it on read and marks a row
 never quietly claim a number for code that no longer exists. A **?** means the
 result carries no fingerprint at all and cannot be checked either way, which is
 reported rather than folded into "fine". Re-running the benchmark clears both.
+
+**And the run has to reproduce.** The fingerprint proves the code has not changed;
+it cannot prove the score was earned. Same seed and same bot must mean the same
+run, and for a while that was not true — an option's label carried a pictograph
+the game substitutes for a missing sprite, the feature sets parse labels, and
+whether the substitution had arrived depended on timing. Five of one entry's fifty
+rows stopped reproducing, including the one that put it top. If you cannot replay
+your own result, it is not a measurement. `uv run pokelike bench` twice on the
+same bot is the check, and it should agree with itself exactly.
 
 **And for LLM bots, three more things.** Which model actually answered, which
 version of the shared harness asked it, and the share of turns the model did not

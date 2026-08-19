@@ -32,11 +32,11 @@ command line, from Python, or over an HTTP API. No windows, no internet.
 > request, nothing skipped. The short version is that a bot is one method,
 > `choose(state) -> int`, and the rest is measuring it honestly.
 >
-> Current standings, and the command to play the leader without training
-> anything, are in [bots/README.md](bots/).
->
-> The bar to beat right now is **1.36 badges**. Random gets 0.56, so it is lower
-> than it sounds.
+> Current standings, the bar to beat, and the command to play the leader without
+> training anything are all in [bots/README.md](bots/). That table is generated
+> from what is measured on disk, so it cannot fall out of date the way a number
+> written into prose does. Random is on it too, and the gap between flailing and
+> the best trained policy is smaller than you would expect.
 
 ## Examples
 
@@ -479,10 +479,9 @@ items into one answerable question: does this boost a type I actually field.
 ### The bots that ship with it
 
 **`random`** picks uniformly among the legal actions. It is the baseline, and not
-a trivial one: over the 50 standard seeds it averages 0.56 badges with a best of
-2, dying in 16 moves for a mean score of −9.5. A map is short enough that flailing
-sometimes reaches a gym. Everyone has to beat it, and the first trained agent
-here did not.
+a trivial one: a map is short enough that flailing sometimes reaches a gym, so it
+earns badges and it is on the table with everyone else. Everyone has to beat it,
+and the first trained agent here did not.
 
 **The six `llm-*` bots** are one shared harness: four prompts, one of those
 prompts reading a different view of the state, and one reference that turns every
@@ -568,16 +567,16 @@ by tabular RL. It doubles as the worked example of what
 a leaderboard submission looks like, which is why it carries its own copy of the
 state encoding instead of importing the training code.
 
-It barely clears random — 0.62 badges to 0.56 on the benchmark — and stays on
-the leaderboard at that number. The limit is visible in its own decision log:
+It barely clears random on the benchmark, and stays on the leaderboard at
+whatever it earned. The limit is visible in its own decision log:
 on the starter screen its learned Q values are 6.3 / 6.2 / 6.3, three slots its
 six-number encoding cannot tell apart, so the information a player uses never
 reaches the table.
 
 **`sarsa-v1`** and **`sarsa-v2`** ([bots/sarsa-v1/](bots/sarsa-v1/),
-[bots/sarsa-v2/](bots/sarsa-v2/)) are the answer to that, and lead the
-leaderboard: 1.30 and 1.36 badges over the 50 standard seeds, against random's
-0.56. Same algorithm family as `dyna-q`, same budget; what changed is that
+[bots/sarsa-v2/](bots/sarsa-v2/)) are the answer to that, and they are what the
+trained rows near the top of the table are: same algorithm family as `dyna-q`,
+same budget; what changed is that
 hand-built linear features let the agent see what is on the card, what an item
 does, what the move tutor is offering, and who should lead. Sutton & Barto
 chapter 10 for the update, 12.7 for the traces:
@@ -587,10 +586,16 @@ chapter 10 for the update, 12.7 for the traces:
 Because the model is linear you can read the policy instead of only running it:
 training prints the weights it leaned on hardest, by name.
 
-Both are kept. v2 has 100 features to v1's 81 and is ahead by 0.06 badges,
-less than the noise on fifty runs. A leaderboard that overwrites its own
+Both are kept. v2 has 100 features to v1's 81 and is ahead by less than the noise
+on fifty runs. A leaderboard that overwrites its own
 history cannot tell you whether the next idea helped, so `--bot sarsa` names
 neither: it is an error listing both.
+
+**`lspi`** ([bots/lspi/](bots/lspi/)) is a contributed entry and the proof the
+contest works: same 100 features as `sarsa-v2`, same reward, but the weights are
+solved as the exact linear fixed point of the projected Bellman equation instead
+of nudged by gradient steps. Least-squares policy iteration, Lagoudakis & Parr
+2003. Different machinery, comparable result — which is itself the finding.
 
 ---
 

@@ -55,8 +55,8 @@ of the run.
 from, and index 2 is a battle now and a catch next turn. Nothing can be decided
 by position; you look at what each entry actually is.
 
-It is worth watching the one at the top of the table play before you write
-anything:
+It is worth watching a trained bot play before you write
+anything. Pick whichever is leading from [the standings](bots/README.md):
 
 ```bash
 uv run pokelike bot --bot sarsa-v2 --seed 40003 --runs 1 -g -dd
