@@ -172,12 +172,29 @@ def train(tag: str = "mixed", iters: int = 30, gamma: float = 0.98,
     return {"history": history, "path": path}
 
 
+def parse_hidden(spec: str) -> tuple[int, ...]:
+    """Layer sizes, or `()` for no hidden layer at all.
+
+    The empty case is the control arm and the reason this is a function. Fitting
+    q̂ = wᵀx by the SAME fitted Q iteration on the SAME shards is what separates
+    the three things that otherwise move together here: the shape of q̂, the
+    algorithm, and the data distribution. Compared only against the online
+    SARSA(λ) number, a result cannot say which of them it is about.
+    """
+    spec = (spec or "").strip().lower()
+    if spec in ("", "none", "linear"):
+        return ()
+    return tuple(int(h) for h in spec.split(","))
+
+
 def main() -> int:
     p = argparse.ArgumentParser(description="Fit Q offline on collected transitions.")
     p.add_argument("--data", default="mixed", help="shard prefix under output/data/")
     p.add_argument("--iters", type=int, default=30, help="fitted Q rounds")
     p.add_argument("--gamma", type=float, default=0.98)
-    p.add_argument("--hidden", default="64,64")
+    p.add_argument("--hidden", default="64,64",
+                   help="layer sizes, comma separated. '' or 'linear' fits q = wx "
+                        "with no hidden layer: the control arm")
     p.add_argument("--lr", type=float, default=1e-3)
     p.add_argument("--epochs", type=int, default=6, help="passes per round")
     p.add_argument("--batch", type=int, default=512)
@@ -187,7 +204,7 @@ def main() -> int:
     p.add_argument("--out", default="drrn.json")
     a = p.parse_args()
     with tee(HERE, a.out.replace(".json", "")) as path:
-        train(a.data, a.iters, a.gamma, tuple(int(h) for h in a.hidden.split(",")),
+        train(a.data, a.iters, a.gamma, parse_hidden(a.hidden),
               a.lr, a.epochs, a.batch, a.reset_every, a.seed, a.out)
         print(f"log:     {path}")
     return 0

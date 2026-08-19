@@ -573,6 +573,13 @@ class DrrnBot(Bot):
         The input is sparse — about nine of a hundred features are non-zero at
         any decision — so the first layer is computed from the non-zero entries
         rather than from a dense vector of mostly noughts.
+
+        `len(self.W) > 1` is not defensive: with no hidden layer at all the first
+        layer IS the last, and rectifying it would clamp every negative q-value
+        to zero while the numpy side returned wᵀx. That net is the linear control
+        arm — the same fitted Q iteration on the same data with the shape of q̂
+        put back — so the arm that exists to isolate capacity is exactly the one
+        the two implementations disagreed on.
         """
         h = list(self.b[0])
         W0 = self.W[0]
@@ -580,7 +587,8 @@ class DrrnBot(Bot):
             row = W0[i]
             for j in range(len(h)):
                 h[j] += row[j] * v
-        h = [v if v > 0.0 else 0.0 for v in h]
+        if len(self.W) > 1:
+            h = [v if v > 0.0 else 0.0 for v in h]
 
         for layer in range(1, len(self.W)):
             W, b = self.W[layer], self.b[layer]

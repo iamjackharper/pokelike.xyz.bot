@@ -179,6 +179,10 @@ def fan_out(episodes: int, workers: int, seed0: int, port0: int,
     built on.
     """
     DATA.mkdir(parents=True, exist_ok=True)
+    # Made here rather than assumed: `logs/` is gitignored, git does not track an
+    # empty directory, and a worker's log is opened before the worker starts. So
+    # a fresh clone died after launching nothing at all.
+    (HERE / "logs").mkdir(parents=True, exist_ok=True)
     per = episodes // workers
     procs, shards = [], []
     for k in range(workers):
