@@ -1,6 +1,30 @@
 {
  "entries": [
   {
+   "bot": "lspi",
+   "author": "testjoejoe",
+   "category": "rl",
+   "description": "LSTD-Q(lambda) + Least-Squares Policy Iteration (Lagoudakis & Parr 2003), 100 linear features shared with sarsa-v2, 300 training episodes",
+   "score_mean": 76.7,
+   "score_stdev": 79.4,
+   "score_best": 520,
+   "badges_mean": 1.44,
+   "badges_best": 8,
+   "maps_mean": 0,
+   "completed": 0,
+   "runs": 50,
+   "game": "eceae50bbda9e32b",
+   "model": null,
+   "harness": null,
+   "fallback_rate": null,
+   "stock_tools": null,
+   "state_view": null,
+   "fingerprint": "a05c4efbdf5b",
+   "stale": false,
+   "unverified": false,
+   "artifacts": 2
+  },
+  {
    "bot": "sarsa-v2",
    "author": "pierpierpy",
    "category": "rl",
@@ -68,7 +92,7 @@
    "stock_tools": null,
    "state_view": null,
    "fingerprint": "6aeb11457d3c",
-   "stale": false,
+   "stale": true,
    "unverified": false,
    "artifacts": 2
   },
