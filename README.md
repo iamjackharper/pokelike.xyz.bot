@@ -5,13 +5,9 @@
 *A trained reinforcement-learning policy playing*
 
 Play [pokelike.xyz](https://pokelike.xyz/) — a Pokémon roguelike — from the
-command line, from Python, or over an HTTP API. No windows, no internet, and a
-score to compare players with.
+command line, from Python, or over an HTTP API. No windows, no internet.
 
-Built to let bots play it. Ten ship with it — random, three trained policies
-(Dyna-Q and two linear SARSA(λ)) and six built on one shared LLM harness — the
-interface for writing your own is a single method, and there is a benchmark and a
-leaderboard so bots can be compared honestly.
+**Bot competition is open! Look below!** ⬇️
 
 ## 🏆 POKELIKE.XYZ BOT COMPETITION IS [OPEN]!!!
 
