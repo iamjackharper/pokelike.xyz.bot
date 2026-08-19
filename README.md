@@ -1,3 +1,14 @@
+# pokelike.xyz.bot
+
+Play [pokelike.xyz](https://pokelike.xyz/) — a Pokémon roguelike — from the
+command line, from Python, or over an HTTP API. No windows, no internet, and a
+score to compare players with.
+
+Built to let bots play it. Ten ship with it — random, three trained policies
+(Dyna-Q and two linear SARSA(λ)) and six built on one shared LLM harness — the
+interface for writing your own is a single method, and there is a benchmark and a
+leaderboard so bots can be compared honestly.
+
 # 🏆 POKELIKE.XYZ BOT COMPETITION IS [OPEN]!!!
 
 
@@ -27,16 +38,14 @@
 > The bar to beat right now is **1.36 badges**. Random gets 0.56, so it is lower
 > than it sounds.
 
-# pokelike.xyz.bot
+## Examples
 
-Play [pokelike.xyz](https://pokelike.xyz/) — a Pokémon roguelike — from the
-command line, from Python, or over an HTTP API. No windows, no internet, and a
-score to compare players with.
+![A trained policy playing a run](img/reinforcement_learning.gif)
 
-Built to let bots play it. Ten ship with it — random, three trained policies
-(Dyna-Q and two linear SARSA(λ)) and six built on one shared LLM harness — the
-interface for writing your own is a single method, and there is a benchmark and a
-leaderboard so bots can be compared honestly.
+*A trained reinforcement-learning policy playing, shown with `--watch`: a real
+browser window, animations at their own speed. Everything else in this repo runs
+headless with no window at all — this is the same run made visible. Sped up for
+the recording.*
 
 ![An LLM playing a run](img/llm_playthrough.gif)
 
