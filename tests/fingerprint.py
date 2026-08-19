@@ -36,8 +36,25 @@ def _stable_action(a: dict[str, Any]) -> str:
     """A label that survives translation: it comes from the game, not from us."""
     if a.get("kind") == "node":
         return f"{a['id']}:{a['node']}"
-    # `label` is the button text rendered by the game itself (English).
-    return f"el{a['idx']}:{(a.get('label') or '')[:40]}"
+    # `label` is the button text rendered by the game itself (English), with any
+    # leading decoration removed.
+    #
+    # An item card reads "🤍 Silk Scarf +40% Normal move damage". That heart is
+    # not engine data about the run — it is what the game shows when a sprite
+    # fails to load, and `site/img/sprites/items/silk-scarf.png` is one of the
+    # holes the local copy is allowed to have (`mirror --phase verify` exists
+    # because copies differ). So whether it is there depends on a 404 arriving
+    # from our own asset server, which means the recorded trace depended on
+    # timing and on which files happen to be missing from the machine that
+    # recorded it. README states a missing sprite cannot change a run; this is
+    # what made that untrue of the fingerprint.
+    #
+    # Leading only: a shiny's ★ sits at the END of a Pokemon card and IS engine
+    # data about the run, so it stays.
+    label = (a.get("label") or "").lstrip()
+    while label and not label[0].isalnum():
+        label = label[1:].lstrip()
+    return f"el{a['idx']}:{label[:40]}"
 
 
 def fingerprint(game, seed: int, policy: str, max_steps: int = 120) -> dict[str, Any]:

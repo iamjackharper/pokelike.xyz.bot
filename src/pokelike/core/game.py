@@ -86,13 +86,40 @@ class Game:
         self.last_alive = None
         page = self.session.load(seed)
 
+        # Into Story mode. These used to be two flat 300 ms sleeps; measured, the
+        # region buttons appear after 17 ms and the first decision 17-21 ms after
+        # that, so 600 ms of every run was spent waiting for something that had
+        # already happened.
+        #
+        # Both predicates only READ, which is what makes them safe to hand to a
+        # poller. The loud warning on `_settle` is about `__pk_pump`, which clicks:
+        # a poller calls its predicate an unpredictable number of times, so clicks
+        # inside one would land at different moments and the engine would draw its
+        # seeded randomness in a different order.
         page.evaluate("() => { const b = document.getElementById('btn-history-run'); if (b) b.click(); }")
-        page.wait_for_timeout(300)
+        page.wait_for_function(
+            "() => { const b = document.querySelector('.history-region-btn');"
+            " return b && b.getBoundingClientRect().width > 0; }",
+            timeout=10_000,
+        )
         page.evaluate(
             "() => { const b = document.querySelector('.history-region-btn');"
             " if (b) b.dispatchEvent(new MouseEvent('click', {bubbles: true})); }"
         )
-        page.wait_for_timeout(300)
+        try:
+            # The run has started when there is something to decide. Waiting for a
+            # positive signal rather than a duration, because arriving early is
+            # worse than arriving late: `_settle` would still be looking at the
+            # menu, and `__pk_advance` presses a lone button on whatever it finds.
+            page.wait_for_function(
+                "() => window.__pk_point() === 'decision'"
+                " && window.__pk_choices().length > 1",
+                timeout=10_000,
+            )
+        except Exception:  # noqa: BLE001
+            # Never fail a run over the wait itself: fall back to the duration
+            # this used to use and let `_settle` sort out what it finds.
+            page.wait_for_timeout(300)
 
         if self.scoring:
             # Scoring is a bonus: if the hook fails the run must still go on.
@@ -135,11 +162,32 @@ class Game:
                 f"index {index} out of range: there are {len(actions)} legal actions"
             )
         choice = actions[index]
-        ok = self.session.page.evaluate("c => window.__pk_apply(c)", choice)
-        if not ok:
+        applied = self.session.page.evaluate("c => window.__pk_apply(c)", choice)
+        # `false` on refusal; otherwise a dict carrying what the screen looked
+        # like just before the click. An older bridge returned a bare `true`,
+        # which is still truthy here and simply leaves nothing to wait for.
+        if not applied:
             raise IllegalAction(f"the engine refused the action: {choice}")
         self.steps += 1
-        self.session.page.wait_for_timeout(70)
+
+        # Wait for the engine to LEAVE that decision point, rather than sleeping
+        # a flat 70 ms and hoping. The sleep was not about redraws: without some
+        # wait, `_settle` reads the screen before the engine has moved off it,
+        # finds the old decision still standing and hands back a stale state, so
+        # the caller chooses twice on the same turn. Measured, the page reacts in
+        # 0.4 ms median against the 70 ms we used to spend — a fifth of a whole
+        # run — and waiting for the change is both faster and correct on hardware
+        # slower than this.
+        #
+        # Guarded because bridge.js is re-read from disk on every run while this
+        # module is imported once: a process that pulls mid-run can be holding a
+        # bridge older than this line.
+        sig = applied.get("sig") if isinstance(applied, dict) else None
+        if sig:
+            self.session.page.evaluate(
+                "a => window.__pk_await_change ? window.__pk_await_change(a[0], a[1]) : 0",
+                [sig, 100],
+            )
         return self._settle()
 
     # ------------------------------------------------------- free actions

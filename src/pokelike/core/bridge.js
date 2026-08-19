@@ -150,19 +150,58 @@
     }));
   };
 
+  // A cheap fingerprint of what the player is being asked: which layer, and
+  // which options. Used to tell whether the engine has reacted to the last
+  // action yet — see `__pk_await_change`.
+  window.__pk_sig = () => {
+    const L = window.__pk_layer();
+    return L.id + '#' + window.__pk_choices().map((c) => c.id || c.idx || c.label).join(',');
+  };
+
+  // Wait for the engine to leave the decision point named by `sig`.
+  //
+  // SAFE as a poller predicate, unlike `__pk_pump`: it only reads. It never
+  // clicks, so it cannot change the order in which the engine draws its seeded
+  // Math.random, which is the property the whole settle design protects.
+  //
+  // This replaces a flat 70 ms sleep after every action. Measured, the page
+  // reacts in 0.4 ms median and 3.5 ms at worst, so the sleep was two orders of
+  // magnitude too long — but it could not simply be shortened, because what it
+  // was really buying was that `__pk_settle` does not read the OLD screen, see a
+  // decision still standing there, and hand a stale state back as if the action
+  // had not happened. Waiting for the change is that guarantee, and it is
+  // adaptive: instant on a fast machine, still correct on a slow one.
+  //
+  // The cap exists for an action that leaves the question unchanged. None was
+  // observed in fifty steps, and if one exists the caller simply carries on as
+  // it did before.
+  window.__pk_await_change = async (sig, capMs) => {
+    if (!sig) return 0;
+    const now = window.__pk_realNow || performance.now.bind(performance);
+    const t0 = now();
+    while (now() - t0 < capMs) {
+      if (window.__pk_sig() !== sig) return now() - t0;
+      await new Promise((k) => window.__pk_realTimeout(k, 1));
+    }
+    return -1;
+  };
+
   window.__pk_apply = (c) => {
+    // Read BEFORE acting: what the player was being asked. Returned so the
+    // caller can wait for the engine to leave it without a second round trip.
+    const before = window.__pk_sig();
     if (c.kind === 'node') {
       const st = g('state');
       const n = st && st.map && st.map.nodes[c.id];
       if (!n || !n.accessible || n.visited) return false;
-      g('onNodeClick')(n); // async by design; Python polls until things settle
-      return true;
+      g('onNodeClick')(n); // async by design; Python waits for the change
+      return { ok: true, sig: before };
     }
     const { els } = choiceElements();
     const el = els && els[c.idx];
     if (!el) return false;
     el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    return true;
+    return { ok: true, sig: before };
   };
 
   window.__pk_point = () => {
@@ -255,7 +294,27 @@
     const started = now();
     while (now() - started < timeoutMs) {
       const r = window.__pk_pump();
-      if (r.ready) return true;
+      if (r.ready) {
+        // Reaching a decision is not the same as the decision being finished.
+        // Sprites that fail to load are replaced by an emoji a few milliseconds
+        // later, so an option's label — which a bot reads, and which the golden
+        // fingerprints record — can still be changing under us. Hand back only a
+        // question that has stopped moving.
+        //
+        // This was invisible while every action was followed by a flat 70 ms
+        // sleep. It was never the sleep's purpose, just something it happened to
+        // cover, which is the trouble with waiting a fixed time for an unnamed
+        // reason: remove it and unrelated things break.
+        let sig = window.__pk_sig();
+        const until = now() + 60;
+        while (now() < until) {
+          await new Promise((k) => window.__pk_realTimeout(k, 2));
+          const again = window.__pk_sig();
+          if (again === sig) break;
+          sig = again;
+        }
+        return true;
+      }
       // Pace only after actually clicking, so the click never lands on top of
       // the redraw it caused. While merely waiting for the engine's own async
       // work there is nothing to disturb, so check often.

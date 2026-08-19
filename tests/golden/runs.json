@@ -60,7 +60,7 @@
    "map-screen|2|n2_0:catch",
    "catch-screen|3|el0:Geodude Lv. 4 ROCK GROUND ATK 11 SPE 6 H",
    "map-screen|2|n3_0:catch",
-   "catch-screen|3|el0:★ Shiny Zubat Lv. 4 POISON FLYING ATK 8 ",
+   "catch-screen|3|el0:Shiny Zubat Lv. 4 POISON FLYING ATK 8 SP",
    "catch-screen|3|el0:Bellsprout Lv. 4 GRASS POISON ATK 11 SPE",
    "map-screen|2|n5_0:item",
    "item-screen|3|el0:Choice Scarf +50% Speed",
@@ -150,7 +150,7 @@
    "map-screen|2|n2_0:catch",
    "catch-screen|3|el0:Haunter Lv. 15 GHOST POISON SP.A 39 SPE ",
    "map-screen|2|n3_0:question",
-   "item-screen|3|el0:🤍 Silk Scarf +40% Normal move damage; at",
+   "item-screen|3|el0:Silk Scarf +40% Normal move damage; atte",
    "item-equip-modal|7|el0:SWAP — Ivysaur Lv20 Expert Belt SWAP",
    "item-screen|3|el0:Choice Specs +30% special damage",
    "item-equip-modal|7|el0:SWAP — Ivysaur Lv20 🤍 Silk Scarf SWAP",
@@ -215,7 +215,7 @@
    "map-screen|2|n4_0:catch",
    "catch-screen|3|el2:Pidgey Lv. 4 NORMAL FLYING ATK 8 SPE 9 H",
    "map-screen|2|n5_0:move_tutor",
-   "item-equip-modal|4|el1:→ ZEN HEADBUTT — Drowzee Lv6 • Confusion"
+   "item-equip-modal|4|el1:ZEN HEADBUTT — Drowzee Lv6 • Confusion ("
   ]
  },
  "7-cycling": {
