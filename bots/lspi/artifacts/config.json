@@ -1,0 +1,29 @@
+{
+ "algorithm": "LSTD-Q(lambda) + least-squares policy iteration (Lagoudakis & Parr 2003; Boyan 2002)",
+ "features_version": 2,
+ "n_features": 100,
+ "hyperparameters": {
+  "gamma": 0.98,
+  "lambda": 0.9,
+  "ridge": 0.05
+ },
+ "n_folded": 7129,
+ "trainer": "experiments/lspi/train.py",
+ "top_weights": {
+  "bias": 60.813,
+  "map_index": -46.134,
+  "badges": -46.134,
+  "min_hp": 39.288,
+  "team_size": -37.426,
+  "screen:trainer-screen": 35.058,
+  "screen:starter-screen": 25.728,
+  "depth": 18.517,
+  "mean_hp": 18.02,
+  "screen:catch-screen": -16.949,
+  "node:trainer*small_team": 14.94,
+  "mon_best_stats": 14.772,
+  "n_actions": 11.563,
+  "node:trainer": 9.845,
+  "mon_new_type": 9.243
+ }
+}
