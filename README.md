@@ -2,10 +2,7 @@
 
 ![A trained policy playing a run](img/reinforcement_learning.gif)
 
-*A trained reinforcement-learning policy playing, shown with `--watch`: a real
-browser window, animations at their own speed. Everything else in this repo runs
-headless with no window at all — this is the same run made visible. Sped up for
-the recording.*
+*A trained reinforcement-learning policy playing*
 
 Play [pokelike.xyz](https://pokelike.xyz/) — a Pokémon roguelike — from the
 command line, from Python, or over an HTTP API. No windows, no internet, and a
