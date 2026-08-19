@@ -99,6 +99,17 @@ def play_run(
         if on_step:
             on_step(obs, game.steps)
 
+        # Vision is an optional LLM capability. Keep the screenshot handoff in
+        # the shared runner so the bot still receives the exact same state and
+        # action list as every other bot, while only vision-enabled bots get
+        # the current rendered screen.
+        if getattr(bot, "vision", False) and hasattr(bot, "set_vision_image"):
+            vision_screens = getattr(bot, "VISION_SCREENS", ("map-screen",))
+            if obs.get("screen") in vision_screens:
+                bot.set_vision_image(game.screenshot_bytes())
+            else:
+                bot.set_vision_image(None)
+
         # Free actions come first: reordering does not consume the turn, so the
         # state handed to `choose` must already show the team as the bot wants
         # it. A bot that does not implement the hook is unaffected.

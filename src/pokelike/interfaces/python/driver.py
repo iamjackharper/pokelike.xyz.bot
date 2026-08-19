@@ -128,7 +128,7 @@ class _Worker:
 # thread that owns it. Plain attributes (`steps`, `seed`, `last_alive`) are just
 # data and are read directly.
 _BROWSER_CALLS = ("reset", "state", "actions", "step", "reorder", "score",
-                  "screenshot", "open", "close")
+                  "screenshot", "screenshot_bytes", "open", "close")
 
 
 class ThreadedGame:

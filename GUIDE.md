@@ -119,6 +119,17 @@ uv run pokelike bot --bot mine --runs 5 -d
 uv run pokelike bench --bot mine --dry-run     # the real 50 seeds, recorded nowhere
 ```
 
+For an LLM bot, `--vision` sends the current rendered map screen as a PNG
+alongside the text state. It is opt-in because the image adds context and cost;
+vision is currently used only on `map-screen`, where the screenshot exposes the
+graph edges that the compact text view does not show:
+
+```bash
+uv run pokelike bot --bot llm-baseline --vision --runs 1 -d
+```
+
+The flag is accepted only by LLM bots. Without it, the request is unchanged.
+
 ## 4. Write it
 
 The only method you must write is `choose`. It gets the state and returns an

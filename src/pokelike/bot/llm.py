@@ -40,6 +40,7 @@ for two models to be asked subtly different questions.
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import urllib.error
@@ -282,6 +283,8 @@ class LLMBot(Bot):
     TOKEN_BUDGET = 0
     EXTRA_TOOLS: list[dict[str, Any]] = []
     STATE_VIEW: Any = "screen"
+    VISION = False
+    VISION_SCREENS = ("map-screen",)
 
     def __init__(self, seed: int = 0, endpoint: str | None = None,
                  token: str | None = None, model: str | None = None,
@@ -316,6 +319,7 @@ class LLMBot(Bot):
         # row whose view was chosen by the caller does not say what it played.
         self.state_view = overrides.pop("view", None) or self.STATE_VIEW
         self.token_budget = overrides.pop("token_budget", self.TOKEN_BUDGET)
+        self.vision = overrides.pop("vision", self.VISION)
         if overrides:
             raise TypeError(f"unknown settings: {', '.join(sorted(overrides))}")
         self.verbose = verbose or bool(os.environ.get("POKELIKE_VERBOSE"))
@@ -344,9 +348,15 @@ class LLMBot(Bot):
         self.tokens_used = 0
         self.fallbacks = 0
         self.journal: list[str] = []
+        self._vision_image: bytes | None = None
+        self._vision_images_sent = 0
         self._last_why = ""
         # The turn decided in `rearrange`, waiting for `choose` to collect it.
         self._pending: tuple[int | None, int | None, str] | None = None
+
+    def set_vision_image(self, image: bytes | None) -> None:
+        """Sets the screenshot used for the next LLM decision."""
+        self._vision_image = image
 
     # ------------------------------------------------------------------ hooks
 
@@ -355,7 +365,9 @@ class LLMBot(Bot):
         self.journal = []
         self._pending = None
         self.calls = self.turns = self.tokens_used = self.fallbacks = 0
+        self._vision_images_sent = 0
         self._last_why = ""
+        self._vision_image = None
 
     def notes(self) -> dict[str, Any]:
         """Ends up in the run registry, and in the result a benchmark records.
@@ -375,6 +387,9 @@ class LLMBot(Bot):
             "fallbacks": self.fallbacks,
             "fallback_rate": round(self.fallbacks / self.turns, 3) if self.turns else 0.0,
             "temperature": self.temperature,
+            "vision": self.vision,
+            "vision_screens": list(self.VISION_SCREENS),
+            "images_sent": self._vision_images_sent,
             # False means this bot answers a different question from the others:
             # it gave the model tools they did not have, or took some away.
             "stock_tools": self.tool_names() == _STOCK_TOOL_NAMES,
@@ -421,6 +436,8 @@ class LLMBot(Bot):
                     "tools": self.tool_names(),
                     "stock_tools": self.tool_names() == _STOCK_TOOL_NAMES,
                     "state_view": self.view_name(),
+                    "vision": self.vision,
+                    "vision_screens": list(self.VISION_SCREENS),
                     "reproducible": False,
                     "why_not": (
                         "providers change models behind a fixed name and sampling is "
@@ -531,9 +548,19 @@ class LLMBot(Bot):
                        allow_lead: bool = False) -> tuple[int, str, int | None]:
         """One turn of thinking. Returns (action index, reason, lead or None)."""
         lead: int | None = None
+        user_content: str | list[dict[str, Any]] = self._situation(state)
+        if self.vision and self._vision_image:
+            encoded = base64.b64encode(self._vision_image).decode("ascii")
+            self._vision_images_sent += 1
+            user_content = [
+                {"type": "text", "text": user_content},
+                {"type": "image_url", "image_url": {
+                    "url": f"data:image/png;base64,{encoded}",
+                }},
+            ]
         messages: list[dict[str, Any]] = [
             {"role": "system", "content": self.system},
-            {"role": "user", "content": self._situation(state)},
+            {"role": "user", "content": user_content},
         ]
 
         for _ in range(self.max_rounds):

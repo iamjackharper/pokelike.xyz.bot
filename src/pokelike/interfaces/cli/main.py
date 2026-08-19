@@ -234,6 +234,12 @@ def cmd_bot(args) -> int:
         print(e.args[0], file=sys.stderr)
         raise SystemExit(2) from e
 
+    if args.vision:
+        if not hasattr(bot, "set_vision_image"):
+            print("--vision is supported only by LLM bots", file=sys.stderr)
+            raise SystemExit(2)
+        bot.vision = True
+
     # Runs walk the seed forward, so a start that is fine on its own can still
     # run off the end part way through. Better to say so now than to stop after
     # the third of ten runs.
@@ -532,6 +538,8 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--max-steps", type=int, default=300)
     s.add_argument("--watch", action="store_true", help="open a real window and watch")
     s.add_argument("--shots", metavar="FOLDER", help="save an image at every step")
+    s.add_argument("--vision", action="store_true",
+                   help="send the current game screenshot to an LLM bot")
     s.add_argument("--pause", type=int, default=800, help="ms between moves with --watch")
     s.add_argument("--no-history", "--no-stats", dest="no_stats", action="store_true",
                    help="do not record the runs")

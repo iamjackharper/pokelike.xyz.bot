@@ -271,6 +271,12 @@ class Game:
         self.session.page.screenshot(path=str(p))
         return p
 
+    def screenshot_bytes(self) -> bytes:
+        """Returns a PNG of the current screen without writing it to disk."""
+        if self.session is None or self.session.page is None:
+            raise RuntimeError("no run open")
+        return self.session.page.screenshot()
+
     def _is_terminal(self) -> bool:
         assert self.session is not None and self.session.page is not None
         return self.session.page.evaluate("() => window.__pk_point()") == "terminal"
