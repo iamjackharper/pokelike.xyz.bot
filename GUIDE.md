@@ -26,8 +26,11 @@ is easy to get wrong is marked, and the rule that catches people out has
 
 ## 1. Set up, once
 
+Fork this repo on GitHub first, then clone **your** fork — not this one. That way
+`origin` is somewhere you can push, which is what step 6 needs:
+
 ```bash
-git clone https://github.com/pierpierpy/pokelike.xyz.bot && cd pokelike.xyz.bot
+git clone https://github.com/YOUR-HANDLE/pokelike.xyz.bot && cd pokelike.xyz.bot
 uv sync
 uv run pokelike setup          # the browser plus an offline copy of the game, ~130 MB
 ```
@@ -175,17 +178,18 @@ that no longer exists.
 
 ## 6. Submit
 
-Fork the repo on GitHub, then:
+You forked in step 1, so `origin` is your fork and there is nothing left to set
+up:
 
 ```bash
 git checkout -b my-bot
 git add bots/mine
-git commit -m "Add mine"
+git commit -m "Add my-bot"
 git push origin my-bot
 ```
 
-and open the pull request GitHub offers you. Your whole submission is one
-folder.
+Then open the pull request GitHub offers you, from your fork to this repo. Your
+whole submission is one folder.
 
 ---
 

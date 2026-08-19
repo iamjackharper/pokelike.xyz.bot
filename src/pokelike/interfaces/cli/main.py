@@ -401,12 +401,14 @@ def cmd_bench(args) -> int:
     for f in sorted(d.rglob("*")):
         if f.is_file() and "__pycache__" not in f.parts:
             print(f"    {f.relative_to(d)}")
-    print("\n  to submit (you do not need write access to the repo):")
-    print("    1. fork it on GitHub, if you have not already")
-    print(f"    2. git checkout -b {result['bot']}")
-    print(f"    3. git add {rel}")
-    print(f"    4. git commit -m 'Add {result['bot']}' && git push origin {result['bot']}")
-    print("    5. open the pull request GitHub offers you")
+    print("\n  to submit — origin is your fork, so:")
+    print(f"    git checkout -b {result['bot']}")
+    print(f"    git add {rel}")
+    print(f"    git commit -m 'Add {result['bot']}'")
+    print(f"    git push origin {result['bot']}")
+    print("    then open the pull request GitHub offers you")
+    print("\n  (if you cloned this repo instead of your own fork, origin is not")
+    print("   yours to push to — fork it and add that remote first. See GUIDE.md.)")
     return 0
 
 
