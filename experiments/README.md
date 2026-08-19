@@ -15,7 +15,7 @@ experiments/          research                 bots/          what it produced
 ├── dyna-q/    tabular RL. It lost             dyna-q/        kept because it lost
 ├── sarsa/     linear FA. The one that worked  sarsa-v1/ -v2/ 81 and 100 features
 ├── llm/       comparing prompts               llm-*/         one harness, six bots
-└── <yours>/   ignored, and yours              <yours>/
+└── <yours>/   ignored by default, and yours   <yours>/
 ```
 
 **An experiment is named after the bot it produces**, so you never have to work
