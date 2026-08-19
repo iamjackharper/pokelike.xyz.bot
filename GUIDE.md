@@ -1,7 +1,8 @@
 # Entering the contest
 
-Six steps from a clone to a pull request. None of them is optional, and the two
-that are easy to get wrong are marked.
+Six steps from a clone to a pull request. None of them is optional. The one that
+is easy to get wrong is marked, and the rule that catches people out has
+[a section of its own](#the-rule-that-is-not-obvious).
 
 ---
 
@@ -18,6 +19,7 @@ that are easy to get wrong are marked.
 [The rule that is not obvious](#the-rule-that-is-not-obvious) ·
 [Two people, one name](#two-people-one-name) ·
 [Where to experiment](#where-to-experiment) ·
+[Pushing your experiments too](#pushing-your-experiments-too) ·
 [What counts as a bot](#what-counts-as-a-bot)
 
 ---
@@ -245,11 +247,11 @@ it comes from the content, so it would change every time you retrained.
 
 ## Where to experiment
 
-`experiments/` is a scratch area and **it is not tracked**: everything under it
-is gitignored apart from the shared `env/` and our own worked examples. Whatever
-you try there — training runs, sweeps, prompts, dead ends — stays on your
-machine, and a pull request that adds a bot cannot drag a training run along with
-it by accident.
+`experiments/` is a scratch area and **nothing you add there is tracked by
+default**: everything under it is gitignored apart from the shared `env/` and our
+own worked examples. Whatever you try — training runs, sweeps, prompts, dead ends
+— stays on your machine unless you say otherwise, and a pull request that adds a
+bot cannot drag a training run along with it by accident.
 
 ```bash
 cp -r experiments/example experiments/mine
@@ -274,6 +276,53 @@ Submitting a folder does reveal the bot — that is the only reason the number
 beside it means anything, since a leaderboard where the code is hidden is a list
 of claims. It reveals nothing about the sweeps, the rewards you tried, or the
 twenty runs that went nowhere.
+
+## Pushing your experiments too
+
+That default is a **default, not a rule**. The research is yours, which means it
+is yours to publish as much as it is yours to keep. Ours are checked in for
+exactly that reason — they are meant to be read — and if you want the same for
+yours, it is one line.
+
+Add a negation for your folder in `.gitignore`, next to the ones already there:
+
+```
+experiments/*
+!experiments/env/
+...
+!experiments/mine/          # <- yours
+```
+
+Then `git add experiments/mine` picks up the code and nothing else, because the
+three rules below that block still apply to every experiment including yours:
+
+```
+experiments/*/output/       weights, data shards, histories
+experiments/*/logs/         what each run printed
+experiments/*/artifacts/    the weights a candidate bot.py reads
+```
+
+So a whitelisted experiment commits its **code and its README** — the loop, the
+features, the reasoning, the results you wrote down — and never the hundreds of
+megabytes a run produced. That split is deliberate: `artifacts/` is in the ignored
+list because an experiment's `bot.py` is a *candidate*, and its weights only
+become something to commit when the bot earns a folder under `bots/` and is
+measured there under its own name.
+
+Check it did what you meant before committing, rather than after:
+
+```bash
+git status --short experiments/mine
+git check-ignore -v experiments/mine/output/whatever.json   # should print the rule that caught it
+```
+
+Two things worth knowing if you put an experiment in a pull request. It is a
+larger thing to ask of a reviewer than a bot is — a bot is one folder with one
+method and a score, an experiment is a claim about *why* something works — so say
+in the description what question it asks and what the answer turned out to be,
+the way [`experiments/`](experiments/) does. And it is entirely separable: a pull
+request that adds only `bots/mine/` is complete on its own, and nobody will ask
+you for the training code behind it.
 
 ---
 

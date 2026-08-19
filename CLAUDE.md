@@ -93,8 +93,9 @@ src/pokelike/
         ├── driver.py        session(), open_game(), play(), compare()
         └── example.ipynb    the cell-by-cell walkthrough
 experiments/             research. OURS are tracked as worked examples; anything
-│                        else anyone creates here is gitignored, as are all
-│                        output/ and logs/ folders
+│                        else anyone creates here is gitignored by default — one
+│                        `!experiments/<name>/` line opts a folder in, and
+│                        output/, logs/ and artifacts/ stay out regardless
 ├── env/                   the game as an RL problem: environment, rewards,
 │                          encoding, tee() for per-experiment logs
 ├── example/               the smallest complete experiment

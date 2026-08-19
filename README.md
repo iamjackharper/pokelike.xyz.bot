@@ -17,7 +17,7 @@
 > that was played, because scores from before and after a game update are not
 > comparable.
 >
-> **Where to start: [GUIDE.md](GUIDE.md)** — seven steps from a clone to a pull
+> **Where to start: [GUIDE.md](GUIDE.md)** — six steps from a clone to a pull
 > request, nothing skipped. The short version is that a bot is one method,
 > `choose(state) -> int`, and the rest is measuring it honestly.
 >
@@ -33,10 +33,10 @@ Play [pokelike.xyz](https://pokelike.xyz/) — a Pokémon roguelike — from the
 command line, from Python, or over an HTTP API. No windows, no internet, and a
 score to compare players with.
 
-Built to let bots play it. Four ship with it (random, an LLM one, and two trained
-policies: Dyna-Q and linear SARSA(λ)), the interface for writing your own is a
-single method, and there is a benchmark and a leaderboard so bots can be compared
-honestly.
+Built to let bots play it. Ten ship with it — random, three trained policies
+(Dyna-Q and two linear SARSA(λ)) and six built on one shared LLM harness — the
+interface for writing your own is a single method, and there is a benchmark and a
+leaderboard so bots can be compared honestly.
 
 ![An LLM playing a run](img/llm_playthrough.gif)
 
@@ -482,7 +482,9 @@ a trivial one: over the 50 standard seeds it averages 0.56 badges with a best of
 sometimes reaches a gym. Everyone has to beat it, and the first trained agent
 here did not.
 
-**The four `llm-*` bots** are one shared harness with four different prompts.
+**The six `llm-*` bots** are one shared harness: four prompts, one of those
+prompts reading a different view of the state, and one reference that turns every
+knob there is.
 The harness — the tools, the agentic loop, the state rendering, one HTTP call per
 turn — lives in [src/pokelike/bot/llm.py](src/pokelike/bot/llm.py), and it is
 shared **on purpose**: two bots with different loops are two harnesses being
@@ -661,7 +663,7 @@ are both ways of improving a player.
 
 ```bash
 uv run python -m experiments.example.train --episodes 20
-uv run python -m experiments.llm.compare --strategies survivor,explorer --seeds 5
+uv run python -m experiments.llm.compare --bots llm-survivor,llm-explorer --seeds 5
 ```
 
 `experiments/env/` states the game as an MDP: the encoding, the environment

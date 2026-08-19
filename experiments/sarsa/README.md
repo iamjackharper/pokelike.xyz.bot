@@ -106,10 +106,10 @@ crosses 36, `lookahead` 4, `screen` 7, `mon` 7, `slot` 3, `button` 3, `item` 7,
 
 ## No neural network, on purpose
 
-Not modesty — arithmetic. An episode is ~20 transitions and a step costs ~0.5 s,
-so 300 episodes is about 6000 transitions in an hour. A DQN's usual budget is
-10⁵–10⁶ transitions: 20 to 200 hours of wall clock for one run, before any
-tuning. The binding constraint is samples, not model capacity, and hand-built
+Not modesty — arithmetic. An episode is ~20 transitions, so 300 episodes is a few
+thousand transitions, and a DQN's usual budget is 10⁵-10⁶: on the order of an hour
+for the low end once collection runs in parallel processes, and a long day for the
+high end. The binding constraint is samples, not model capacity, and hand-built
 features plus a linear model is what that budget buys.
 
 If the features turn out to carry the day, that is the evidence that would
