@@ -44,9 +44,9 @@ In `agent.py` those map to `observe()` for (d) and (e), and `plan()` for (f).
 
 ## Why this algorithm first
 
-Because the environment is slow. A real step drives a browser and costs about
-0.7 seconds; a planning update is a dict lookup and a bit of arithmetic. Dyna
-exists precisely for that trade-off, and this problem happens to fit the
+Because the environment is slow. A real step drives a browser and costs about a
+quarter of a second; a planning update is a dict lookup and a bit of arithmetic.
+Dyna exists precisely for that trade-off, and this problem happens to fit the
 motivation almost too well.
 
 Measured on a 20-episode run: **380 real steps produced 7749 Q updates**. Same

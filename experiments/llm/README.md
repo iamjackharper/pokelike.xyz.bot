@@ -15,8 +15,8 @@ decided by its prompt, so "which prompt is better" is an empirical question with
 the same shape as any other: play both on **identical seeds** and compare them
 paired.
 
-Four prompts ship as four bots, each a folder of about thirty lines sitting on
-the one harness in `pokelike.bot.llm`:
+Six bots ship on the one harness in `pokelike.bot.llm`, four of them differing in
+nothing but the prompt — which is what makes the four comparable:
 
 | bot | what it is told to weigh |
 |---|---|
@@ -24,6 +24,11 @@ the one harness in `pokelike.bot.llm`:
 | [`llm-survivor`](../../bots/llm-survivor/) | staying alive; heal before it is urgent |
 | [`llm-explorer`](../../bots/llm-explorer/) | reaching further, taking the risk |
 | [`llm-analyst`](../../bots/llm-analyst/) | read the tools first, commit last |
+| [`llm-raw`](../../bots/llm-raw/) | `llm-survivor`'s prompt, reading the raw state dict instead of the view |
+| [`llm-example`](../../bots/llm-example/) | every knob turned, with reasons. A reference, not a contender |
+
+`llm-raw` is not a fifth prompt: it is `llm-survivor` with one variable moved, so
+the pair measures the state view rather than the wording.
 
 This compares **the actual bots**, loaded from `bots/` — not a copy of their
 prompts. A prompt that wins here is the same file that gets benchmarked, so it
