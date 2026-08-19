@@ -240,6 +240,13 @@ class Session:
         if any(b in url for b in BLOCKED_HOSTS):
             route.abort()
             return
+        # The soundtrack. Measured: one 2.5 MB mp3 fetched and decoded per run,
+        # for a game with no window and nobody listening — more bytes than
+        # everything else on the page put together. `--mute-audio` silences
+        # playback but still downloads it; this does not download it.
+        if not self.watch and route.request.resource_type == "media":
+            route.abort()
+            return
         if not self.load_images and url.endswith(IMAGE_SUFFIXES):
             route.abort()
             return
