@@ -1,4 +1,11 @@
-# pokelike.xyz.bot
+# POKELIKE.XYZ.BOT
+
+![A trained policy playing a run](img/reinforcement_learning.gif)
+
+*A trained reinforcement-learning policy playing, shown with `--watch`: a real
+browser window, animations at their own speed. Everything else in this repo runs
+headless with no window at all — this is the same run made visible. Sped up for
+the recording.*
 
 Play [pokelike.xyz](https://pokelike.xyz/) — a Pokémon roguelike — from the
 command line, from Python, or over an HTTP API. No windows, no internet, and a
@@ -9,7 +16,7 @@ Built to let bots play it. Ten ship with it — random, three trained policies
 interface for writing your own is a single method, and there is a benchmark and a
 leaderboard so bots can be compared honestly.
 
-# 🏆 POKELIKE.XYZ BOT COMPETITION IS [OPEN]!!!
+## 🏆 POKELIKE.XYZ BOT COMPETITION IS [OPEN]!!!
 
 
 > Write something that plays [pokelike.xyz](https://pokelike.xyz/) better than
@@ -39,13 +46,6 @@ leaderboard so bots can be compared honestly.
 > than it sounds.
 
 ## Examples
-
-![A trained policy playing a run](img/reinforcement_learning.gif)
-
-*A trained reinforcement-learning policy playing, shown with `--watch`: a real
-browser window, animations at their own speed. Everything else in this repo runs
-headless with no window at all — this is the same run made visible. Sped up for
-the recording.*
 
 ![An LLM playing a run](img/llm_playthrough.gif)
 
