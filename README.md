@@ -182,7 +182,7 @@ symbol legend, `s` for the score, `j` for the raw JSON state, `n` for a new run,
 ```bash
 uv run pokelike bot --runs 5             # the random bot
 uv run pokelike bot --runs 1 -d          # + log every decision it made
-uv run pokelike stats                    # how it went
+uv run pokelike history                  # how it went
 ```
 
 `-d` streams one line per decision as it happens, so you watch the bot play
@@ -350,7 +350,7 @@ but everything needed to *play* is in all three.
 | what the state contains | `pokelike schema` | `GET /schema` | `pokelike.schema.describe` |
 | run a bot over many seeds | `pokelike bot` | — | `evaluate`, `compare` |
 | benchmark and submit | `pokelike bench` | — | `bench.run_benchmark` |
-| history and leaderboard | `pokelike stats`, `leaderboard` | — | `stats`, `leaderboard` |
+| history and leaderboard | `pokelike history`, `leaderboard` | — | `stats`, `leaderboard` |
 | install and mirror | `pokelike setup`, `mirror` | — | `assets.mirror.build` |
 
 The missing HTTP rows are batch and installation jobs, not ways of playing a
@@ -609,12 +609,12 @@ where everything else is in the tens, so it would drown out the rest.
 ## Statistics
 
 Every `pokelike bot` run lands in `stats/runs.db`, a SQLite file you can query
-with plain SQL. `--no-stats` skips it.
+with plain SQL. `--no-history` skips it.
 
 ```bash
-uv run pokelike stats                # summary per bot
-uv run pokelike stats -d             # + what each column means
-uv run pokelike stats --recent 10    # + the last runs
+uv run pokelike history              # summary per bot
+uv run pokelike history -d           # + what each column means
+uv run pokelike history --recent 10  # + the last runs
 ```
 
 ```

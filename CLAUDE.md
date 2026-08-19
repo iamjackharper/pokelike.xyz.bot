@@ -40,7 +40,7 @@ uv sync                          # environment
 uv run pokelike setup            # browser + offline copy (once)
 uv run pokelike play --seed 42   # interactive run
 uv run pokelike bot --runs 5     # the random bot
-uv run pokelike stats -d         # summary, with the columns explained
+uv run pokelike history -d       # what you played here, columns explained
 uv run pokelike schema           # what a bot receives (--markdown regenerates it in README.md)
 uv run pokelike bot -d --runs 1  # log every decision, for any bot
 uv run pytest                    # full suite, ~1 minute

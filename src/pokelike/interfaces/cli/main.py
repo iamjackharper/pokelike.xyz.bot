@@ -531,7 +531,8 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--watch", action="store_true", help="open a real window and watch")
     s.add_argument("--shots", metavar="FOLDER", help="save an image at every step")
     s.add_argument("--pause", type=int, default=800, help="ms between moves with --watch")
-    s.add_argument("--no-stats", action="store_true", help="do not record the runs")
+    s.add_argument("--no-history", "--no-stats", dest="no_stats", action="store_true",
+                   help="do not record the runs")
     s.add_argument("-g", "--graph", action="store_true",
                    help="draw the map before each decision, with where you are on it")
     s.add_argument("--ascii-map", action="store_true",
@@ -576,7 +577,11 @@ def main(argv: list[str] | None = None) -> int:
                    help="regenerate the state reference inside README.md")
     s.set_defaults(func=cmd_schema)
 
-    s = sub.add_parser("stats", help="summary of the recorded runs")
+    # `history`, not `stats`: this is what YOU played on this machine, and the
+    # name has to stop reading like a sibling of `leaderboard`. `stats` stays as
+    # an alias so anything already typed or scripted keeps working.
+    s = sub.add_parser("history", aliases=["stats"],
+                       help="what you have played on this machine (not comparable)")
     s.add_argument("-d", "--explain", action="store_true",
                    help="explain what each column means")
     s.add_argument("--recent", type=int, default=0, help="also show the last N runs")

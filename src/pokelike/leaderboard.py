@@ -319,7 +319,13 @@ def format_table(index: dict[str, Any]) -> str:
         return "no bots measured yet"
     head = (f"{'bot':<20}{'category':>10}{'runs':>6}{'badge~':>8}{'badge+':>8}"
             f"{'score~':>9}{'stdev':>8}{'best':>7}{'done':>6}")
-    out = [head, "-" * len(head)]
+    # Said above the table, because this one and `pokelike stats` print columns
+    # with the same names and mean entirely different things. One is the fixed 50
+    # seeds everybody is scored on; the other is whatever you happened to play on
+    # this machine. Confusing them is not hypothetical — the same weights scored
+    # 1.60 on 25 seeds picked during development and 1.10 on the official 50.
+    out = ["THE OFFICIAL BENCHMARK — the same 50 seeds for everyone, so these "
+           "numbers are comparable.", "", head, "-" * len(head)]
     for r in rows:
         v = lambda k: r[k] if r.get(k) is not None else "-"  # noqa: E731
         out.append(

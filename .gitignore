@@ -5,7 +5,10 @@ __pycache__/
 *.egg-info/
 build/
 dist/
-stats/
+# Recordings of local play live in a database at the top level. Anchored with a
+# leading slash: written as `stats/` this also matched src/pokelike/stats/, so a
+# new file in that package would have been silently ignored.
+/stats/
 
 .env
 
