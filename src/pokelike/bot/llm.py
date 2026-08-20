@@ -358,6 +358,13 @@ class LLMBot(Bot):
         self.calls = 0
         self.turns = 0
         self.tokens_used = 0
+        self.tokens_in = 0
+        self.tokens_out = 0
+        self.cached_tokens = 0
+        self.cache_write_tokens = 0
+        self.reasoning_tokens = 0
+        self.cost = 0.0
+        self.cost_observed = False
         self.fallbacks = 0
         self.journal: list[str] = []
         self.plan: list[str] = []
@@ -379,6 +386,11 @@ class LLMBot(Bot):
         self.plan = []
         self._pending = None
         self.calls = self.turns = self.tokens_used = self.fallbacks = 0
+        self.tokens_in = self.tokens_out = 0
+        self.cached_tokens = self.cache_write_tokens = 0
+        self.reasoning_tokens = 0
+        self.cost = 0.0
+        self.cost_observed = False
         self._vision_images_sent = 0
         self._last_why = ""
         self._vision_image = None
@@ -398,6 +410,13 @@ class LLMBot(Bot):
             "calls": self.calls,
             "turns": self.turns,
             "tokens": self.tokens_used,
+            "tokens_in": self.tokens_in,
+            "tokens_out": self.tokens_out,
+            "cached_tokens": self.cached_tokens,
+            "cache_write_tokens": self.cache_write_tokens,
+            "reasoning_tokens": self.reasoning_tokens,
+            "cost": self.cost if self.cost_observed else None,
+            "cost_source": "provider" if self.cost_observed else None,
             "fallbacks": self.fallbacks,
             "fallback_rate": round(self.fallbacks / self.turns, 3) if self.turns else 0.0,
             "temperature": self.temperature,
@@ -823,7 +842,23 @@ class LLMBot(Bot):
             raise LLMError(f"{type(e).__name__}: {e}") from e
 
         self.calls += 1
-        self.tokens_used += (answer.get("usage") or {}).get("total_tokens", 0)
+        usage = answer.get("usage") or {}
+        prompt = usage.get("prompt_tokens", usage.get("input_tokens", 0)) or 0
+        completion = usage.get("completion_tokens", usage.get("output_tokens", 0)) or 0
+        self.tokens_in += prompt
+        self.tokens_out += completion
+        self.tokens_used += usage.get("total_tokens", prompt + completion) or 0
+        prompt_details = usage.get("prompt_tokens_details") or {}
+        completion_details = usage.get("completion_tokens_details") or {}
+        self.cached_tokens += prompt_details.get("cached_tokens", 0) or 0
+        self.cache_write_tokens += prompt_details.get("cache_write_tokens", 0) or 0
+        self.reasoning_tokens += completion_details.get("reasoning_tokens", 0) or 0
+        try:
+            if usage.get("cost") is not None:
+                self.cost += float(usage["cost"])
+                self.cost_observed = True
+        except (TypeError, ValueError):
+            pass
         choices = answer.get("choices") or []
         if not choices:
             raise LLMError("response had no choices")
