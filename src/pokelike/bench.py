@@ -95,9 +95,11 @@ def run_benchmark(
                ("seed", "steps", "score", "badges", "maps", "kos", "faints", "ending",
                 "stalled")}
         runs.append(row)
-        done = [r["score"] for r in runs if r["score"] is not None]
-        bar.set_postfix(score=row["score"],
-                        mean=round(sum(done) / len(done), 1) if done else None)
+        badge_values = [r.get("badges") or 0 for r in runs]
+        bar.set_postfix(
+            badges_mean=round(statistics.mean(badge_values), 2),
+            badges_best=max(badge_values),
+        )
         if on_run:
             on_run(row, len(runs), len(seeds))
 
