@@ -524,7 +524,15 @@ class LLMBot(Bot):
 
     def _commit(self, state: dict[str, Any], index: int, why: str) -> int:
         self._last_why = why
-        self.journal.append(f"step {state.get('steps')}: [{index}] {why[:90]}")
+        actions = state.get("actions") or []
+        action = actions[index] if 0 <= index < len(actions) else {}
+        if action.get("kind") == "node":
+            description = f"{action.get('id', '?')} ({action.get('node', 'node')})"
+            if action.get("tooltip"):
+                description += f" — {action['tooltip']}"
+        else:
+            description = str(action.get("label") or action.get("id") or "action")
+        self.journal.append(f"step {state.get('steps')}: [{index}] {description}")
         self.journal = self.journal[-self.memory:]
         if self.verbose:
             print(f"   [llm] -> [{index}] {why[:100]}")
@@ -724,14 +732,15 @@ class LLMBot(Bot):
     def _situation(self, state: dict[str, Any]) -> str:
         """The whole user message: the view, plus what the harness owns.
 
-        Deliberately not the hook. The journal is what stops a bot walking the
-        same loop forever, and the instruction line is what tells the model how
+        Deliberately not the hook. The journal records actions selected by the
+        harness, not the model's explanation, so it cannot turn speculation into
+        fact. It helps stop a bot walking the same loop forever, and the instruction line is what tells the model how
         many options there are -- neither is a choice a bot should be able to
         drop by accident while changing something else.
         """
         parts = [self.view(state)]
         if self.journal:
-            parts += ["", "YOUR RECENT MOVES:", *(f"  {r}" for r in self.journal)]
+            parts += ["", "VERIFIED RECENT ACTIONS:", *(f"  {r}" for r in self.journal)]
         if self.plan:
             parts += [
                 "", "YOUR CURRENT PLAN — UNVERIFIED",
