@@ -477,7 +477,7 @@ def test_the_state_view_is_the_bots_to_choose_and_cannot_break_the_plumbing(monk
     bot.journal = ["step 1: [0] went to the trainer"]
     whole = bot._situation(state)
     assert "ONLY MINE" in whole
-    assert "YOUR RECENT MOVES" in whole, "replacing the view cost the bot its memory"
+    assert "RECENT ACTIONS" in whole, "replacing the view cost the bot its memory"
     assert "Pick an index between 0 and 1" in whole, "the model was not told the range"
     assert bot.view_name() == "custom", "a custom view must be recorded as one"
 
