@@ -457,17 +457,37 @@ def cmd_llm_bench(args) -> int:
         print(f"\n=== {model} | {len(seeds)} runs | {args.workers} workers ===")
         active = {}
         last_status = [0.0]
+        last_progress = [""]
+        compact = sys.stdout.isatty()
+
+        def emit_progress(line):
+            if compact:
+                print(f"\033[2K\r{line}", end="", flush=True)
+            else:
+                print(line, flush=True)
+
+        def show_live_progress():
+            if not last_progress[0]:
+                return
+            active_text = ", ".join(
+                f"seed {item['seed']} m{item.get('map', '?')} s{item.get('step', 0)}"
+                for item in sorted(active.values(), key=lambda item: item["seed"])
+            )
+            line = last_progress[0]
+            if active_text:
+                line += f" | active: {active_text}"
+            emit_progress(line)
 
         def show_progress(rows):
             s = lb.summary(rows)
             cost_mean = (f"${s['cost_mean']:.6f}"
                          if s["cost_mean"] is not None else "n/a")
-            print(
+            last_progress[0] = (
                 f"progress {len(rows)}/{len(seeds)} | "
                 f"badges mean {s['badges_mean']:.3f} | "
-                f"best {s['badges_best']} | cost mean {cost_mean}",
-                flush=True,
+                f"best {s['badges_best']} | cost mean {cost_mean}"
             )
+            show_live_progress()
 
         def show_status(status):
             if status["kind"] == "finished":
@@ -478,18 +498,14 @@ def cmd_llm_bench(args) -> int:
             if now - last_status[0] < 5:
                 return
             last_status[0] = now
-            running = sorted(active.values(), key=lambda item: item["seed"])
-            details = ", ".join(
-                f"seed {item['seed']} map {item.get('map', '?')} step {item.get('step', 0)}"
-                for item in running
-            )
-            if details:
-                print(f"active: {details}", flush=True)
+            show_live_progress()
 
         result = lb.run_model(args.bot, model, seeds, args.workers, endpoint, token,
                               SITE_ROOT, args.port + 100 + i * max(args.workers, 1),
                               args.max_steps, on_progress=show_progress,
                               on_status=show_status)
+        if compact:
+            print()
         s = result["summary"]
         cost = f"${s['cost']:.6f}" if s["cost"] is not None else "n/a"
         print(
