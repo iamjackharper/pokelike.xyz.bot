@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -459,6 +460,7 @@ def cmd_llm_bench(args) -> int:
         last_status = [0.0]
         last_progress = [""]
         compact = sys.stdout.isatty()
+        terminal_width = shutil.get_terminal_size((120, 20)).columns
 
         def emit_progress(line):
             if compact:
@@ -476,6 +478,8 @@ def cmd_llm_bench(args) -> int:
             line = last_progress[0]
             if active_text:
                 line += f" | active: {active_text}"
+            if compact and len(line) >= terminal_width:
+                line = line[:terminal_width - 2] + "…"
             emit_progress(line)
 
         def show_progress(rows):
@@ -500,6 +504,7 @@ def cmd_llm_bench(args) -> int:
             last_status[0] = now
             show_live_progress()
 
+        show_progress([])
         result = lb.run_model(args.bot, model, seeds, args.workers, endpoint, token,
                               SITE_ROOT, args.port + 100 + i * max(args.workers, 1),
                               args.max_steps, on_progress=show_progress,

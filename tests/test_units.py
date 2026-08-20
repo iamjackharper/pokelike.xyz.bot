@@ -482,6 +482,15 @@ def test_the_state_view_is_the_bots_to_choose_and_cannot_break_the_plumbing(monk
     assert bot.view_name() == "custom", "a custom view must be recorded as one"
 
 
+def test_empty_llm_benchmark_summary_has_no_cost_mean():
+    from pokelike.llmbench_cartographer import summary
+
+    result = summary([])
+    assert result["runs"] == 0
+    assert result["cost"] is None
+    assert result["cost_mean"] is None
+
+
 def test_a_name_matching_two_bots_is_an_error_not_a_guess():
     """`--bot sarsa` with sarsa-v1 and sarsa-v2 on disk must refuse to choose.
 

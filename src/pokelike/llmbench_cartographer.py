@@ -9,11 +9,11 @@ from __future__ import annotations
 
 import hashlib
 import json
+import multiprocessing as mp
 import statistics
 from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
 from datetime import datetime, timezone
-from multiprocessing import Manager
-from queue import Empty
+from queue import Empty, Full
 from pathlib import Path
 from typing import Any, Callable
 
@@ -22,6 +22,23 @@ from .bench import STANDARD_SEEDS
 ROOT = Path(__file__).resolve().parents[2]
 BOTS = ROOT / "bots"
 OUT = ROOT / "llm-bench" / "cartographer"
+_STATUS_QUEUE = None
+
+
+def _init_status_queue(status_queue) -> None:
+    """Give each spawned worker direct access to the native status queue."""
+    global _STATUS_QUEUE
+    _STATUS_QUEUE = status_queue
+
+
+def _report_status(status: dict[str, Any]) -> None:
+    """Best-effort heartbeat; benchmark results never depend on this queue."""
+    if _STATUS_QUEUE is None:
+        return
+    try:
+        _STATUS_QUEUE.put_nowait(status)
+    except Full:
+        pass
 
 
 def slug(model: str) -> str:
@@ -49,8 +66,7 @@ def fingerprint(name: str) -> dict[str, str]:
 
 
 def _worker(bot_name: str, model: str, seed: int, endpoint: str | None,
-            token: str | None, port: int, site: str, max_steps: int,
-            status_queue) -> list[dict[str, Any]]:
+            token: str | None, port: int, site: str, max_steps: int) -> list[dict[str, Any]]:
     from .assets.server import AssetServer
     from .bot.catalogue import load_class
     from .core.game import Game
@@ -64,11 +80,11 @@ def _worker(bot_name: str, model: str, seed: int, endpoint: str | None,
     game.open()
     rows: list[dict[str, Any]] = []
     try:
-        status_queue.put({"seed": seed, "kind": "started"})
+        _report_status({"seed": seed, "kind": "started"})
 
         def heartbeat(obs, steps):
             run = obs.get("run") or {}
-            status_queue.put({
+            _report_status({
                 "seed": seed,
                 "kind": "step",
                 "map": run.get("map"),
@@ -120,8 +136,9 @@ def summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "cached_tokens": sum(r.get("cached_tokens") or 0 for r in rows),
         "cache_write_tokens": sum(r.get("cache_write_tokens") or 0 for r in rows),
         "reasoning_tokens": sum(r.get("reasoning_tokens") or 0 for r in rows),
-        "cost": round(sum(costs), 8) if len(costs) == len(rows) else None,
-        "cost_mean": round(statistics.mean(costs), 8) if len(costs) == len(rows) else None,
+        "cost": round(sum(costs), 8) if rows and len(costs) == len(rows) else None,
+        "cost_mean": round(statistics.mean(costs), 8)
+        if rows and len(costs) == len(rows) else None,
         "cost_observed_runs": len(costs),
         "fallback_rate": round(fallbacks / turns, 3) if turns else 0,
     }
@@ -134,17 +151,29 @@ def run_model(bot_name: str, model: str, seeds: list[int], workers: int,
               on_status: Callable[[dict[str, Any]], None] | None = None) -> dict[str, Any]:
     workers = max(1, min(workers, len(seeds)))
     rows: list[dict[str, Any]] = []
-    with Manager() as manager:
-        status_queue = manager.Queue()
-        with ProcessPoolExecutor(max_workers=workers) as pool:
+    context = mp.get_context("spawn")
+    # Heartbeats are best-effort diagnostics. This is a native multiprocessing
+    # queue inherited when workers spawn, not a Manager proxy in the main loop.
+    status_queue = context.Queue(maxsize=max(8, workers * 4))
+    try:
+        with ProcessPoolExecutor(
+            max_workers=workers,
+            mp_context=context,
+            initializer=_init_status_queue,
+            initargs=(status_queue,),
+        ) as pool:
             futures = [pool.submit(_worker, bot_name, model, seed, endpoint, token,
-                                   port + i, str(site), max_steps, status_queue)
+                                   port + i, str(site), max_steps)
                        for i, seed in enumerate(seeds)]
             pending = set(futures)
             while pending:
                 done, pending = wait(pending, timeout=0.25,
                                      return_when=FIRST_COMPLETED)
-                while True:
+                # Drain only a bounded number of diagnostic events per pass.
+                # With an unbounded `while`, workers could refill the queue as
+                # quickly as it was drained, so completed runs were never
+                # processed even though the pool had already started new ones.
+                for _ in range(max(8, workers * 4)):
                     try:
                         if on_status:
                             on_status(status_queue.get_nowait())
@@ -160,6 +189,8 @@ def run_model(bot_name: str, model: str, seeds: list[int], workers: int,
                             on_status({"kind": "finished", "seed": row["seed"]})
                     if on_progress:
                         on_progress(rows)
+    finally:
+        status_queue.close()
     rows.sort(key=lambda r: r["seed"])
     return {
         "model": model,
