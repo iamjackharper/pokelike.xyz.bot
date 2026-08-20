@@ -532,7 +532,11 @@ class LLMBot(Bot):
                 description += f" — {action['tooltip']}"
         else:
             description = str(action.get("label") or action.get("id") or "action")
-        self.journal.append(f"step {state.get('steps')}: [{index}] {description}")
+        reason = " ".join(str(why or "").split())[:256]
+        self.journal.append(
+            f"step {state.get('steps')}: [{index}] {description}\n"
+            f"  reasoning: {reason or '(none provided)'}"
+        )
         self.journal = self.journal[-self.memory:]
         if self.verbose:
             print(f"   [llm] -> [{index}] {why[:100]}")
@@ -732,21 +736,20 @@ class LLMBot(Bot):
     def _situation(self, state: dict[str, Any]) -> str:
         """The whole user message: the view, plus what the harness owns.
 
-        Deliberately not the hook. The journal records actions selected by the
-        harness, not the model's explanation, so it cannot turn speculation into
-        fact. It helps stop a bot walking the same loop forever, and the instruction line is what tells the model how
+        Deliberately not the hook. The journal records the selected action and
+        the model's reasoning separately. The action is harness data; reasoning
+        is context only and must not be treated as verified fact. It helps stop
+        a bot walking the same loop forever, and the instruction line is what tells the model how
         many options there are -- neither is a choice a bot should be able to
         drop by accident while changing something else.
         """
         parts = [self.view(state)]
         if self.journal:
-            parts += ["", "VERIFIED RECENT ACTIONS:", *(f"  {r}" for r in self.journal)]
+            parts += ["", "RECENT ACTIONS:", *(f"  {r}" for r in self.journal)]
         if self.plan:
             parts += [
-                "", "YOUR CURRENT PLAN — UNVERIFIED",
+                "", "YOUR CURRENT PLAN",
                 *(f"  {i}. {item}" for i, item in enumerate(self.plan, 1)),
-                "  These are intentions from your previous planning, not verified game facts.",
-                "  Re-evaluate them against the current state before acting.",
             ]
         parts += [
             "",
