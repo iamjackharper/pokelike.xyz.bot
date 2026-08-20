@@ -152,8 +152,8 @@ TOOLS = [
             "name": "set_lead",
             "description": (
                 "Move a team member to slot 0, so they enter the next battle first. "
-                "Free: it does not use the turn, and you still have to call play "
-                "afterwards. Only offered on the map screen."
+                "Free: it does not use the turn, so you may continue with other "
+                "tools or call play when ready. Only offered on the map screen."
             ),
             "parameters": {
                 "type": "object",
@@ -332,6 +332,7 @@ class LLMBot(Bot):
         self.vision = overrides.pop("vision", self.VISION)
         self._static_map_key: tuple[Any, Any] | None = None
         self._static_map_text: str | None = None
+        self._map_notice: str | None = None
         if overrides:
             raise TypeError(f"unknown settings: {', '.join(sorted(overrides))}")
         self.verbose = verbose or bool(os.environ.get("POKELIKE_VERBOSE"))
@@ -394,6 +395,9 @@ class LLMBot(Bot):
         self._vision_images_sent = 0
         self._last_why = ""
         self._vision_image = None
+        self._static_map_key = None
+        self._static_map_text = None
+        self._map_notice = None
 
     def notes(self) -> dict[str, Any]:
         """Ends up in the run registry, and in the result a benchmark records.
@@ -642,11 +646,11 @@ class LLMBot(Bot):
                     want = args.get("index")
                     if allow_lead and isinstance(want, int):
                         lead = want
-                        reply = f"ok, slot {want} will lead. Now call play()."
+                        reply = f"ok, slot {want} will lead."
                     else:
                         reply = ("not available on this screen: the options here are "
                                  "your team, so reordering would change what an index "
-                                 "means. Call play().")
+                                 "means.")
                     messages.append({
                         "role": "tool", "tool_call_id": c["id"], "content": reply,
                     })
@@ -741,8 +745,15 @@ class LLMBot(Bot):
         run = state.get("run") or {}
         key = (run.get("run_seed"), run.get("map"))
         if key != self._static_map_key:
+            previous = self._static_map_key
             self._static_map_key = key
             self._static_map_text = render.static_map_view(m)
+            if previous is not None and previous[0] == key[0] and previous[1] != key[1]:
+                self.plan = []
+                self._map_notice = (
+                    f"MAP CHANGED: you are now on map {key[1]}. "
+                    "Create a new plan for this map before choosing."
+                )
         return self._static_map_text or ""
 
     def view_name(self) -> str:
@@ -763,6 +774,9 @@ class LLMBot(Bot):
         drop by accident while changing something else.
         """
         parts = [self.view(state)]
+        if self._map_notice:
+            parts += ["", self._map_notice]
+            self._map_notice = None
         if self.journal:
             parts += ["", "RECENT ACTIONS:", *(f"  {r}" for r in self.journal)]
         if self.plan:
