@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 from ...assets.mirror import PHASES, build
@@ -454,23 +455,41 @@ def cmd_llm_bench(args) -> int:
     partial = seeds != STANDARD_SEEDS
     for i, model in enumerate(models):
         print(f"\n=== {model} | {len(seeds)} runs | {args.workers} workers ===")
+        active = {}
+        last_status = [0.0]
 
         def show_progress(rows):
             s = lb.summary(rows)
             cost_mean = (f"${s['cost_mean']:.6f}"
                          if s["cost_mean"] is not None else "n/a")
             print(
-                f"\rprogress {len(rows)}/{len(seeds)} | "
+                f"progress {len(rows)}/{len(seeds)} | "
                 f"badges mean {s['badges_mean']:.3f} | "
                 f"best {s['badges_best']} | cost mean {cost_mean}",
-                end="",
                 flush=True,
             )
 
+        def show_status(status):
+            if status["kind"] == "finished":
+                active.pop(status["seed"], None)
+                return
+            active[status["seed"]] = status
+            now = time.monotonic()
+            if now - last_status[0] < 5:
+                return
+            last_status[0] = now
+            running = sorted(active.values(), key=lambda item: item["seed"])
+            details = ", ".join(
+                f"seed {item['seed']} map {item.get('map', '?')} step {item.get('step', 0)}"
+                for item in running
+            )
+            if details:
+                print(f"active: {details}", flush=True)
+
         result = lb.run_model(args.bot, model, seeds, args.workers, endpoint, token,
                               SITE_ROOT, args.port + 100 + i * max(args.workers, 1),
-                              args.max_steps, on_progress=show_progress)
-        print()
+                              args.max_steps, on_progress=show_progress,
+                              on_status=show_status)
         s = result["summary"]
         cost = f"${s['cost']:.6f}" if s["cost"] is not None else "n/a"
         print(

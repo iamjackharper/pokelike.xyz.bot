@@ -10,8 +10,10 @@ from __future__ import annotations
 import hashlib
 import json
 import statistics
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ProcessPoolExecutor, wait
 from datetime import datetime, timezone
+from multiprocessing import Manager
+from queue import Empty
 from pathlib import Path
 from typing import Any, Callable
 
@@ -47,7 +49,8 @@ def fingerprint(name: str) -> dict[str, str]:
 
 
 def _worker(bot_name: str, model: str, seed: int, endpoint: str | None,
-            token: str | None, port: int, site: str, max_steps: int) -> list[dict[str, Any]]:
+            token: str | None, port: int, site: str, max_steps: int,
+            status_queue) -> list[dict[str, Any]]:
     from .assets.server import AssetServer
     from .bot.catalogue import load_class
     from .core.game import Game
@@ -61,7 +64,18 @@ def _worker(bot_name: str, model: str, seed: int, endpoint: str | None,
     game.open()
     rows: list[dict[str, Any]] = []
     try:
-        full = play_run(game, bot, seed, max_steps=max_steps)
+        status_queue.put({"seed": seed, "kind": "started"})
+
+        def heartbeat(obs, steps):
+            run = obs.get("run") or {}
+            status_queue.put({
+                "seed": seed,
+                "kind": "step",
+                "map": run.get("map"),
+                "step": steps,
+            })
+
+        full = play_run(game, bot, seed, max_steps=max_steps, on_step=heartbeat)
         notes = bot.notes()
         rows.append({
             "seed": seed,
@@ -116,17 +130,36 @@ def summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
 def run_model(bot_name: str, model: str, seeds: list[int], workers: int,
               endpoint: str | None, token: str | None, site: Path,
               port: int, max_steps: int = 400,
-              on_progress: Callable[[list[dict[str, Any]]], None] | None = None) -> dict[str, Any]:
+              on_progress: Callable[[list[dict[str, Any]]], None] | None = None,
+              on_status: Callable[[dict[str, Any]], None] | None = None) -> dict[str, Any]:
     workers = max(1, min(workers, len(seeds)))
     rows: list[dict[str, Any]] = []
-    with ProcessPoolExecutor(max_workers=workers) as pool:
-        futures = [pool.submit(_worker, bot_name, model, seed, endpoint, token,
-                               port + i, str(site), max_steps)
-                   for i, seed in enumerate(seeds)]
-        for future in as_completed(futures):
-            rows.extend(future.result())
-            if on_progress:
-                on_progress(rows)
+    with Manager() as manager:
+        status_queue = manager.Queue()
+        with ProcessPoolExecutor(max_workers=workers) as pool:
+            futures = [pool.submit(_worker, bot_name, model, seed, endpoint, token,
+                                   port + i, str(site), max_steps, status_queue)
+                       for i, seed in enumerate(seeds)]
+            pending = set(futures)
+            while pending:
+                done, pending = wait(pending, timeout=0.25,
+                                     return_when=FIRST_COMPLETED)
+                while True:
+                    try:
+                        if on_status:
+                            on_status(status_queue.get_nowait())
+                        else:
+                            status_queue.get_nowait()
+                    except Empty:
+                        break
+                for future in done:
+                    result_rows = future.result()
+                    rows.extend(result_rows)
+                    if on_status:
+                        for row in result_rows:
+                            on_status({"kind": "finished", "seed": row["seed"]})
+                    if on_progress:
+                        on_progress(rows)
     rows.sort(key=lambda r: r["seed"])
     return {
         "model": model,
