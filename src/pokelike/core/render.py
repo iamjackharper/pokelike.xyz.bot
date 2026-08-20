@@ -95,7 +95,7 @@ def dynamic_map_view(m: dict[str, Any] | None) -> str:
     visited = [n["id"] for n in m.get("nodes", []) if n.get("visited")]
     # Keep the compact marker as a visual cue for CLI/API readers while the
     # static block above remains completely free of turn-specific state.
-    lines = ["CURRENT MAP STATE", f"  current: {current} [@]"]
+    lines = ["CURRENT MAP STATE", "", "YOUR POSITION", f"  {current} [@]"]
     lines.append("  visited: " + (", ".join(visited) if visited else "none"))
     return "\n".join(lines)
 
@@ -361,7 +361,7 @@ def screen(obs: dict[str, Any], with_legend: bool = False,
     if offers:
         parts += ["", "MOVE TUTOR — what each offer replaces", offers]
 
-    parts += ["", "ACTIONS", actions_view(obs.get("actions") or [])]
+    parts += ["", "AVAILABLE ACTIONS", actions_view(obs.get("actions") or [])]
 
     if obs.get("done"):
         parts += ["", ">>> RUN OVER <<<"]
