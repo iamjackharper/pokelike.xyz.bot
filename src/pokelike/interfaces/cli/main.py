@@ -454,9 +454,23 @@ def cmd_llm_bench(args) -> int:
     partial = seeds != STANDARD_SEEDS
     for i, model in enumerate(models):
         print(f"\n=== {model} | {len(seeds)} runs | {args.workers} workers ===")
+
+        def show_progress(rows):
+            s = lb.summary(rows)
+            cost_mean = (f"${s['cost_mean']:.6f}"
+                         if s["cost_mean"] is not None else "n/a")
+            print(
+                f"\rprogress {len(rows)}/{len(seeds)} | "
+                f"badges mean {s['badges_mean']:.3f} | "
+                f"best {s['badges_best']} | cost mean {cost_mean}",
+                end="",
+                flush=True,
+            )
+
         result = lb.run_model(args.bot, model, seeds, args.workers, endpoint, token,
                               SITE_ROOT, args.port + 100 + i * max(args.workers, 1),
-                              args.max_steps)
+                              args.max_steps, on_progress=show_progress)
+        print()
         s = result["summary"]
         cost = f"${s['cost']:.6f}" if s["cost"] is not None else "n/a"
         print(

@@ -13,7 +13,7 @@ import statistics
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from .bench import STANDARD_SEEDS
 
@@ -46,7 +46,7 @@ def fingerprint(name: str) -> dict[str, str]:
     return {"sha256": h.hexdigest()[:16], "files": ",".join(str(p.relative_to(ROOT)) for p in paths)}
 
 
-def _worker(bot_name: str, model: str, seeds: list[int], endpoint: str | None,
+def _worker(bot_name: str, model: str, seed: int, endpoint: str | None,
             token: str | None, port: int, site: str, max_steps: int) -> list[dict[str, Any]]:
     from .assets.server import AssetServer
     from .bot.catalogue import load_class
@@ -61,29 +61,28 @@ def _worker(bot_name: str, model: str, seeds: list[int], endpoint: str | None,
     game.open()
     rows: list[dict[str, Any]] = []
     try:
-        for seed in seeds:
-            full = play_run(game, bot, seed, max_steps=max_steps)
-            notes = bot.notes()
-            rows.append({
-                "seed": seed,
-                "steps": full["steps"],
-                "score": full["score"],
-                "badges": full["badges"],
-                "maps": full["maps"],
-                "kos": full["kos"],
-                "faints": full["faints"],
-                "ending": full["ending"],
-                "stalled": full["stalled"],
-                "tokens_in": notes.get("tokens_in", 0),
-                "tokens_out": notes.get("tokens_out", 0),
-                "cached_tokens": notes.get("cached_tokens", 0),
-                "cache_write_tokens": notes.get("cache_write_tokens", 0),
-                "reasoning_tokens": notes.get("reasoning_tokens", 0),
-                "cost": notes.get("cost"),
-                "fallbacks": notes.get("fallbacks", 0),
-                "turns": notes.get("turns", 0),
-                "calls": notes.get("calls", 0),
-            })
+        full = play_run(game, bot, seed, max_steps=max_steps)
+        notes = bot.notes()
+        rows.append({
+            "seed": seed,
+            "steps": full["steps"],
+            "score": full["score"],
+            "badges": full["badges"],
+            "maps": full["maps"],
+            "kos": full["kos"],
+            "faints": full["faints"],
+            "ending": full["ending"],
+            "stalled": full["stalled"],
+            "tokens_in": notes.get("tokens_in", 0),
+            "tokens_out": notes.get("tokens_out", 0),
+            "cached_tokens": notes.get("cached_tokens", 0),
+            "cache_write_tokens": notes.get("cache_write_tokens", 0),
+            "reasoning_tokens": notes.get("reasoning_tokens", 0),
+            "cost": notes.get("cost"),
+            "fallbacks": notes.get("fallbacks", 0),
+            "turns": notes.get("turns", 0),
+            "calls": notes.get("calls", 0),
+        })
     finally:
         game.close()
         server.stop()
@@ -108,6 +107,7 @@ def summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "cache_write_tokens": sum(r.get("cache_write_tokens") or 0 for r in rows),
         "reasoning_tokens": sum(r.get("reasoning_tokens") or 0 for r in rows),
         "cost": round(sum(costs), 8) if len(costs) == len(rows) else None,
+        "cost_mean": round(statistics.mean(costs), 8) if len(costs) == len(rows) else None,
         "cost_observed_runs": len(costs),
         "fallback_rate": round(fallbacks / turns, 3) if turns else 0,
     }
@@ -115,16 +115,18 @@ def summary(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
 def run_model(bot_name: str, model: str, seeds: list[int], workers: int,
               endpoint: str | None, token: str | None, site: Path,
-              port: int, max_steps: int = 400) -> dict[str, Any]:
+              port: int, max_steps: int = 400,
+              on_progress: Callable[[list[dict[str, Any]]], None] | None = None) -> dict[str, Any]:
     workers = max(1, min(workers, len(seeds)))
-    chunks = [seeds[i::workers] for i in range(workers)]
     rows: list[dict[str, Any]] = []
     with ProcessPoolExecutor(max_workers=workers) as pool:
-        futures = [pool.submit(_worker, bot_name, model, chunk, endpoint, token,
+        futures = [pool.submit(_worker, bot_name, model, seed, endpoint, token,
                                port + i, str(site), max_steps)
-                   for i, chunk in enumerate(chunks)]
+                   for i, seed in enumerate(seeds)]
         for future in as_completed(futures):
             rows.extend(future.result())
+            if on_progress:
+                on_progress(rows)
     rows.sort(key=lambda r: r["seed"])
     return {
         "model": model,
