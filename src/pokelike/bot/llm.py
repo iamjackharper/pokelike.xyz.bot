@@ -53,7 +53,7 @@ from pokelike.core import render
 # How a decision is made here. Written into every result; a row measured under a
 # different number is marked as such rather than ranked as if it were the same.
 #
-#   1  agentic loop with team_details / what_lies_ahead / set_lead / play,
+#   1  agentic loop with team_details / set_plan / set_lead / play,
 #      situation rendered by core.render.screen, prose index as a last resort
 HARNESS = 1
 
@@ -126,13 +126,24 @@ TOOLS = [
     {
         "type": "function",
         "function": {
-            "name": "what_lies_ahead",
+            "name": "set_plan",
             "description": (
-                "For each legal action, which nodes it leads to on the next layer. "
-                "Useful to avoid closing off good paths: this choice decides what "
-                "you will be able to do next."
+                "Replace your short-term plan for future turns. This does not end "
+                "the turn: call play afterwards. The plan is your own unverified "
+                "intention, not game state. Pass an empty list to clear it."
             ),
-            "parameters": {"type": "object", "properties": {}},
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "items": {
+                        "type": "array",
+                        "description": "Up to five concise planning notes.",
+                        "items": {"type": "string"},
+                        "maxItems": 5,
+                    },
+                },
+                "required": ["items"],
+            },
         },
     },
     {
@@ -349,6 +360,7 @@ class LLMBot(Bot):
         self.tokens_used = 0
         self.fallbacks = 0
         self.journal: list[str] = []
+        self.plan: list[str] = []
         self._vision_image: bytes | None = None
         self._vision_images_sent = 0
         self._last_why = ""
@@ -364,6 +376,7 @@ class LLMBot(Bot):
     def on_start(self, seed: int) -> None:
         self.seed = seed
         self.journal = []
+        self.plan = []
         self._pending = None
         self.calls = self.turns = self.tokens_used = self.fallbacks = 0
         self._vision_images_sent = 0
@@ -637,8 +650,15 @@ class LLMBot(Bot):
         """
         if name == "team_details":
             return render.team_view(state.get("team")) or "(empty team)"
-        if name == "what_lies_ahead":
-            return self._exits(state)
+        if name == "set_plan":
+            raw = args.get("items")
+            if not isinstance(raw, list):
+                return "set_plan requires an `items` array of strings."
+            self.plan = [item.strip()[:300] for item in raw
+                         if isinstance(item, str) and item.strip()][:5]
+            if not self.plan:
+                return "Plan cleared."
+            return f"Plan saved with {len(self.plan)} item(s)."
         return f"unknown tool: {name}"
 
     # ---------------------------------------------------------------- context
@@ -712,6 +732,13 @@ class LLMBot(Bot):
         parts = [self.view(state)]
         if self.journal:
             parts += ["", "YOUR RECENT MOVES:", *(f"  {r}" for r in self.journal)]
+        if self.plan:
+            parts += [
+                "", "YOUR CURRENT PLAN — UNVERIFIED",
+                *(f"  {i}. {item}" for i, item in enumerate(self.plan, 1)),
+                "  These are intentions from your previous planning, not verified game facts.",
+                "  Re-evaluate them against the current state before acting.",
+            ]
         parts += [
             "",
             f"Pick an index between 0 and {len(state['actions']) - 1} and call play().",
