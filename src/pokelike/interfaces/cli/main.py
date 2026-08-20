@@ -426,6 +426,52 @@ def cmd_leaderboard(args) -> int:
     return 0
 
 
+def cmd_llm_bench(args) -> int:
+    """Compare one fixed bot across models, with independent workers."""
+    import os
+
+    from ... import llmbench_cartographer as lb
+
+    models = [m.strip() for m in (args.models or "").split(",") if m.strip()]
+    if args.model:
+        models.insert(0, args.model)
+    models = list(dict.fromkeys(models))
+    if not models:
+        print("name at least one model: --model provider/model", file=sys.stderr)
+        raise SystemExit(2)
+
+    seeds = STANDARD_SEEDS[:args.runs] if args.runs else STANDARD_SEEDS
+    endpoint = args.endpoint or os.environ.get("FW_ENDPOINT")
+    token = args.api_key or os.environ.get("FW_TOKEN")
+    if not endpoint or not token:
+        print("FW_ENDPOINT and FW_TOKEN (or --endpoint and --api-key) are required",
+              file=sys.stderr)
+        raise SystemExit(2)
+    if not SITE_ROOT.is_dir():
+        print("offline copy missing: run `uv run pokelike setup` first", file=sys.stderr)
+        raise SystemExit(2)
+
+    partial = seeds != STANDARD_SEEDS
+    for i, model in enumerate(models):
+        print(f"\n=== {model} | {len(seeds)} runs | {args.workers} workers ===")
+        result = lb.run_model(args.bot, model, seeds, args.workers, endpoint, token,
+                              SITE_ROOT, args.port + 100 + i * max(args.workers, 1),
+                              args.max_steps)
+        s = result["summary"]
+        cost = f"${s['cost']:.6f}" if s["cost"] is not None else "n/a"
+        print(
+            f"badges {s['badges_mean']} ±{s['badges_sem']}  best {s['badges_best']}  "
+            f"tokens in/out {s['tokens_in']}/{s['tokens_out']}  "
+            f"cached {s['cached_tokens']}  cost {cost}  "
+            f"fallback {s['fallback_rate']}"
+        )
+        if partial or args.dry_run:
+            print("not recorded (practice run)")
+        else:
+            print(f"recorded in {lb.save(result)}")
+    return 0
+
+
 def cmd_schema(args) -> int:
     """Prints what a bot receives, captured from a live run."""
     from ...schema import as_markdown, capture, describe
@@ -577,6 +623,21 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--dry-run", action="store_true",
                    help="play all 50 and print the result, but write no entry")
     s.set_defaults(func=cmd_bench)
+
+    s = sub.add_parser("llm-bench", help="compare one bot across LLM models in parallel")
+    s.add_argument("--bot", default="llm-cartographer",
+                   help="fixed bot folder whose prompt and tools are benchmarked")
+    s.add_argument("--model", default="", help="one model id, e.g. anthropic/claude-opus")
+    s.add_argument("--models", default="", help="comma-separated model ids")
+    s.add_argument("--workers", type=int, default=4,
+                   help="independent browser processes per model")
+    s.add_argument("--runs", type=int, default=0,
+                   help="use only the first N standard seeds; never records")
+    s.add_argument("--max-steps", type=int, default=400)
+    s.add_argument("--endpoint", default=None, help="OpenAI-compatible base URL")
+    s.add_argument("--api-key", default=None, help="API key (prefer FW_TOKEN in environment)")
+    s.add_argument("--dry-run", action="store_true", help="run but do not record")
+    s.set_defaults(func=cmd_llm_bench)
 
     s = sub.add_parser("leaderboard", help="rebuild and print the leaderboard table")
     s.set_defaults(func=cmd_leaderboard)

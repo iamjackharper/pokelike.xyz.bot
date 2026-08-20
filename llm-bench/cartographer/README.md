@@ -1,0 +1,32 @@
+# Cartographer model benchmark
+
+This benchmark keeps the `llm-cartographer` bot, prompt and tools fixed while
+comparing model IDs. Each worker owns its own browser and local asset server.
+
+```bash
+export FW_ENDPOINT="https://openrouter.ai/api"
+export FW_TOKEN="sk-or-..."
+
+uv run pokelike llm-bench \
+  --bot llm-cartographer \
+  --models anthropic/claude-opus-4.1,openai/gpt-5.6-luna \
+  --workers 4
+```
+
+Use a short practice run first:
+
+```bash
+uv run pokelike llm-bench \
+  --bot llm-cartographer \
+  --model openai/gpt-5.6-luna \
+  --runs 2 \
+  --workers 2
+```
+
+Partial runs are never recorded. A full pass uses the 50 standard seeds and is
+written to `results/<model>.json`.
+
+The result reports badges, standard error, best run, input/output tokens,
+cached and cache-write tokens, reasoning tokens, fallback rate, and the sum of
+the per-request `usage.cost` values returned by the provider. If the endpoint
+does not return a cost, the result marks it as unavailable rather than guessing.
