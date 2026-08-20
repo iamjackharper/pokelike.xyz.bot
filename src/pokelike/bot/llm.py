@@ -224,17 +224,16 @@ class LLMBot(Bot):
 
     | value | what the model gets | roughly |
     |---|---|--:|
-    | `"screen"` | the ASCII view a person sees. The default | 880 chars |
+    | `"screen"` | stable map plus current textual state. The default | varies |
     | `"json"` | the whole state dict, compact JSON | 5900 chars |
     | `"both"` | the view, then the dict under it | 6800 chars |
     | `["team", "actions"]` | just those keys, as JSON | varies |
 
-    Six times the tokens is the price of `"json"`, and it is not only money:
-    filling the context with a map the turn does not need takes room from the
-    reasoning it was about to do. The default drops real things -- the engine's
-    type/item table, the map edges, raw base stats -- because it renders what a
-    person would look at, not everything that is true. Which of those matters is
-    an experiment, which is why this is a knob and not our decision.
+    The default keeps the map topology and its currently-known tooltips in a
+    stable prefix, then appends the current position, team and actions. This
+    makes the map suitable for provider prompt caching without exposing hidden
+    node contents. JSON remains useful for experiments because it includes every
+    raw field, including engine flags such as `revealed` and `accessible`.
 
     `view(state)` is the escape hatch when none of the four fit. Override it and
     return whatever string you like; the journal and the "pick an index"
@@ -320,6 +319,8 @@ class LLMBot(Bot):
         self.state_view = overrides.pop("view", None) or self.STATE_VIEW
         self.token_budget = overrides.pop("token_budget", self.TOKEN_BUDGET)
         self.vision = overrides.pop("vision", self.VISION)
+        self._static_map_key: tuple[Any, Any] | None = None
+        self._static_map_text: str | None = None
         if overrides:
             raise TypeError(f"unknown settings: {', '.join(sorted(overrides))}")
         self.verbose = verbose or bool(os.environ.get("POKELIKE_VERBOSE"))
@@ -655,7 +656,11 @@ class LLMBot(Bot):
         """
         spec = self.state_view
         if isinstance(spec, str) and spec == "screen":
-            return render.screen(state)
+            # Keep the complete topology as an identical prefix between turns;
+            # the current position/team/actions follow it as an overlay.
+            static = self._static_map(state)
+            dynamic = render.screen(state, include_map=False)
+            return f"{static}\n\n{dynamic}" if static else dynamic
         if isinstance(spec, str) and spec in ("json", "both"):
             raw = json.dumps(state, separators=(",", ":"))
             if spec == "json":
@@ -676,6 +681,18 @@ class LLMBot(Bot):
             f"STATE_VIEW is {spec!r}. Use 'screen', 'json', 'both', a list of "
             f"state keys, or override view(state) yourself."
         )
+
+    def _static_map(self, state: dict[str, Any]) -> str:
+        """Return the cached, fair map description for this run/map."""
+        m = state.get("map")
+        if not m:
+            return ""
+        run = state.get("run") or {}
+        key = (run.get("run_seed"), run.get("map"))
+        if key != self._static_map_key:
+            self._static_map_key = key
+            self._static_map_text = render.static_map_view(m)
+        return self._static_map_text or ""
 
     def view_name(self) -> str:
         """What to record: the setting, or 'custom' if `view` was replaced."""

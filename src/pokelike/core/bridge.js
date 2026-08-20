@@ -153,15 +153,56 @@
     return own.slice(0, 160);
   };
 
+  // The game shows useful node details in one shared tooltip when the pointer
+  // moves over a map node (trainer type, gym roster, item meaning, and so on).
+  // Those details are not part of `state.map.nodes`, but they are information a
+  // human player is explicitly allowed to see. Read the rendered text exactly
+  // as the player sees it; do not parse it into guessed fields.
+  window.__pk_map_tooltips = () => {
+    const st = g('state');
+    if (!st || !st.map || window.__pk_layer().id !== 'map-screen') return {};
+    const key = `${st.runSeed}:${st.currentMap}`;
+    window.__pk_tooltip_cache = window.__pk_tooltip_cache || {};
+    if (window.__pk_tooltip_cache[key]) return window.__pk_tooltip_cache[key];
+
+    const tip = document.getElementById('map-node-tooltip');
+    const groups = [...document.querySelectorAll('#map-container #map-svg > g')];
+    if (!tip || groups.length < Object.keys(st.map.nodes).length) return {};
+
+    const oldClass = tip.getAttribute('class');
+    const oldStyle = tip.getAttribute('style');
+    const result = {};
+    Object.values(st.map.nodes).forEach((n, i) => {
+      const el = groups[i];
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      el.dispatchEvent(new MouseEvent('mousemove', {
+        bubbles: true, clientX: r.left + r.width / 2,
+        clientY: r.top + r.height / 2, view: window,
+      }));
+      const text = (tip.innerText || '').replace(/\s+/g, ' ').trim();
+      if (text) result[n.id] = text;
+    });
+    if (oldClass === null) tip.removeAttribute('class');
+    else tip.setAttribute('class', oldClass);
+    if (oldStyle === null) tip.removeAttribute('style');
+    else tip.setAttribute('style', oldStyle);
+    window.__pk_tooltip_cache[key] = result;
+    return result;
+  };
+
   window.__pk_choices = () => {
     const { L, nodes, els } = choiceElements();
     if (nodes) {
       const st = g('state');
       if (!st || !st.map) return [];
+      const tips = window.__pk_map_tooltips();
       return Object.values(st.map.nodes)
         .filter((n) => n.accessible && !n.visited)
         .sort((a, b) => (a.layer - b.layer) || (a.col - b.col))
-        .map((n) => ({ kind: 'node', id: n.id, node: n.type, layer: n.layer, col: n.col }));
+        .map((n) => ({ kind: 'node', id: n.id, node: n.type, layer: n.layer,
+          col: n.col, tooltip: tips[n.id] || null }));
     }
     return (els || []).map((e, i) => ({
       kind: 'element', idx: i, layer: L.id, id: e.id || null,
@@ -469,10 +510,12 @@
         id: i.id, name: i.name, desc: i.desc, usable: !!i.usable,
       }));
       if (st.map) {
+        const tips = window.__pk_map_tooltips();
         o.map = {
           nodes: Object.values(st.map.nodes).map((n) => ({
             id: n.id, kind: n.type, layer: n.layer, col: n.col,
             accessible: !!n.accessible, visited: !!n.visited, revealed: !!n.revealed,
+            tooltip: tips[n.id] || null,
           })),
           edges: st.map.edges.map((e) => [e.from, e.to]),
           current: st.currentNode ? st.currentNode.id : null,

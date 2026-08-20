@@ -48,6 +48,58 @@ def map_view(m: dict[str, Any] | None) -> str:
     return "\n".join(rows)
 
 
+def static_map_view(m: dict[str, Any] | None) -> str:
+    """A stable, fair description of the map topology.
+
+    The topology is known to the harness, but hidden nodes are not: exposing
+    their kind or tooltip would give the bot information a player does not
+    have.  We therefore keep their position and connections while rendering
+    their contents as UNKNOWN.  Dynamic facts (current/visited/accessible)
+    deliberately do not appear here, so this block can be cached verbatim.
+    """
+    if not m or not m.get("nodes"):
+        return "STATIC MAP\n  (no map)"
+
+    by_layer: dict[int, list[dict]] = {}
+    for node in m["nodes"]:
+        by_layer.setdefault(node.get("layer", 0), []).append(node)
+
+    rows = ["STATIC MAP"]
+    for layer in sorted(by_layer):
+        rows.append(f"\nlayer {layer}")
+        for node in sorted(by_layer[layer], key=lambda n: (n.get("col", 0), n.get("id", ""))):
+            if node.get("revealed"):
+                kind = str(node.get("kind", "unknown")).upper()
+                tooltip = node.get("tooltip") or "Unknown"
+                rows.append(f"  {node['id']} [{kind}] — {tooltip}")
+            else:
+                rows.append(f"  {node['id']} [UNKNOWN] — Unknown")
+
+    rows += ["\nCONNECTIONS"]
+    outgoing: dict[str, list[str]] = {}
+    for edge in m.get("edges") or []:
+        if len(edge) >= 2:
+            outgoing.setdefault(edge[0], []).append(edge[1])
+    for node in (sorted(m["nodes"], key=lambda n: (n.get("layer", 0), n.get("col", 0), n.get("id", "")))):
+        targets = sorted(outgoing.get(node["id"], []))
+        if targets:
+            rows.append(f"  {node['id']} -> {', '.join(targets)}")
+    return "\n".join(rows)
+
+
+def dynamic_map_view(m: dict[str, Any] | None) -> str:
+    """The small per-turn overlay kept separate from the static map."""
+    if not m:
+        return "CURRENT MAP STATE\n  (no map)"
+    current = m.get("current") or "none"
+    visited = [n["id"] for n in m.get("nodes", []) if n.get("visited")]
+    # Keep the compact marker as a visual cue for CLI/API readers while the
+    # static block above remains completely free of turn-specific state.
+    lines = ["CURRENT MAP STATE", f"  current: {current} [@]"]
+    lines.append("  visited: " + (", ".join(visited) if visited else "none"))
+    return "\n".join(lines)
+
+
 # EVERYTHING STRUCTURAL HERE IS ASCII, AND THAT IS NOT LAZINESS.
 #
 # The pretty characters — ▶ ◀ · ╱ ╲ │ ─ ╭ ╰ — are all East Asian AMBIGUOUS
@@ -247,7 +299,8 @@ def actions_view(actions: list[dict]) -> str:
     rows = []
     for i, a in enumerate(actions):
         if a["kind"] == "node":
-            rows.append(f"  [{i}] go to node {a['id']:<6} ({a['node']})")
+            tooltip = f" — {a['tooltip']}" if a.get("tooltip") else ""
+            rows.append(f"  [{i}] go to node {a['id']:<6} ({a['node']}){tooltip}")
         else:
             rows.append(f"  [{i}] {a['label']}")
     return "\n".join(rows)
@@ -280,7 +333,8 @@ def tutor_view(obs: dict[str, Any]) -> str:
     return "\n".join(rows)
 
 
-def screen(obs: dict[str, Any], with_legend: bool = False) -> str:
+def screen(obs: dict[str, Any], with_legend: bool = False,
+           include_map: bool = True) -> str:
     """The whole turn as text."""
     run = obs.get("run") or {}
     head = (
@@ -298,8 +352,8 @@ def screen(obs: dict[str, Any], with_legend: bool = False) -> str:
     if bag:
         parts += ["", "BAG", "  " + ", ".join(str(b) for b in bag)]
 
-    if obs.get("map"):
-        parts += ["", "MAP   [here]  <legal move>  x'=done", map_view(obs["map"])]
+    if obs.get("map") and include_map:
+        parts += ["", static_map_view(obs["map"]), "", dynamic_map_view(obs["map"])]
         if with_legend:
             parts += ["", LEGEND]
 
