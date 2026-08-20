@@ -357,7 +357,7 @@ def screen(obs: dict[str, Any], with_legend: bool = False,
         if with_legend:
             parts += ["", LEGEND]
 
-    offers = tutor_view(obs)
+    offers = tutor_view(obs) if obs.get("screen") == "move-tutor-screen" else ""
     if offers:
         parts += ["", "MOVE TUTOR — what each offer replaces", offers]
 
