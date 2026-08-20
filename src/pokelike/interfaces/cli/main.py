@@ -8,9 +8,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import shutil
 import sys
-import time
 from pathlib import Path
 
 from ...assets.mirror import PHASES, build
@@ -434,6 +432,12 @@ def cmd_llm_bench(args) -> int:
 
     from ... import llmbench_cartographer as lb
 
+    if args.table:
+        table = lb.format_table()
+        lb.update_readme(table)
+        print(table)
+        return 0
+
     models = [m.strip() for m in (args.models or "").split(",") if m.strip()]
     if args.model:
         models.insert(0, args.model)
@@ -456,61 +460,22 @@ def cmd_llm_bench(args) -> int:
     partial = seeds != STANDARD_SEEDS
     for i, model in enumerate(models):
         print(f"\n=== {model} | {len(seeds)} runs | {args.workers} workers ===")
-        active = {}
-        last_status = [0.0]
-        last_progress = [""]
-        compact = sys.stdout.isatty()
-        terminal_width = shutil.get_terminal_size((120, 20)).columns
-
-        def emit_progress(line):
-            if compact:
-                print(f"\033[2K\r{line}", end="", flush=True)
-            else:
-                print(line, flush=True)
-
-        def show_live_progress():
-            if not last_progress[0]:
-                return
-            active_text = ", ".join(
-                f"seed {item['seed']} m{item.get('map', '?')} s{item.get('step', 0)}"
-                for item in sorted(active.values(), key=lambda item: item["seed"])
-            )
-            line = last_progress[0]
-            if active_text:
-                line += f" | active: {active_text}"
-            if compact and len(line) >= terminal_width:
-                line = line[:terminal_width - 2] + "…"
-            emit_progress(line)
 
         def show_progress(rows):
             s = lb.summary(rows)
             cost_mean = (f"${s['cost_mean']:.6f}"
                          if s["cost_mean"] is not None else "n/a")
-            last_progress[0] = (
+            print(
                 f"progress {len(rows)}/{len(seeds)} | "
                 f"badges mean {s['badges_mean']:.3f} | "
-                f"best {s['badges_best']} | cost mean {cost_mean}"
+                f"best {s['badges_best']} | cost mean {cost_mean}",
+                flush=True,
             )
-            show_live_progress()
-
-        def show_status(status):
-            if status["kind"] == "finished":
-                active.pop(status["seed"], None)
-                return
-            active[status["seed"]] = status
-            now = time.monotonic()
-            if now - last_status[0] < 5:
-                return
-            last_status[0] = now
-            show_live_progress()
 
         show_progress([])
         result = lb.run_model(args.bot, model, seeds, args.workers, endpoint, token,
                               SITE_ROOT, args.port + 100 + i * max(args.workers, 1),
-                              args.max_steps, on_progress=show_progress,
-                              on_status=show_status)
-        if compact:
-            print()
+                              args.max_steps, on_progress=show_progress)
         s = result["summary"]
         cost = f"${s['cost']:.6f}" if s["cost"] is not None else "n/a"
         print(
@@ -522,7 +487,9 @@ def cmd_llm_bench(args) -> int:
         if partial or args.dry_run:
             print("not recorded (practice run)")
         else:
-            print(f"recorded in {lb.save(result)}")
+            path = lb.save(result)
+            lb.update_readme()
+            print(f"recorded in {path}")
     return 0
 
 
@@ -691,6 +658,8 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--endpoint", default=None, help="OpenAI-compatible base URL")
     s.add_argument("--api-key", default=None, help="API key (prefer FW_TOKEN in environment)")
     s.add_argument("--dry-run", action="store_true", help="run but do not record")
+    s.add_argument("--table", action="store_true",
+                   help="print recorded model standings and regenerate the benchmark README")
     s.set_defaults(func=cmd_llm_bench)
 
     s = sub.add_parser("leaderboard", help="rebuild and print the leaderboard table")
